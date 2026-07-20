@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Tavla | Reservations Management</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "tertiary-container": "#005b51",
+                    "inverse-primary": "#d1bcff",
+                    "surface-container-low": "#f5f3f3",
+                    "tertiary": "#00413a",
+                    "outline": "#7b7484",
+                    "surface-variant": "#e3e2e2",
+                    "on-background": "#1b1c1c",
+                    "on-error-container": "#93000a",
+                    "on-secondary-fixed-variant": "#4d4450",
+                    "secondary": "#655b68",
+                    "on-tertiary": "#ffffff",
+                    "surface-dim": "#dbdad9",
+                    "surface-tint": "#6c45c0",
+                    "on-primary-fixed": "#24005b",
+                    "on-secondary-fixed": "#201924",
+                    "primary": "#461599",
+                    "on-primary-fixed-variant": "#5429a7",
+                    "primary-fixed": "#eaddff",
+                    "on-tertiary-container": "#6dd4c4",
+                    "primary-fixed-dim": "#d1bcff",
+                    "error-container": "#ffdad6",
+                    "on-tertiary-fixed": "#00201c",
+                    "tertiary-fixed-dim": "#70d8c8",
+                    "on-secondary-container": "#6b616e",
+                    "on-tertiary-fixed-variant": "#005048",
+                    "on-primary-container": "#ceb8ff",
+                    "inverse-on-surface": "#f2f0f0",
+                    "background": "#fbf9f9",
+                    "primary-container": "#5e35b1",
+                    "tertiary-fixed": "#8df5e4",
+                    "on-primary": "#ffffff",
+                    "surface": "#fbf9f9",
+                    "error": "#ba1a1a",
+                    "surface-container-lowest": "#ffffff",
+                    "surface-container": "#efeded",
+                    "secondary-container": "#ecdeee",
+                    "on-secondary": "#ffffff",
+                    "on-surface-variant": "#494453",
+                    "secondary-fixed": "#ecdeee",
+                    "surface-container-highest": "#e3e2e2",
+                    "on-surface": "#1b1c1c",
+                    "secondary-fixed-dim": "#cfc2d2",
+                    "inverse-surface": "#303031",
+                    "outline-variant": "#cbc3d5",
+                    "surface-container-high": "#e9e8e7",
+                    "surface-bright": "#fbf9f9",
+                    "on-error": "#ffffff"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "xl": "32px",
+                    "sm": "8px",
+                    "md": "16px",
+                    "base": "4px",
+                    "lg": "24px",
+                    "container-margin": "24px",
+                    "gutter": "16px",
+                    "xs": "4px"
+            },
+            "fontFamily": {
+                    "body-sm": ["Inter"],
+                    "body-md": ["Inter"],
+                    "headline-md": ["Inter"],
+                    "headline-lg": ["Inter"],
+                    "body-lg": ["Inter"],
+                    "label-md": ["Inter"],
+                    "label-sm": ["Inter"],
+                    "display": ["Inter"]
+            },
+            "fontSize": {
+                    "body-sm": ["13px", {"lineHeight": "18px", "fontWeight": "400"}],
+                    "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "headline-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "headline-lg": ["28px", {"lineHeight": "36px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                    "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                    "label-sm": ["11px", {"lineHeight": "14px", "fontWeight": "500"}],
+                    "display": ["36px", {"lineHeight": "44px", "letterSpacing": "-0.02em", "fontWeight": "700"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; background-color: #fbf9f9; }
+        .glass { backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="text-on-surface">
+<!-- SideNavBar (Desktop Only) -->
+<aside class="fixed left-0 top-0 h-full w-[260px] z-50 bg-surface flex flex-col py-lg border-r border-outline-variant/30 hidden md:flex">
+<div class="px-lg mb-xl">
+<h1 class="font-display text-headline-lg text-primary">Tavla</h1>
+</div>
+<div class="flex-1 overflow-y-auto no-scrollbar">
+<nav class="space-y-1 px-sm">
+<!-- Dashboard -->
+<a class="flex items-center gap-md px-md py-sm text-on-surface-variant hover:bg-surface-container-high transition-all duration-200" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-label-md text-label-md">Dashboard</span>
+</a>
+<!-- Reservations (ACTIVE) -->
+<a class="flex items-center gap-md px-md py-sm text-primary border-l-4 border-primary bg-primary-container/10 transition-transform translate-x-1" href="#">
+<span class="material-symbols-outlined">event</span>
+<span class="font-label-md text-label-md">Reservations</span>
+</a>
+<!-- Floor Plan -->
+<a class="flex items-center gap-md px-md py-sm text-on-surface-variant hover:bg-surface-container-high transition-all duration-200" href="#">
+<span class="material-symbols-outlined">layers</span>
+<span class="font-label-md text-label-md">Floor Plan</span>
+</a>
+<!-- Customers -->
+<a class="flex items-center gap-md px-md py-sm text-on-surface-variant hover:bg-surface-container-high transition-all duration-200" href="#">
+<span class="material-symbols-outlined">group</span>
+<span class="font-label-md text-label-md">Customers</span>
+</a>
+<!-- Staff -->
+<a class="flex items-center gap-md px-md py-sm text-on-surface-variant hover:bg-surface-container-high transition-all duration-200" href="#">
+<span class="material-symbols-outlined">badge</span>
+<span class="font-label-md text-label-md">Staff</span>
+</a>
+<!-- Analytics -->
+<a class="flex items-center gap-md px-md py-sm text-on-surface-variant hover:bg-surface-container-high transition-all duration-200" href="#">
+<span class="material-symbols-outlined">analytics</span>
+<span class="font-label-md text-label-md">Reports</span>
+</a>
+<!-- Settings -->
+<a class="flex items-center gap-md px-md py-sm text-on-surface-variant hover:bg-surface-container-high transition-all duration-200" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-label-md text-label-md">Settings</span>
+</a>
+</nav>
+</div>
+<div class="px-sm pt-lg border-t border-outline-variant/30">
+<div class="flex items-center gap-md px-md py-sm mb-lg">
+<img class="w-10 h-10 rounded-full object-cover" data-alt="A professional headshot of a female restaurant receptionist named Sarah, wearing a minimalist black uniform. She has a warm, professional expression, set against a soft-focus background of a luxury restaurant interior with warm ambient lighting." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDf8UFCdEOBz2tBL0iLy8-bxqFvxUGb5G_j3tmdAEeTSNSkneyiLN6pVpgtM1f59Ot3R2lqRgz2RKjhYr6AJnepRQqKqFlf1k_IclYVDSiIAQ6eyW9j4Y24SPNpVZ1CCWCdspNKAxpN3ZlUzFaRhZcWckWQ5Lm9OX4a6l8PPiGQOpudkyvS-Vz8Mx7RK5UvR1zOb45uW54ty6OZM1xYNR0cpZCxCKv2_ko5TSzFvG3e7hOJSYRTUXm-cA"/>
+<div>
+<p class="font-label-md text-label-md text-on-surface">Sarah Jenkins</p>
+<p class="text-[10px] text-on-surface-variant">Receptionist</p>
+</div>
+</div>
+<a class="flex items-center gap-md px-md py-sm text-on-surface-variant hover:bg-surface-container-high transition-all" href="#">
+<span class="material-symbols-outlined">logout</span>
+<span class="font-label-md text-label-md">Logout</span>
+</a>
+</div>
+</aside>
+<!-- TopNavBar -->
+<header class="fixed top-0 left-0 md:left-[260px] right-0 h-16 glass bg-surface/80 shadow-sm z-40 flex items-center justify-between px-lg border-b border-outline-variant/10">
+<div class="flex items-center gap-md">
+<span class="md:hidden material-symbols-outlined text-primary">menu</span>
+<h2 class="font-headline-md text-headline-md text-primary">Reservations</h2>
+</div>
+<div class="flex items-center gap-lg">
+<div class="hidden sm:flex items-center gap-sm text-on-surface-variant font-body-md">
+<span class="material-symbols-outlined text-md">location_on</span>
+<span>Old City</span>
+</div>
+<div class="flex items-center gap-md">
+<button class="p-base rounded-full hover:bg-surface-variant/50 transition-colors">
+<span class="material-symbols-outlined text-on-surface-variant">language</span>
+</button>
+<button class="p-base rounded-full hover:bg-surface-variant/50 transition-colors">
+<span class="material-symbols-outlined text-on-surface-variant">notifications</span>
+</button>
+<button class="hidden md:flex bg-primary text-on-primary px-md py-sm rounded-lg font-label-md items-center gap-sm active:scale-95 transition-all">
+<span class="material-symbols-outlined text-sm">add</span>
+                    New Booking
+                </button>
+</div>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="pt-20 pb-24 md:pb-lg pl-0 md:pl-[260px] min-h-screen">
+<div class="max-w-[1400px] mx-auto px-lg">
+<!-- Bento Stats / Dashboard Summary -->
+<div class="grid grid-cols-1 md:grid-cols-4 gap-gutter mb-xl">
+<div class="bg-surface-container-lowest p-lg rounded-xl shadow-sm border border-outline-variant/20 flex flex-col justify-between">
+<span class="text-on-surface-variant font-label-md">Expected Tonight</span>
+<div class="flex items-end justify-between mt-md">
+<span class="font-display text-headline-lg text-primary">124</span>
+<span class="text-tertiary-container font-label-sm">+12%</span>
+</div>
+</div>
+<div class="bg-surface-container-lowest p-lg rounded-xl shadow-sm border border-outline-variant/20 flex flex-col justify-between">
+<span class="text-on-surface-variant font-label-md">Pending Confirmation</span>
+<div class="flex items-end justify-between mt-md">
+<span class="font-display text-headline-lg text-primary">18</span>
+<span class="text-error font-label-sm">High</span>
+</div>
+</div>
+<div class="bg-surface-container-lowest p-lg rounded-xl shadow-sm border border-outline-variant/20 flex flex-col justify-between">
+<span class="text-on-surface-variant font-label-md">Waitlist</span>
+<div class="flex items-end justify-between mt-md">
+<span class="font-display text-headline-lg text-primary">7</span>
+<span class="text-on-surface-variant font-label-sm">Est. 25m</span>
+</div>
+</div>
+<div class="bg-surface-container-lowest p-lg rounded-xl shadow-sm border border-outline-variant/20 flex flex-col justify-between">
+<span class="text-on-surface-variant font-label-md">Capacity</span>
+<div class="mt-md">
+<div class="w-full bg-surface-variant rounded-full h-2 overflow-hidden">
+<div class="bg-primary h-full w-[78%]"></div>
+</div>
+<div class="flex justify-between mt-xs">
+<span class="text-[10px] text-on-surface-variant">78% Full</span>
+<span class="text-[10px] text-on-surface-variant">42 Tables Left</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Search & Filters -->
+<div class="bg-surface shadow-sm rounded-xl mb-lg p-md md:p-lg border border-outline-variant/10">
+<div class="flex flex-col lg:flex-row gap-gutter">
+<div class="relative flex-1">
+<span class="material-symbols-outlined absolute left-md top-1/2 -translate-y-1/2 text-outline">search</span>
+<input class="w-full pl-xl pr-md py-sm bg-surface-container-low border-none rounded-lg focus:ring-2 focus:ring-primary/20 text-body-md" placeholder="Search by name, ID, or phone..." type="text"/>
+</div>
+<div class="flex flex-wrap items-center gap-sm">
+<select class="bg-surface-container-low border-none rounded-lg py-sm px-md text-label-md text-on-surface-variant cursor-pointer focus:ring-primary/20">
+<option>All Statuses</option>
+<option>Confirmed</option>
+<option>Pending</option>
+<option>Seated</option>
+</select>
+<input class="bg-surface-container-low border-none rounded-lg py-sm px-md text-label-md text-on-surface-variant cursor-pointer focus:ring-primary/20" type="date" value="2023-11-20"/>
+<select class="bg-surface-container-low border-none rounded-lg py-sm px-md text-label-md text-on-surface-variant cursor-pointer focus:ring-primary/20">
+<option>Party Size</option>
+<option>1-2 Guests</option>
+<option>3-5 Guests</option>
+<option>6+ Guests</option>
+</select>
+<button class="flex items-center gap-xs px-md py-sm text-primary font-label-md hover:bg-primary/5 rounded-lg transition-colors">
+<span class="material-symbols-outlined text-md">filter_list</span>
+                            Advanced
+                        </button>
+</div>
+</div>
+</div>
+<!-- Reservations Table Container -->
+<div class="bg-surface-container-lowest rounded-xl shadow-sm border border-outline-variant/10 overflow-hidden">
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-surface-container border-b border-outline-variant/30">
+<th class="px-lg py-sm font-label-md text-on-surface-variant">ID</th>
+<th class="px-lg py-sm font-label-md text-on-surface-variant">Customer Name</th>
+<th class="px-lg py-sm font-label-md text-on-surface-variant">Date/Time</th>
+<th class="px-lg py-sm font-label-md text-on-surface-variant">Guests</th>
+<th class="px-lg py-sm font-label-md text-on-surface-variant">Table</th>
+<th class="px-lg py-sm font-label-md text-on-surface-variant">Status</th>
+<th class="px-lg py-sm font-label-md text-on-surface-variant text-right">Actions</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant/20">
+<!-- Sara Khoury Row -->
+<tr class="hover:bg-surface-bright transition-colors group">
+<td class="px-lg py-md font-body-sm text-outline">#RES-9421</td>
+<td class="px-lg py-md">
+<div class="flex flex-col">
+<span class="font-body-md font-semibold text-on-surface">Sara Khoury</span>
+<span class="text-[11px] text-primary/70 font-medium">Anniversary</span>
+</div>
+</td>
+<td class="px-lg py-md">
+<div class="flex flex-col">
+<span class="font-body-md">Today, Nov 20</span>
+<span class="font-label-sm text-outline">7:30 PM</span>
+</div>
+</td>
+<td class="px-lg py-md font-body-md">2 guests</td>
+<td class="px-lg py-md">
+<span class="bg-surface-variant px-sm py-[2px] rounded text-label-sm">Table 7</span>
+</td>
+<td class="px-lg py-md">
+<span class="inline-flex items-center px-sm py-xs rounded-full bg-[#FFB000]/10 text-[#FFB000] font-label-sm">
+<span class="w-1.5 h-1.5 rounded-full bg-[#FFB000] mr-xs"></span>
+                                        Pending
+                                    </span>
+</td>
+<td class="px-lg py-md text-right">
+<div class="flex items-center justify-end gap-xs opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="p-xs text-tertiary hover:bg-tertiary/10 rounded transition-colors" title="Check In"><span class="material-symbols-outlined text-[20px]">how_to_reg</span></button>
+<button class="p-xs text-primary hover:bg-primary/10 rounded transition-colors" title="Confirm"><span class="material-symbols-outlined text-[20px]">check_circle</span></button>
+<button class="p-xs text-error hover:bg-error/10 rounded transition-colors" title="Cancel"><span class="material-symbols-outlined text-[20px]">cancel</span></button>
+</div>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="hover:bg-surface-bright transition-colors group">
+<td class="px-lg py-md font-body-sm text-outline">#RES-9422</td>
+<td class="px-lg py-md">
+<div class="flex flex-col">
+<span class="font-body-md font-semibold text-on-surface">James Wilson</span>
+<span class="text-[11px] text-outline">Frequent Guest</span>
+</div>
+</td>
+<td class="px-lg py-md">
+<div class="flex flex-col">
+<span class="font-body-md">Today, Nov 20</span>
+<span class="font-label-sm text-outline">8:00 PM</span>
+</div>
+</td>
+<td class="px-lg py-md font-body-md">4 guests</td>
+<td class="px-lg py-md">
+<span class="bg-surface-variant px-sm py-[2px] rounded text-label-sm">Table 12</span>
+</td>
+<td class="px-lg py-md">
+<span class="inline-flex items-center px-sm py-xs rounded-full bg-[#00A896]/10 text-[#00A896] font-label-sm">
+<span class="w-1.5 h-1.5 rounded-full bg-[#00A896] mr-xs"></span>
+                                        Confirmed
+                                    </span>
+</td>
+<td class="px-lg py-md text-right">
+<div class="flex items-center justify-end gap-xs opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="p-xs text-tertiary hover:bg-tertiary/10 rounded transition-colors"><span class="material-symbols-outlined text-[20px]">how_to_reg</span></button>
+<button class="p-xs text-error hover:bg-error/10 rounded transition-colors"><span class="material-symbols-outlined text-[20px]">cancel</span></button>
+</div>
+</td>
+</tr>
+<!-- Row 3 -->
+<tr class="hover:bg-surface-bright transition-colors group">
+<td class="px-lg py-md font-body-sm text-outline">#RES-9423</td>
+<td class="px-lg py-md">
+<div class="flex flex-col">
+<span class="font-body-md font-semibold text-on-surface">Elena Rodriguez</span>
+<span class="text-[11px] text-outline">New Client</span>
+</div>
+</td>
+<td class="px-lg py-md">
+<div class="flex flex-col">
+<span class="font-body-md">Today, Nov 20</span>
+<span class="font-label-sm text-outline">8:15 PM</span>
+</div>
+</td>
+<td class="px-lg py-md font-body-md">2 guests</td>
+<td class="px-lg py-md">
+<span class="bg-surface-variant px-sm py-[2px] rounded text-label-sm">Bar 3</span>
+</td>
+<td class="px-lg py-md">
+<span class="inline-flex items-center px-sm py-xs rounded-full bg-secondary/10 text-secondary font-label-sm">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary mr-xs"></span>
+                                        Seated
+                                    </span>
+</td>
+<td class="px-lg py-md text-right">
+<div class="flex items-center justify-end gap-xs opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="p-xs text-on-surface-variant hover:bg-surface-variant rounded transition-colors"><span class="material-symbols-outlined text-[20px]">more_vert</span></button>
+</div>
+</td>
+</tr>
+<!-- Row 4 -->
+<tr class="hover:bg-surface-bright transition-colors group">
+<td class="px-lg py-md font-body-sm text-outline">#RES-9424</td>
+<td class="px-lg py-md">
+<div class="flex flex-col">
+<span class="font-body-md font-semibold text-on-surface">Arthur P.</span>
+<span class="text-[11px] text-outline">VVIP</span>
+</div>
+</td>
+<td class="px-lg py-md">
+<div class="flex flex-col">
+<span class="font-body-md">Today, Nov 20</span>
+<span class="font-label-sm text-outline">9:00 PM</span>
+</div>
+</td>
+<td class="px-lg py-md font-body-md">6 guests</td>
+<td class="px-lg py-md">
+<span class="bg-surface-variant px-sm py-[2px] rounded text-label-sm">Booth 1</span>
+</td>
+<td class="px-lg py-md">
+<span class="inline-flex items-center px-sm py-xs rounded-full bg-[#FFB000]/10 text-[#FFB000] font-label-sm">
+<span class="w-1.5 h-1.5 rounded-full bg-[#FFB000] mr-xs"></span>
+                                        Pending
+                                    </span>
+</td>
+<td class="px-lg py-md text-right">
+<div class="flex items-center justify-end gap-xs opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="p-xs text-primary hover:bg-primary/10 rounded transition-colors"><span class="material-symbols-outlined text-[20px]">check_circle</span></button>
+<button class="p-xs text-error hover:bg-error/10 rounded transition-colors"><span class="material-symbols-outlined text-[20px]">cancel</span></button>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Pagination -->
+<div class="px-lg py-md flex items-center justify-between border-t border-outline-variant/20 bg-surface-container-low">
+<span class="font-body-sm text-on-surface-variant">Showing 1 to 10 of 42 entries</span>
+<div class="flex items-center gap-sm">
+<button class="p-xs rounded-md hover:bg-surface-variant transition-colors disabled:opacity-30" disabled="">
+<span class="material-symbols-outlined">chevron_left</span>
+</button>
+<div class="flex items-center gap-xs">
+<button class="w-8 h-8 rounded-md bg-primary text-on-primary font-label-md">1</button>
+<button class="w-8 h-8 rounded-md hover:bg-surface-variant text-on-surface-variant font-label-md">2</button>
+<button class="w-8 h-8 rounded-md hover:bg-surface-variant text-on-surface-variant font-label-md">3</button>
+<span class="px-xs text-outline">...</span>
+<button class="w-8 h-8 rounded-md hover:bg-surface-variant text-on-surface-variant font-label-md">5</button>
+</div>
+<button class="p-xs rounded-md hover:bg-surface-variant transition-colors">
+<span class="material-symbols-outlined">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- BottomNavBar (Mobile Only) -->
+<nav class="fixed bottom-0 left-0 w-full glass bg-surface/90 border-t border-outline-variant/10 flex justify-around items-center py-sm px-md md:hidden z-50">
+<a class="flex flex-col items-center justify-center text-on-surface-variant/70 active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined">login</span>
+<span class="font-label-sm text-[11px]">Arriving Now</span>
+</a>
+<a class="flex flex-col items-center justify-center text-primary active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">grid_view</span>
+<span class="font-label-sm text-[11px]">Floor</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant/70 active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined">timer</span>
+<span class="font-label-sm text-[11px]">Waitlist</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant/70 active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined">menu</span>
+<span class="font-label-sm text-[11px]">More</span>
+</a>
+</nav>
+<!-- Floating Action Button (Only for relevant contexts) -->
+<button class="fixed right-lg bottom-[88px] md:bottom-lg w-14 h-14 bg-primary text-on-primary rounded-full shadow-lg flex items-center justify-center active:scale-90 transition-all z-40 group">
+<span class="material-symbols-outlined">add</span>
+<div class="absolute right-16 bg-inverse-surface text-inverse-on-surface px-md py-xs rounded text-body-sm whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">New Reservation</div>
+</button>
+<script>
+        // Micro-interactions for table rows
+        document.querySelectorAll('tr').forEach(row => {
+            row.addEventListener('click', (e) => {
+                if (e.target.closest('button')) return;
+                // Add select logic if needed
+                console.log('Row clicked');
+            });
+        });
+
+        // Search bar interaction
+        const searchInput = document.querySelector('input[type="text"]');
+        searchInput.addEventListener('focus', () => {
+            searchInput.parentElement.classList.add('ring-2', 'ring-primary/20');
+        });
+        searchInput.addEventListener('blur', () => {
+            searchInput.parentElement.classList.remove('ring-2', 'ring-primary/20');
+        });
+    </script>
+</body></html>

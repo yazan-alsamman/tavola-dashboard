@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Tavla - Restaurant Management Dashboard</title>
+<!-- Fonts & Icons -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "tertiary-container": "#005b51",
+                    "inverse-primary": "#d1bcff",
+                    "surface-container-low": "#f5f3f3",
+                    "tertiary": "#00413a",
+                    "outline": "#7b7484",
+                    "surface-variant": "#e3e2e2",
+                    "on-background": "#1b1c1c",
+                    "on-error-container": "#93000a",
+                    "on-secondary-fixed-variant": "#4d4450",
+                    "secondary": "#655b68",
+                    "on-tertiary": "#ffffff",
+                    "surface-dim": "#dbdad9",
+                    "surface-tint": "#6c45c0",
+                    "on-primary-fixed": "#24005b",
+                    "on-secondary-fixed": "#201924",
+                    "primary": "#461599",
+                    "on-primary-fixed-variant": "#5429a7",
+                    "primary-fixed": "#eaddff",
+                    "on-tertiary-container": "#6dd4c4",
+                    "primary-fixed-dim": "#d1bcff",
+                    "error-container": "#ffdad6",
+                    "on-tertiary-fixed": "#00201c",
+                    "tertiary-fixed-dim": "#70d8c8",
+                    "on-secondary-container": "#6b616e",
+                    "on-tertiary-fixed-variant": "#005048",
+                    "on-primary-container": "#ceb8ff",
+                    "inverse-on-surface": "#f2f0f0",
+                    "background": "#fbf9f9",
+                    "primary-container": "#5e35b1",
+                    "tertiary-fixed": "#8df5e4",
+                    "on-primary": "#ffffff",
+                    "surface": "#fbf9f9",
+                    "error": "#ba1a1a",
+                    "surface-container-lowest": "#ffffff",
+                    "surface-container": "#efeded",
+                    "secondary-container": "#ecdeee",
+                    "on-secondary": "#ffffff",
+                    "on-surface-variant": "#494453",
+                    "secondary-fixed": "#ecdeee",
+                    "surface-container-highest": "#e3e2e2",
+                    "on-surface": "#1b1c1c",
+                    "secondary-fixed-dim": "#cfc2d2",
+                    "inverse-surface": "#303031",
+                    "outline-variant": "#cbc3d5",
+                    "surface-container-high": "#e9e8e7",
+                    "surface-bright": "#fbf9f9",
+                    "on-error": "#ffffff"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "xl": "32px",
+                    "sm": "8px",
+                    "md": "16px",
+                    "base": "4px",
+                    "lg": "24px",
+                    "container-margin": "24px",
+                    "gutter": "16px",
+                    "xs": "4px"
+            },
+            "fontFamily": {
+                    "body-sm": ["Inter"],
+                    "body-md": ["Inter"],
+                    "headline-md": ["Inter"],
+                    "headline-lg": ["Inter"],
+                    "body-lg": ["Inter"],
+                    "label-md": ["Inter"],
+                    "label-sm": ["Inter"],
+                    "display": ["Inter"]
+            },
+            "fontSize": {
+                    "body-sm": ["13px", {"lineHeight": "18px", "fontWeight": "400"}],
+                    "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "headline-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "headline-lg": ["28px", {"lineHeight": "36px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                    "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                    "label-sm": ["11px", {"lineHeight": "14px", "fontWeight": "500"}],
+                    "display": ["36px", {"lineHeight": "44px", "letterSpacing": "-0.02em", "fontWeight": "700"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; }
+        .glass { backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .fill-icon { font-variation-settings: 'FILL' 1; }
+    </style>
+</head>
+<body class="bg-background text-on-background min-h-screen">
+<!-- Global SideNavBar (Visible on Desktop) -->
+<aside class="hidden md:flex fixed left-0 top-0 h-full w-[260px] z-50 flex-col py-lg border-r border-outline-variant/30 bg-surface dark:bg-surface-container shadow-lg">
+<div class="px-lg mb-xl">
+<h1 class="font-display text-headline-lg text-primary">Tavla</h1>
+</div>
+<div class="flex flex-col gap-xs flex-1 overflow-y-auto px-sm">
+<!-- Active State Logic: Dashboard is current -->
+<a class="flex items-center gap-md px-md py-sm text-primary dark:text-inverse-primary border-l-4 border-primary dark:border-inverse-primary bg-primary-container/10 hover:bg-surface-container-high transition-all duration-200 translate-x-1" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-label-md text-label-md">Dashboard</span>
+</a>
+<!-- Inactive States -->
+<a class="flex items-center gap-md px-md py-sm text-on-surface-variant dark:text-outline hover:bg-surface-container-high transition-all duration-200" href="#">
+<span class="material-symbols-outlined">event</span>
+<span class="font-label-md text-label-md">Reservations</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm text-on-surface-variant dark:text-outline hover:bg-surface-container-high transition-all duration-200" href="#">
+<span class="material-symbols-outlined">layers</span>
+<span class="font-label-md text-label-md">Floor Plan</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm text-on-surface-variant dark:text-outline hover:bg-surface-container-high transition-all duration-200" href="#">
+<span class="material-symbols-outlined">hourglass_empty</span>
+<span class="font-label-md text-label-md">Waitlist</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm text-on-surface-variant dark:text-outline hover:bg-surface-container-high transition-all duration-200" href="#">
+<span class="material-symbols-outlined">group</span>
+<span class="font-label-md text-label-md">Customers</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm text-on-surface-variant dark:text-outline hover:bg-surface-container-high transition-all duration-200" href="#">
+<span class="material-symbols-outlined">restaurant</span>
+<span class="font-label-md text-label-md">Tables</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm text-on-surface-variant dark:text-outline hover:bg-surface-container-high transition-all duration-200" href="#">
+<span class="material-symbols-outlined">badge</span>
+<span class="font-label-md text-label-md">Staff</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm text-on-surface-variant dark:text-outline hover:bg-surface-container-high transition-all duration-200" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-label-md text-label-md">Settings</span>
+</a>
+</div>
+<div class="mt-auto px-sm pt-lg border-t border-outline-variant/20">
+<div class="flex items-center gap-md px-md mb-lg">
+<img class="w-10 h-10 rounded-full object-cover" data-alt="Close-up professional portrait of Sarah Jenkins, a friendly restaurant receptionist with a warm smile, wearing a modern professional uniform. Soft studio lighting in a high-end restaurant foyer background with blurred warm bokeh. Cinematic and polished modern hospitality aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCgTkIhQa8lmN7P94NYd0z6pZmSxHR7CC7tKLJC6GIA2qohDjnpKNM9UI0GyHT7DMDIFfuY3X4bhN5XH9SptWwk8SU3u8xuveCY8ueRQaYGUDpTe-dbCn6NDGrPUHkrJOGpsdJzBYeZzhjzn1EAFrbNY7YB0ryOFt67bwGwfO0A5hoBbz5BawE4k5TRwcGxreeef46NvGlrsTiAWzb0aRmg57H8jjrObwvRx8mZRGN3c78XG_eGSWAxTg"/>
+<div class="flex flex-col">
+<span class="font-headline-md text-body-md font-bold">Sarah Jenkins</span>
+<span class="font-body-sm text-label-sm text-on-surface-variant">Receptionist</span>
+</div>
+</div>
+<a class="flex items-center gap-md px-md py-sm text-on-surface-variant hover:bg-surface-container-high transition-all duration-200" href="#">
+<span class="material-symbols-outlined">logout</span>
+<span class="font-label-md text-label-md">Logout</span>
+</a>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="md:ml-[260px] min-h-screen pb-20 md:pb-0">
+<!-- TopAppBar -->
+<header class="sticky top-0 z-40 w-full h-16 flex justify-between items-center px-lg glass bg-surface/80 shadow-sm">
+<div class="flex items-center gap-lg">
+<div class="md:hidden font-display text-headline-md text-primary font-extrabold tracking-tight">Tavla</div>
+<div class="hidden md:flex items-center bg-surface-variant/50 rounded-full px-md py-1.5 w-64">
+<span class="material-symbols-outlined text-outline text-lg">search</span>
+<input class="bg-transparent border-none focus:ring-0 text-body-sm w-full ml-sm" placeholder="Search reservations..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-md">
+<div class="hidden lg:flex items-center gap-xs px-md py-1.5 bg-secondary-container/30 rounded-full">
+<span class="material-symbols-outlined text-primary text-sm">location_on</span>
+<span class="font-label-md text-primary">Old City</span>
+</div>
+<button class="p-2 hover:bg-surface-variant/50 rounded-full transition-colors duration-200">
+<span class="material-symbols-outlined">language</span>
+</button>
+<button class="p-2 hover:bg-surface-variant/50 rounded-full transition-colors duration-200">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="p-2 hover:bg-surface-variant/50 rounded-full transition-colors duration-200">
+<span class="material-symbols-outlined">dark_mode</span>
+</button>
+<div class="w-8 h-8 rounded-full overflow-hidden ml-sm">
+<img class="w-full h-full object-cover" data-alt="A small circular avatar of a professional restaurant manager in a white chef coat, positioned against a minimalist light grey background. Clean and sharp professional headshot for a high-end management interface." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDvBW_JSAraoajCQkceDzwJOwBrKOntmJCUH-kqfLgUqubRZT4effEi6pZeb2zhKap_B8fiLkPIK3mH1GXoexLLg9j3k38-cEPA7lYoI2z6a9elTr_-JIuZvREBWk5eNYJ1SH35ZoUchcNPadh66PLk_MFCwWNsmc9WnJ2fy3TcnU4twGDvVVY4prEBrzyIqQe2R6Kxt0-6e9p1_jBbbFoUDB1hnNzXO_nN8TN1IaZblVMgrm_cSKNlrg"/>
+</div>
+</div>
+</header>
+<div class="p-md md:p-lg space-y-lg">
+<!-- Header Section -->
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-md">
+<div>
+<h2 class="font-headline-lg text-headline-lg text-on-surface">Evening Service Dashboard</h2>
+<p class="font-body-md text-on-surface-variant">Welcome back, Sarah. Here's what's happening at Narange tonight.</p>
+</div>
+<div class="flex gap-sm">
+<button class="bg-secondary-container text-primary font-label-md px-lg py-sm rounded-lg hover:opacity-80 transition-all flex items-center gap-sm">
+<span class="material-symbols-outlined">add</span> New Booking
+                    </button>
+</div>
+</div>
+<!-- Statistics Overview - Bento Grid Style -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-md">
+<div class="bg-surface-container-lowest p-lg rounded-xl shadow-sm border border-outline-variant/30 flex flex-col justify-between group hover:border-primary/30 transition-colors">
+<div class="flex justify-between items-start">
+<div class="p-sm bg-primary-container/10 rounded-lg text-primary">
+<span class="material-symbols-outlined">calendar_today</span>
+</div>
+<span class="text-tertiary font-label-sm">+12% vs last Thu</span>
+</div>
+<div class="mt-md">
+<p class="font-label-md text-on-surface-variant uppercase tracking-wider">Total Reservations</p>
+<h3 class="font-display text-display text-primary mt-xs">42</h3>
+</div>
+</div>
+<div class="bg-surface-container-lowest p-lg rounded-xl shadow-sm border border-outline-variant/30 flex flex-col justify-between hover:border-primary/30 transition-colors">
+<div class="flex justify-between items-start">
+<div class="p-sm bg-tertiary-container/10 rounded-lg text-tertiary">
+<span class="material-symbols-outlined">group</span>
+</div>
+<span class="text-on-surface-variant font-label-sm">Peak: 8:00 PM</span>
+</div>
+<div class="mt-md">
+<p class="font-label-md text-on-surface-variant uppercase tracking-wider">Current Occupancy</p>
+<h3 class="font-display text-display text-primary mt-xs">78%</h3>
+</div>
+</div>
+<div class="bg-surface-container-lowest p-lg rounded-xl shadow-sm border border-outline-variant/30 flex flex-col justify-between hover:border-primary/30 transition-colors">
+<div class="flex justify-between items-start">
+<div class="p-sm bg-secondary-container/40 rounded-lg text-secondary">
+<span class="material-symbols-outlined">login</span>
+</div>
+<span class="text-secondary font-label-sm">Next 30 mins</span>
+</div>
+<div class="mt-md">
+<p class="font-label-md text-on-surface-variant uppercase tracking-wider">Arriving Soon</p>
+<h3 class="font-display text-display text-primary mt-xs">6</h3>
+</div>
+</div>
+<div class="bg-surface-container-lowest p-lg rounded-xl shadow-sm border border-outline-variant/30 flex flex-col justify-between hover:border-primary/30 transition-colors">
+<div class="flex justify-between items-start">
+<div class="p-sm bg-error-container/40 rounded-lg text-error">
+<span class="material-symbols-outlined">pending_actions</span>
+</div>
+<span class="bg-error text-white text-[10px] px-1.5 rounded-full">New</span>
+</div>
+<div class="mt-md">
+<p class="font-label-md text-on-surface-variant uppercase tracking-wider">Pending Approvals</p>
+<h3 class="font-display text-display text-primary mt-xs">4</h3>
+</div>
+</div>
+</div>
+<!-- Main Layout Grid -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-lg">
+<!-- Left Column: Arrival & Approvals (7/12) -->
+<div class="lg:col-span-7 space-y-lg">
+<!-- Arriving Soon List -->
+<div class="bg-surface-container-lowest rounded-xl shadow-sm border border-outline-variant/30 overflow-hidden">
+<div class="px-lg py-md border-b border-outline-variant/30 flex justify-between items-center bg-surface-container-low/30">
+<h3 class="font-headline-md text-headline-md text-on-surface flex items-center gap-sm">
+<span class="material-symbols-outlined text-primary">directions_walk</span> Arriving Soon
+                            </h3>
+<button class="text-primary font-label-md hover:underline">View All</button>
+</div>
+<div class="divide-y divide-outline-variant/20">
+<div class="px-lg py-sm flex items-center justify-between hover:bg-surface-variant/20 transition-colors">
+<div class="flex items-center gap-md">
+<div class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">JD</div>
+<div>
+<p class="font-body-md font-bold text-on-surface">Julianne Devis</p>
+<p class="font-label-sm text-on-surface-variant">VIP Guest • Regular</p>
+</div>
+</div>
+<div class="flex items-center gap-xl text-right">
+<div>
+<p class="font-label-sm text-on-surface-variant uppercase">Time</p>
+<p class="font-body-md font-bold text-primary">19:15</p>
+</div>
+<div>
+<p class="font-label-sm text-on-surface-variant uppercase">Party</p>
+<p class="font-body-md font-bold">4 Guests</p>
+</div>
+<div class="bg-primary/5 text-primary text-[11px] px-3 py-1 rounded-full border border-primary/20">Table 12</div>
+</div>
+</div>
+<div class="px-lg py-sm flex items-center justify-between hover:bg-surface-variant/20 transition-colors">
+<div class="flex items-center gap-md">
+<div class="w-10 h-10 rounded-full bg-secondary-container/40 flex items-center justify-center text-secondary font-bold">MK</div>
+<div>
+<p class="font-body-md font-bold text-on-surface">Mark Kalu</p>
+<p class="font-label-sm text-on-surface-variant">First Visit</p>
+</div>
+</div>
+<div class="flex items-center gap-xl text-right">
+<div>
+<p class="font-label-sm text-on-surface-variant uppercase">Time</p>
+<p class="font-body-md font-bold text-primary">19:30</p>
+</div>
+<div>
+<p class="font-label-sm text-on-surface-variant uppercase">Party</p>
+<p class="font-body-md font-bold">2 Guests</p>
+</div>
+<div class="bg-surface-variant text-on-surface-variant text-[11px] px-3 py-1 rounded-full">Assign Table</div>
+</div>
+</div>
+<div class="px-lg py-sm flex items-center justify-between hover:bg-surface-variant/20 transition-colors">
+<div class="flex items-center gap-md">
+<div class="w-10 h-10 rounded-full bg-tertiary-container/10 flex items-center justify-center text-tertiary font-bold">SL</div>
+<div>
+<p class="font-body-md font-bold text-on-surface">Sarah Lane</p>
+<p class="font-label-sm text-on-surface-variant">Window Seat Pref.</p>
+</div>
+</div>
+<div class="flex items-center gap-xl text-right">
+<div>
+<p class="font-label-sm text-on-surface-variant uppercase">Time</p>
+<p class="font-body-md font-bold text-primary">19:45</p>
+</div>
+<div>
+<p class="font-label-sm text-on-surface-variant uppercase">Party</p>
+<p class="font-body-md font-bold">5 Guests</p>
+</div>
+<div class="bg-primary/5 text-primary text-[11px] px-3 py-1 rounded-full border border-primary/20">Table 22</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Pending Approval Section -->
+<div class="bg-surface-container-lowest rounded-xl shadow-sm border border-outline-variant/30 overflow-hidden">
+<div class="px-lg py-md border-b border-outline-variant/30 flex justify-between items-center bg-surface-container-low/30">
+<h3 class="font-headline-md text-headline-md text-on-surface flex items-center gap-sm">
+<span class="material-symbols-outlined text-error">notifications_active</span> Pending Mobile Requests
+                            </h3>
+</div>
+<div class="p-md space-y-md">
+<div class="p-md rounded-lg border border-outline-variant/20 bg-white shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-md group hover:border-primary/20 transition-all">
+<div class="flex items-center gap-md">
+<div class="w-12 h-12 rounded-lg bg-surface-variant/30 flex flex-col items-center justify-center">
+<span class="font-bold text-primary">24</span>
+<span class="text-[9px] uppercase">May</span>
+</div>
+<div>
+<div class="flex items-center gap-sm">
+<span class="font-body-md font-bold">Robert Chen</span>
+<span class="bg-amber-100 text-amber-700 text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-tighter">App Request</span>
+</div>
+<p class="font-body-sm text-on-surface-variant">8:30 PM • 6 Guests • Special: Anniversary</p>
+</div>
+</div>
+<div class="flex gap-sm">
+<button class="flex-1 md:flex-none border border-outline-variant/50 text-on-surface-variant font-label-md px-md py-sm rounded hover:bg-surface-variant/30 transition-all">Reject</button>
+<button class="flex-1 md:flex-none bg-primary text-white font-label-md px-md py-sm rounded hover:opacity-90 transition-all shadow-md shadow-primary/20">Confirm Booking</button>
+</div>
+</div>
+<div class="p-md rounded-lg border border-outline-variant/20 bg-white shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-md group hover:border-primary/20 transition-all opacity-80 hover:opacity-100">
+<div class="flex items-center gap-md">
+<div class="w-12 h-12 rounded-lg bg-surface-variant/30 flex flex-col items-center justify-center">
+<span class="font-bold text-primary">25</span>
+<span class="text-[9px] uppercase">May</span>
+</div>
+<div>
+<span class="font-body-md font-bold">Elena Gilbert</span>
+<p class="font-body-sm text-on-surface-variant">1:00 PM • 2 Guests • Brunch</p>
+</div>
+</div>
+<div class="flex gap-sm">
+<button class="flex-1 md:flex-none border border-outline-variant/50 text-on-surface-variant font-label-md px-md py-sm rounded hover:bg-surface-variant/30 transition-all">Reject</button>
+<button class="flex-1 md:flex-none bg-primary text-white font-label-md px-md py-sm rounded hover:opacity-90 transition-all shadow-md shadow-primary/20">Confirm Booking</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Right Column: Floor at a Glance & Occasions (5/12) -->
+<div class="lg:col-span-5 space-y-lg">
+<!-- Floor at a Glance (Mini Map) -->
+<div class="bg-surface-container-lowest rounded-xl shadow-sm border border-outline-variant/30 overflow-hidden">
+<div class="px-lg py-md border-b border-outline-variant/30 flex justify-between items-center bg-surface-container-low/30">
+<h3 class="font-headline-md text-headline-md text-on-surface flex items-center gap-sm">
+<span class="material-symbols-outlined text-primary">grid_view</span> Floor at a Glance
+                            </h3>
+</div>
+<div class="p-lg">
+<div class="grid grid-cols-4 gap-sm">
+<!-- Occupied Table (Deep Plum) -->
+<div class="aspect-square bg-primary rounded-lg shadow-sm flex flex-col items-center justify-center text-white relative group cursor-pointer">
+<span class="text-[10px] font-bold">T1</span>
+<span class="material-symbols-outlined text-sm fill-icon">person</span>
+<div class="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg"></div>
+</div>
+<!-- Occupied Table -->
+<div class="aspect-square bg-primary rounded-lg shadow-sm flex flex-col items-center justify-center text-white cursor-pointer">
+<span class="text-[10px] font-bold">T2</span>
+<span class="material-symbols-outlined text-sm fill-icon">person</span>
+</div>
+<!-- Available Table -->
+<div class="aspect-square border-2 border-outline-variant/30 rounded-lg flex flex-col items-center justify-center text-outline cursor-pointer hover:border-primary/50 transition-colors">
+<span class="text-[10px] font-bold">T3</span>
+<span class="material-symbols-outlined text-sm">event_seat</span>
+</div>
+<!-- Occupied -->
+<div class="aspect-square bg-primary rounded-lg shadow-sm flex flex-col items-center justify-center text-white cursor-pointer">
+<span class="text-[10px] font-bold">T4</span>
+<span class="material-symbols-outlined text-sm fill-icon">person</span>
+</div>
+<!-- Available -->
+<div class="aspect-square border-2 border-outline-variant/30 rounded-lg flex flex-col items-center justify-center text-outline cursor-pointer hover:border-primary/50 transition-colors">
+<span class="text-[10px] font-bold">T5</span>
+<span class="material-symbols-outlined text-sm">event_seat</span>
+</div>
+<!-- Selected/Current Focus (Plum Stroke) -->
+<div class="aspect-square border-2 border-primary ring-2 ring-primary/20 rounded-lg bg-primary/5 flex flex-col items-center justify-center text-primary cursor-pointer">
+<span class="text-[10px] font-bold">T6</span>
+<span class="material-symbols-outlined text-sm">event_seat</span>
+</div>
+<!-- Occupied -->
+<div class="aspect-square bg-primary rounded-lg shadow-sm flex flex-col items-center justify-center text-white cursor-pointer">
+<span class="text-[10px] font-bold">T7</span>
+<span class="material-symbols-outlined text-sm fill-icon">person</span>
+</div>
+<!-- Available -->
+<div class="aspect-square border-2 border-outline-variant/30 rounded-lg flex flex-col items-center justify-center text-outline cursor-pointer hover:border-primary/50 transition-colors">
+<span class="text-[10px] font-bold">T8</span>
+<span class="material-symbols-outlined text-sm">event_seat</span>
+</div>
+</div>
+<div class="mt-lg flex justify-around border-t border-outline-variant/20 pt-md">
+<div class="flex items-center gap-sm">
+<div class="w-3 h-3 rounded-full bg-primary"></div>
+<span class="font-label-sm text-on-surface-variant">Occupied</span>
+</div>
+<div class="flex items-center gap-sm">
+<div class="w-3 h-3 rounded-full border border-outline"></div>
+<span class="font-label-sm text-on-surface-variant">Available</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Today's Special Occasions -->
+<div class="bg-surface-container-lowest rounded-xl shadow-sm border border-outline-variant/30 overflow-hidden">
+<div class="px-lg py-md border-b border-outline-variant/30 flex justify-between items-center bg-surface-container-low/30">
+<h3 class="font-headline-md text-headline-md text-on-surface flex items-center gap-sm">
+<span class="material-symbols-outlined text-amber-500 fill-icon">cake</span> Special Occasions
+                            </h3>
+</div>
+<div class="p-lg space-y-md">
+<!-- Occasion Card -->
+<div class="flex items-start gap-md p-md bg-amber-50/50 border border-amber-200/50 rounded-xl relative overflow-hidden">
+<div class="absolute -right-4 -bottom-4 text-amber-200/20 rotate-12">
+<span class="material-symbols-outlined text-8xl">cake</span>
+</div>
+<div class="p-2 bg-amber-100 rounded-full text-amber-600">
+<span class="material-symbols-outlined">celebration</span>
+</div>
+<div class="flex-1">
+<div class="flex justify-between items-start">
+<span class="font-body-md font-bold text-on-surface">Thomas Wright</span>
+<span class="font-label-sm text-amber-700 bg-amber-100 px-2 py-0.5 rounded">Birthday</span>
+</div>
+<p class="font-body-sm text-on-surface-variant mt-1">Table 14 • 4 Guests</p>
+<div class="mt-sm flex items-center gap-sm">
+<span class="material-symbols-outlined text-sm text-amber-600">schedule</span>
+<span class="font-label-md font-bold text-amber-800">Cake Time: 21:00</span>
+</div>
+</div>
+</div>
+<!-- Occasion Card -->
+<div class="flex items-start gap-md p-md bg-purple-50/50 border border-purple-200/50 rounded-xl relative overflow-hidden">
+<div class="p-2 bg-purple-100 rounded-full text-purple-600">
+<span class="material-symbols-outlined">favorite</span>
+</div>
+<div class="flex-1">
+<div class="flex justify-between items-start">
+<span class="font-body-md font-bold text-on-surface">The Parkers</span>
+<span class="font-label-sm text-purple-700 bg-purple-100 px-2 py-0.5 rounded">Anniversary</span>
+</div>
+<p class="font-body-sm text-on-surface-variant mt-1">Table 2 • 2 Guests</p>
+<div class="mt-sm flex items-center gap-sm">
+<span class="material-symbols-outlined text-sm text-purple-600">restaurant</span>
+<span class="font-label-md font-bold text-purple-800">Complimentary Prosecco</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- BottomNavBar (Visible on Mobile) -->
+<nav class="md:hidden fixed bottom-0 left-0 w-full flex justify-around items-center py-sm px-md z-50 glass bg-surface/90 shadow-[0_-4px_20px_rgba(0,0,0,0.04)] rounded-t-xl">
+<a class="flex flex-col items-center justify-center text-primary dark:text-inverse-primary scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined fill-icon">login</span>
+<span class="font-label-sm text-[10px]">Arriving Now</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant/70" href="#">
+<span class="material-symbols-outlined">grid_view</span>
+<span class="font-label-sm text-[10px]">Floor</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant/70" href="#">
+<span class="material-symbols-outlined">timer</span>
+<span class="font-label-sm text-[10px]">Waitlist</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant/70" href="#">
+<span class="material-symbols-outlined">menu</span>
+<span class="font-label-sm text-[10px]">More</span>
+</a>
+</nav>
+<!-- FAB (Contextual for Dashboard) -->
+<button class="fixed bottom-24 right-6 md:bottom-10 md:right-10 w-14 h-14 bg-primary text-white rounded-full shadow-2xl flex items-center justify-center group hover:scale-110 active:scale-95 transition-all z-40">
+<span class="material-symbols-outlined text-2xl group-hover:rotate-90 transition-transform">add</span>
+</button>
+<script>
+        // Micro-interactions for table map
+        document.querySelectorAll('.aspect-square').forEach(table => {
+            table.addEventListener('click', () => {
+                // Clear existing focus
+                document.querySelectorAll('.aspect-square').forEach(t => {
+                    t.classList.remove('ring-2', 'ring-primary/20', 'bg-primary/5', 'border-primary');
+                    if (!t.classList.contains('bg-primary')) {
+                        t.classList.add('border-outline-variant/30');
+                        t.classList.remove('text-primary');
+                        t.classList.add('text-outline');
+                    }
+                });
+                
+                // Set new focus if not occupied
+                if (!table.classList.contains('bg-primary')) {
+                    table.classList.remove('border-outline-variant/30');
+                    table.classList.add('border-primary', 'ring-2', 'ring-primary/20', 'bg-primary/5', 'text-primary');
+                    table.classList.remove('text-outline');
+                }
+            });
+        });
+
+        // Simple real-time clock indicator logic (simulated)
+        console.log('Tavla Dashboard Loaded. Real-time updates active.');
+    </script>
+</body></html>
