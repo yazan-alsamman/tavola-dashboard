@@ -26,16 +26,6 @@ export type OccasionType =
 
 export type StaffRole = 'owner' | 'manager' | 'receptionist' | 'viewer'
 
-export interface User {
-  id: string
-  name: string
-  email: string
-  role: StaffRole
-  restaurantId: string
-  branchId: string
-  initials: string
-}
-
 export type AdditionalService =
   | 'cake'
   | 'flowers'

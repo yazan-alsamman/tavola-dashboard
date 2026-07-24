@@ -1,7 +1,7 @@
-import { Link, useLocation } from 'react-router-dom'
-import { Outlet } from 'react-router-dom'
+import { Link, useLocation, Outlet } from 'react-router-dom'
 import { Sidebar } from './Sidebar'
 import { Header } from './Header'
+import { ScopeGate } from './ScopeGate'
 import { useSidebar } from '@/context/SidebarContext'
 import { useLocale } from '@/context/LocaleContext'
 import { cn } from '@/lib/utils'
@@ -25,7 +25,9 @@ export function DashboardLayout() {
       <div className={cn('transition-all duration-300', isCollapsed ? 'lg:ms-[80px]' : 'lg:ms-[260px]')}>
         <Header />
         <main className="p-4 md:p-6 max-w-[1400px] mx-auto pb-24 md:pb-6">
-          <Outlet />
+          <ScopeGate>
+            <Outlet />
+          </ScopeGate>
         </main>
       </div>
 

@@ -4,6 +4,7 @@ import { useLocale } from '@/context/LocaleContext'
 import { useSidebar } from '@/context/SidebarContext'
 import { useAuth } from '@/context/AuthContext'
 import { useRestaurant } from '@/context/RestaurantContext'
+import { useRestaurantScope } from '@/context/RestaurantScopeContext'
 import { Num } from '@/components/ui/Num'
 import { MaterialIcon } from '@/components/ui/Icon'
 
@@ -36,6 +37,7 @@ export function Sidebar() {
   const { isOpen, isCollapsed, close } = useSidebar()
   const { user, logout } = useAuth()
   const { pendingCount, waitlist } = useRestaurant()
+  const { selectedRestaurant, status: scopeStatus } = useRestaurantScope()
 
   const badges: Partial<Record<NavKey, number>> = {
     reservations: pendingCount,
@@ -99,7 +101,19 @@ export function Sidebar() {
       >
         <div className={cn('px-6 mb-6 shrink-0', isCollapsed && 'px-2 text-center')}>
           {!isCollapsed ? (
-            <h1 className="text-headline-lg text-primary font-bold">Tavola</h1>
+            <>
+              <h1 className="text-headline-lg text-primary font-bold">Tavola</h1>
+              {scopeStatus === 'loading' && (
+                <p className="text-label-sm text-on-surface-variant mt-1 truncate">
+                  {t.scope.loading}
+                </p>
+              )}
+              {selectedRestaurant && (
+                <p className="text-label-sm text-on-surface-variant mt-1 truncate" title={selectedRestaurant.name}>
+                  {selectedRestaurant.name}
+                </p>
+              )}
+            </>
           ) : (
             <span className="text-headline-md text-primary font-bold">T</span>
           )}
@@ -118,13 +132,17 @@ export function Sidebar() {
                 {user.initials}
               </div>
               <div className="min-w-0">
-                <p className="text-body-md font-bold text-on-surface truncate">{user.name}</p>
-                <p className="text-label-sm text-on-surface-variant capitalize">{user.role}</p>
+                <p className="text-body-md font-bold text-on-surface truncate">{user.displayName}</p>
+                <p className="text-label-sm text-on-surface-variant">
+                  {user.organization?.role ?? user.actorType}
+                </p>
               </div>
             </div>
           )}
           <button
-            onClick={logout}
+            onClick={() => {
+              void logout()
+            }}
             className={cn(
               'flex items-center gap-3 w-full px-4 py-2.5 text-on-surface-variant hover:bg-surface-container-high transition-colors rounded-lg text-label-md',
               isCollapsed && 'justify-center',

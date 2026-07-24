@@ -68,6 +68,10 @@ interface ConfirmDialogProps {
   confirmLabel?: string
   cancelLabel?: string
   variant?: 'danger' | 'primary'
+  /** When true, confirm is disabled and cancel is blocked. */
+  busy?: boolean
+  /** Defaults true. Set false for async confirm flows that close after success. */
+  closeOnConfirm?: boolean
 }
 
 export function ConfirmDialog({
@@ -79,21 +83,30 @@ export function ConfirmDialog({
   confirmLabel = 'Confirm',
   cancelLabel = 'Cancel',
   variant = 'primary',
+  busy = false,
+  closeOnConfirm = true,
 }: ConfirmDialogProps) {
   return (
-    <Modal open={open} onClose={onClose} title={title} size="sm">
+    <Modal open={open} onClose={busy ? () => undefined : onClose} title={title} size="sm">
       <p className="text-body-sm text-on-surface-variant mb-6">{message}</p>
       <div className="flex gap-3 justify-end">
         <button
+          type="button"
           onClick={onClose}
-          className="px-4 py-2 rounded-lg text-label-md text-on-surface-variant hover:bg-surface-container-high transition-colors"
+          disabled={busy}
+          className="px-4 py-2 rounded-lg text-label-md text-on-surface-variant hover:bg-surface-container-high transition-colors disabled:opacity-50"
         >
           {cancelLabel}
         </button>
         <button
-          onClick={() => { onConfirm(); onClose() }}
+          type="button"
+          disabled={busy}
+          onClick={() => {
+            onConfirm()
+            if (closeOnConfirm) onClose()
+          }}
           className={cn(
-            'px-4 py-2 rounded-lg text-label-md transition-colors',
+            'px-4 py-2 rounded-lg text-label-md transition-colors disabled:opacity-50',
             variant === 'danger'
               ? 'bg-error text-on-error hover:opacity-90'
               : 'bg-primary text-on-primary hover:bg-primary-container hover:text-on-primary-container',

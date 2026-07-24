@@ -3,8 +3,10 @@ import { ThemeProvider } from '@/context/ThemeContext'
 import { LocaleProvider } from '@/context/LocaleContext'
 import { SidebarProvider } from '@/context/SidebarContext'
 import { AuthProvider } from '@/context/AuthContext'
+import { RestaurantScopeProvider } from '@/context/RestaurantScopeContext'
 import { RestaurantProvider } from '@/context/RestaurantContext'
 import { ToastProvider } from '@/context/ToastContext'
+import { AppQueryProvider } from '@/components/providers/AppQueryProvider'
 import { ProtectedRoute, PublicRoute } from '@/components/auth/ProtectedRoute'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { LoginPage } from '@/pages/Login'
@@ -29,38 +31,42 @@ export default function App() {
     <ThemeProvider>
       <LocaleProvider>
         <AuthProvider>
-          <RestaurantProvider>
-            <ToastProvider>
-              <SidebarProvider>
-                <BrowserRouter>
-                  <Routes>
-                    <Route element={<PublicRoute />}>
-                      <Route path="/login" element={<LoginPage />} />
-                    </Route>
-                    <Route element={<ProtectedRoute />}>
-                      <Route element={<DashboardLayout />}>
-                        <Route index element={<DashboardPage />} />
-                        <Route path="reservations" element={<ReservationsPage />} />
-                        <Route path="reservations/:id" element={<ReservationDetailPage />} />
-                        <Route path="floor-plan" element={<FloorPlanPage />} />
-                        <Route path="tables" element={<TablesPage />} />
-                        <Route path="calendar" element={<CalendarPage />} />
-                        <Route path="customers" element={<CustomersPage />} />
-                        <Route path="waitlist" element={<WaitlistPage />} />
-                        <Route path="walk-in" element={<WalkInPage />} />
-                        <Route path="special-occasions" element={<SpecialOccasionsPage />} />
-                        <Route path="notifications" element={<NotificationsPage />} />
-                        <Route path="reports" element={<ReportsPage />} />
-                        <Route path="branches" element={<BranchesPage />} />
-                        <Route path="settings" element={<SettingsPage />} />
-                        <Route path="activity-logs" element={<ActivityLogsPage />} />
-                      </Route>
-                    </Route>
-                  </Routes>
-                </BrowserRouter>
-              </SidebarProvider>
-            </ToastProvider>
-          </RestaurantProvider>
+          <AppQueryProvider>
+            <RestaurantScopeProvider>
+              <RestaurantProvider>
+                <ToastProvider>
+                  <SidebarProvider>
+                    <BrowserRouter>
+                      <Routes>
+                        <Route element={<PublicRoute />}>
+                          <Route path="/login" element={<LoginPage />} />
+                        </Route>
+                        <Route element={<ProtectedRoute />}>
+                          <Route element={<DashboardLayout />}>
+                            <Route index element={<DashboardPage />} />
+                            <Route path="reservations" element={<ReservationsPage />} />
+                            <Route path="reservations/:id" element={<ReservationDetailPage />} />
+                            <Route path="floor-plan" element={<FloorPlanPage />} />
+                            <Route path="tables" element={<TablesPage />} />
+                            <Route path="calendar" element={<CalendarPage />} />
+                            <Route path="customers" element={<CustomersPage />} />
+                            <Route path="waitlist" element={<WaitlistPage />} />
+                            <Route path="walk-in" element={<WalkInPage />} />
+                            <Route path="special-occasions" element={<SpecialOccasionsPage />} />
+                            <Route path="notifications" element={<NotificationsPage />} />
+                            <Route path="reports" element={<ReportsPage />} />
+                            <Route path="branches" element={<BranchesPage />} />
+                            <Route path="settings" element={<SettingsPage />} />
+                            <Route path="activity-logs" element={<ActivityLogsPage />} />
+                          </Route>
+                        </Route>
+                      </Routes>
+                    </BrowserRouter>
+                  </SidebarProvider>
+                </ToastProvider>
+              </RestaurantProvider>
+            </RestaurantScopeProvider>
+          </AppQueryProvider>
         </AuthProvider>
       </LocaleProvider>
     </ThemeProvider>

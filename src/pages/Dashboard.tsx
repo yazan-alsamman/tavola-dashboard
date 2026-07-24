@@ -6,14 +6,16 @@ import { MaterialIcon } from '@/components/ui/Icon'
 import { FloorMapMini } from '@/components/floor/FloorMapSpatial'
 import { useLocale } from '@/context/LocaleContext'
 import { useRestaurant } from '@/context/RestaurantContext'
-import { useToast } from '@/context/ToastContext'
 import { useAuth } from '@/context/AuthContext'
 import { specialOccasions } from '@/data/mockData'
 import { formatTime } from '@/lib/utils'
 
+/**
+ * Dashboard operational metrics remain mock-backed (legacy RestaurantContext).
+ * Fake reservation lifecycle actions were removed — staff approve/check-in APIs are not live.
+ */
 export function DashboardPage() {
   const { t } = useLocale()
-  const { toast } = useToast()
   const { user } = useAuth()
   const {
     todayReservations,
@@ -22,26 +24,12 @@ export function DashboardPage() {
     pendingCount,
     waitlist,
     tables,
-    confirmReservation,
-    checkInReservation,
-    seatReservation,
   } = useRestaurant()
 
   const pending = todayReservations.filter((r) => r.status === 'pending')
   const occasions = specialOccasions.filter((o) =>
     todayReservations.some((r) => r.id === o.reservationId),
   )
-
-  const handleConfirm = (id: string, name: string) => {
-    confirmReservation(id)
-    toast('success', t.reservations.confirm, name)
-  }
-
-  const handleCheckIn = (id: string, name: string) => {
-    checkInReservation(id)
-    seatReservation(id)
-    toast('success', t.reservations.checkIn, name)
-  }
 
   const statCards = [
     { title: t.dashboard.todayReservations, value: stats.todayTotal, icon: 'calendar_today', hint: '+12%' },
@@ -56,7 +44,7 @@ export function DashboardPage() {
         <div>
           <h2 className="text-headline-lg text-on-surface">{t.ops.operationsTitle}</h2>
           <p className="text-body-md text-on-surface-variant mt-1">
-            {t.login.title}, {user?.name?.split(' ')[0] ?? ''}. {t.dashboard.subtitle}
+            {t.login.title}, {user?.displayName?.split(' ')[0] ?? ''}. {t.dashboard.subtitle}
           </p>
         </div>
         <div className="flex gap-2">
@@ -126,11 +114,7 @@ export function DashboardPage() {
                         <p className="text-label-sm text-on-surface-variant uppercase">{t.reservations.guests}</p>
                         <p className="text-body-md font-bold"><Num>{r.guestCount}</Num></p>
                       </div>
-                      {r.status === 'confirmed' && (
-                        <Button size="sm" onClick={() => handleCheckIn(r.id, r.customerName)}>
-                          <MaterialIcon name="how_to_reg" size={16} />
-                        </Button>
-                      )}
+                      <StatusBadge status={r.status} label={t.status[r.status]} />
                     </div>
                   </div>
                 ))
@@ -169,12 +153,9 @@ export function DashboardPage() {
                         </p>
                       </div>
                     </div>
-                    <div className="flex gap-2">
-                      <Button variant="outline" size="sm">{t.reservations.reject}</Button>
-                      <Button size="sm" onClick={() => handleConfirm(r.id, r.customerName)}>
-                        {t.reservations.confirm}
-                      </Button>
-                    </div>
+                    <Link to="/reservations" className="text-label-md text-primary font-semibold">
+                      {t.reservations.backendGap.actionsUnavailable}
+                    </Link>
                   </div>
                 ))
               )}

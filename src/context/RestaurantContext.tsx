@@ -12,7 +12,6 @@ import type {
   Table,
   WaitlistEntry,
   Notification,
-  ReservationStatus,
   TableStatus,
 } from '@/types'
 import {
@@ -53,13 +52,7 @@ interface RestaurantContextType {
   }
   getReservation: (id: string) => Reservation | undefined
   search: (query: string) => { reservations: Reservation[]; customers: { name: string; phone: string }[] }
-  updateReservationStatus: (id: string, status: ReservationStatus) => void
-  confirmReservation: (id: string) => void
-  checkInReservation: (id: string) => void
-  seatReservation: (id: string) => void
-  completeReservation: (id: string) => void
-  cancelReservation: (id: string) => void
-  reassignTable: (reservationId: string, tableId: string) => void
+  /** Legacy mock walk-in seating only — not the live reservations API. */
   registerWalkIn: (data: { name: string; phone: string; guestCount: number; tableId: string }) => void
   addToWaitlist: (data: { name: string; phone: string; guestCount: number }) => void
   removeFromWaitlist: (id: string) => void
@@ -168,58 +161,6 @@ export function RestaurantProvider({ children }: { children: ReactNode }) {
     },
     [reservations],
   )
-
-  const syncTableForReservation = useCallback(
-    (reservation: Reservation, prevStatus?: ReservationStatus) => {
-      setTables((prev) =>
-        prev.map((t) => {
-          if (t.id !== reservation.tableId) {
-            if (prevStatus && t.currentReservationId === reservation.id && ['completed', 'cancelled', 'no_show'].includes(reservation.status)) {
-              return { ...t, status: 'available' as TableStatus, currentReservationId: undefined }
-            }
-            return t
-          }
-          if (reservation.status === 'seated' || reservation.status === 'checked_in') {
-            return { ...t, status: 'occupied' as TableStatus, currentReservationId: reservation.id, nextReservationId: undefined }
-          }
-          if (reservation.status === 'confirmed' || reservation.status === 'pending') {
-            return { ...t, status: 'reserved' as TableStatus, nextReservationId: reservation.id }
-          }
-          if (['completed', 'cancelled', 'no_show'].includes(reservation.status)) {
-            return { ...t, status: 'available' as TableStatus, currentReservationId: undefined, nextReservationId: undefined }
-          }
-          return t
-        }),
-      )
-    },
-    [],
-  )
-
-  const updateReservationStatus = useCallback(
-    (id: string, status: ReservationStatus) => {
-      setReservations((prev) => {
-        const updated = prev.map((r) => (r.id === id ? { ...r, status } : r))
-        const res = updated.find((r) => r.id === id)
-        if (res) syncTableForReservation(res)
-        return updated
-      })
-    },
-    [syncTableForReservation],
-  )
-
-  const confirmReservation = useCallback((id: string) => updateReservationStatus(id, 'confirmed'), [updateReservationStatus])
-  const checkInReservation = useCallback((id: string) => updateReservationStatus(id, 'checked_in'), [updateReservationStatus])
-  const seatReservation = useCallback((id: string) => updateReservationStatus(id, 'seated'), [updateReservationStatus])
-  const completeReservation = useCallback((id: string) => updateReservationStatus(id, 'completed'), [updateReservationStatus])
-  const cancelReservation = useCallback((id: string) => updateReservationStatus(id, 'cancelled'), [updateReservationStatus])
-
-  const reassignTable = useCallback((reservationId: string, tableId: string) => {
-    const table = tables.find((t) => t.id === tableId)
-    if (!table) return
-    setReservations((prev) =>
-      prev.map((r) => (r.id === reservationId ? { ...r, tableId, tableName: table.name } : r)),
-    )
-  }, [tables])
 
   const registerWalkIn = useCallback(
     (data: { name: string; phone: string; guestCount: number; tableId: string }) => {
@@ -342,13 +283,6 @@ export function RestaurantProvider({ children }: { children: ReactNode }) {
         stats,
         getReservation,
         search,
-        updateReservationStatus,
-        confirmReservation,
-        checkInReservation,
-        seatReservation,
-        completeReservation,
-        cancelReservation,
-        reassignTable,
         registerWalkIn,
         addToWaitlist,
         removeFromWaitlist,

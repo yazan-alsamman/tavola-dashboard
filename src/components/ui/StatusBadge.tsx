@@ -1,5 +1,6 @@
 import { cn } from '@/lib/utils'
 import type { ReservationStatus, TableStatus } from '@/types'
+import type { TableStatusDto } from '@/api/tables'
 
 const reservationStatusStyles: Record<ReservationStatus, string> = {
   pending: 'bg-warning/10 text-warning',
@@ -11,25 +12,39 @@ const reservationStatusStyles: Record<ReservationStatus, string> = {
   no_show: 'bg-surface-variant text-on-surface-variant',
 }
 
-const tableStatusStyles: Record<TableStatus, string> = {
+/** Mock table statuses (legacy demo surfaces). */
+const mockTableStatusStyles: Record<TableStatus, string> = {
   available: 'bg-surface-variant text-on-surface-variant',
   reserved: 'bg-primary/10 text-primary',
   occupied: 'bg-primary text-on-primary',
   out_of_service: 'bg-error/10 text-error',
 }
 
+/** Backend table statuses (live inventory). */
+const backendTableStatusStyles: Record<TableStatusDto, string> = {
+  Available: 'bg-surface-variant text-on-surface-variant',
+  Occupied: 'bg-primary text-on-primary',
+  Cleaning: 'bg-warning/10 text-warning',
+  Disabled: 'bg-error/10 text-error',
+}
+
 interface StatusBadgeProps {
-  status: ReservationStatus | TableStatus | string
+  status: ReservationStatus | TableStatus | TableStatusDto | string
   label: string
   type?: 'reservation' | 'table' | 'custom'
   className?: string
 }
 
 export function StatusBadge({ status, label, type = 'reservation', className }: StatusBadgeProps) {
-  const style =
-    type === 'table'
-      ? tableStatusStyles[status as TableStatus] ?? 'bg-surface-variant text-on-surface-variant'
-      : reservationStatusStyles[status as ReservationStatus] ?? 'bg-surface-variant text-on-surface-variant'
+  let style = 'bg-surface-variant text-on-surface-variant'
+  if (type === 'table') {
+    style =
+      backendTableStatusStyles[status as TableStatusDto] ??
+      mockTableStatusStyles[status as TableStatus] ??
+      style
+  } else if (type === 'reservation') {
+    style = reservationStatusStyles[status as ReservationStatus] ?? style
+  }
 
   return (
     <span
@@ -39,7 +54,18 @@ export function StatusBadge({ status, label, type = 'reservation', className }: 
         className,
       )}
     >
-      <span className={cn('w-1.5 h-1.5 rounded-full', style.includes('text-warning') ? 'bg-warning' : style.includes('text-success') ? 'bg-success' : style.includes('text-error') ? 'bg-error' : 'bg-current')} />
+      <span
+        className={cn(
+          'w-1.5 h-1.5 rounded-full',
+          style.includes('text-warning')
+            ? 'bg-warning'
+            : style.includes('text-success')
+              ? 'bg-success'
+              : style.includes('text-error')
+                ? 'bg-error'
+                : 'bg-current',
+        )}
+      />
       {label}
     </span>
   )

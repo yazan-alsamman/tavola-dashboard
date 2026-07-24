@@ -7,6 +7,7 @@ import { PropertiesPanel } from './PropertiesPanel'
 import { Minimap } from './Minimap'
 import { useFloorDesigner } from '@/context/FloorDesignerContext'
 import { useRestaurant } from '@/context/RestaurantContext'
+import { useRestaurantScope } from '@/context/RestaurantScopeContext'
 import { useToast } from '@/context/ToastContext'
 import { useLocale } from '@/context/LocaleContext'
 import type { Table, TableStatus } from '@/types'
@@ -28,9 +29,10 @@ export function FloorDesigner({
 }: FloorDesignerProps) {
   const { t } = useLocale()
   const { toast } = useToast()
-  const { activeBranchId, updateTableCapacity } = useRestaurant()
+  const { updateTableCapacity, tables } = useRestaurant()
+  const { selectedBranchId } = useRestaurantScope()
   const { mode, setMode, resetDocument, saveDocument } = useFloorDesigner()
-  const { tables } = useRestaurant()
+  const floorBranchId = selectedBranchId ?? 'unscoped'
 
   // Force operations mode for read-only users
   useEffect(() => {
@@ -38,7 +40,7 @@ export function FloorDesigner({
   }, [readOnly, mode, setMode])
 
   const handleSave = () => {
-    saveDocument(activeBranchId)
+    saveDocument(floorBranchId)
     toast('success', t.common.save, t.floorPlan.layoutSaved)
   }
 
