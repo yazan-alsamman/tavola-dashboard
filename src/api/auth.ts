@@ -1,4 +1,5 @@
 import { apiRequest } from './client'
+import { tokenStore } from './tokenStore'
 import type {
   ActorType,
   DeviceType,
@@ -97,5 +98,91 @@ export async function logout(): Promise<void> {
 export async function logoutAll(): Promise<void> {
   await apiRequest<undefined>('/auth/logout-all', {
     method: 'POST',
+  })
+}
+
+/** Always returns a generic acceptance (does not reveal whether the email exists). */
+export async function forgotPassword(email: string): Promise<void> {
+  await apiRequest<unknown>('/auth/forgot-password', {
+    method: 'POST',
+    auth: false,
+    body: { email },
+  })
+}
+
+/** Consumes a single-use reset token and sets a new password. */
+export async function resetPassword(
+  token: string,
+  newPassword: string,
+): Promise<void> {
+  await apiRequest<unknown>('/auth/reset-password', {
+    method: 'POST',
+    auth: false,
+    body: { token, newPassword },
+  })
+}
+
+export interface ChangePasswordRequest {
+  currentPassword: string
+  newPassword: string
+}
+
+/** Partial token refresh after password change (access token always rotated). */
+export interface ChangePasswordResponse {
+  accessToken: string
+  refreshToken?: string
+}
+
+/**
+ * Changes password for the authenticated user.
+ * Rotates session version; stores any returned tokens in `tokenStore`.
+ */
+export async function changePassword(
+  request: ChangePasswordRequest,
+): Promise<ChangePasswordResponse> {
+  const data = await apiRequest<ChangePasswordResponse>('/auth/change-password', {
+    method: 'POST',
+    body: {
+      currentPassword: request.currentPassword,
+      newPassword: request.newPassword,
+    },
+  })
+
+  if (data.accessToken) {
+    if (data.refreshToken) {
+      tokenStore.setTokens({
+        accessToken: data.accessToken,
+        refreshToken: data.refreshToken,
+      })
+    } else {
+      tokenStore.setAccessToken(data.accessToken)
+    }
+  }
+
+  return data
+}
+
+export interface AuthSessionDto {
+  sessionId: string
+  isCurrentSession: boolean
+  deviceName?: string | null
+  deviceType?: string | null
+  createdAt?: string
+  lastSeenAt?: string | null
+  expiresAt?: string | null
+}
+
+export interface ListSessionsResponse {
+  sessions: AuthSessionDto[]
+}
+
+export async function listSessions(): Promise<ListSessionsResponse> {
+  return apiRequest<ListSessionsResponse>('/auth/sessions')
+}
+
+/** Revokes a session by id. Returns 204 No Content. */
+export async function revokeSession(sessionId: string): Promise<void> {
+  await apiRequest<undefined>(`/auth/sessions/${sessionId}`, {
+    method: 'DELETE',
   })
 }

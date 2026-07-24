@@ -1,5 +1,6 @@
 import { apiRequest } from './client'
 import type { PaginatedData } from './types'
+import type { WorkingHoursDto } from './restaurants'
 
 /**
  * Confirmed `BranchResponseDto` from live Swagger / Postman.
@@ -26,6 +27,19 @@ export interface ListBranchesParams {
   limit?: number
 }
 
+/** Create / update body from Postman (full-replace on PATCH). */
+export interface BranchWriteRequest {
+  city: string
+  district?: string | null
+  address: string
+  latitude?: number | null
+  longitude?: number | null
+  countryCode: string
+  currency?: string | null
+  timezone: string
+  phone?: string | null
+}
+
 export async function listBranches(
   restaurantId: string,
   params: ListBranchesParams = {},
@@ -47,6 +61,64 @@ export async function getBranch(
 ): Promise<BranchDto> {
   return apiRequest<BranchDto>(
     `/restaurants/${restaurantId}/branches/${branchId}`,
+  )
+}
+
+export async function createBranch(
+  restaurantId: string,
+  body: BranchWriteRequest,
+): Promise<BranchDto> {
+  return apiRequest<BranchDto>(`/restaurants/${restaurantId}/branches`, {
+    method: 'POST',
+    body,
+  })
+}
+
+export async function updateBranch(
+  restaurantId: string,
+  branchId: string,
+  body: BranchWriteRequest,
+): Promise<BranchDto> {
+  return apiRequest<BranchDto>(
+    `/restaurants/${restaurantId}/branches/${branchId}`,
+    {
+      method: 'PATCH',
+      body,
+    },
+  )
+}
+
+/** Soft-delete. Not idempotent. */
+export async function deleteBranch(
+  restaurantId: string,
+  branchId: string,
+): Promise<void> {
+  await apiRequest<undefined>(
+    `/restaurants/${restaurantId}/branches/${branchId}`,
+    { method: 'DELETE' },
+  )
+}
+
+export async function getBranchWorkingHours(
+  restaurantId: string,
+  branchId: string,
+): Promise<WorkingHoursDto> {
+  return apiRequest<WorkingHoursDto>(
+    `/restaurants/${restaurantId}/branches/${branchId}/working-hours`,
+  )
+}
+
+export async function updateBranchWorkingHours(
+  restaurantId: string,
+  branchId: string,
+  body: WorkingHoursDto,
+): Promise<WorkingHoursDto> {
+  return apiRequest<WorkingHoursDto>(
+    `/restaurants/${restaurantId}/branches/${branchId}/working-hours`,
+    {
+      method: 'PATCH',
+      body,
+    },
   )
 }
 

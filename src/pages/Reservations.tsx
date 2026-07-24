@@ -8,9 +8,8 @@ import { useRestaurantScope } from '@/context/RestaurantScopeContext'
 /**
  * Staff reservations hub.
  *
- * Backend Phase 7.1 only exposes availability search + Online create.
- * Staff list / detail / approve / reject / cancel / complete are not live.
- * Mock reservation lists and fake lifecycle mutations are intentionally removed.
+ * Wired from Postman: availability, Online create, cancel / reschedule / complete / no-show.
+ * Still missing: GET list and GET /reservations/:id.
  */
 export function ReservationsPage() {
   const { t } = useLocale()

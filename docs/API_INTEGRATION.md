@@ -46,15 +46,15 @@ Supporting modules:
 | `src/api/types.ts` | Envelope, `PaginatedData`, request option types |
 | `src/api/errors.ts` | `ApiError`, `isApiError` |
 | `src/api/tokenStore.ts` | In-memory access token + `sessionStorage` refresh token + session-invalidated listeners |
-| `src/api/auth.ts` | `login`, `logout`, `logoutAll` |
-| `src/api/users.ts` | `getCurrentUser` (`GET /users/me`) |
-| `src/api/restaurants.ts` | `listRestaurants`, `listAllRestaurants`, `getRestaurant` |
-| `src/api/branches.ts` | `listBranches`, `listAllBranches`, `getBranch`, `formatBranchLabel` |
-| `src/api/reservations.ts` | `searchAvailability`, `createReservation`, `createReservationWithIdempotency` |
+| `src/api/auth.ts` | `login`, `logout`, `logoutAll`, `forgotPassword`, `resetPassword`, `changePassword`, `listSessions`, `revokeSession` |
+| `src/api/users.ts` | `getCurrentUser`, `updateCurrentUser`, `getMyPreferences`, `updateMyPreferences`, `uploadMyAvatar` |
+| `src/api/restaurants.ts` | list/get/create/update/delete + settings, working-hours, gallery, cuisine/occasion category assignment |
+| `src/api/branches.ts` | list/get/create/update/delete + working-hours |
+| `src/api/reservations.ts` | `searchAvailability`, `createReservation`, `cancelReservation`, `rescheduleReservation`, `completeReservation`, `markReservationNoShow` |
 | `src/api/floorPlans.ts` | `listFloorPlans`, `createFloorPlan`, `activateFloorPlan` |
 | `src/api/tables.ts` | list/get + `createTable`, `updateTable`, `deleteTable`, `moveTable`, `changeTableStatus` |
-
-Further resource modules are added when each feature is wired — do not add empty placeholders.
+| `src/api/employees.ts` | `inviteEmployee`, `assignEmployeeRole`, `assignEmployeeToBranch`, `removeEmployeeFromBranch`, `removeEmployee` |
+| `src/api/taxonomy.ts` | `listCuisineCategories`, `listOccasionCategories` |
 
 ---
 
@@ -90,16 +90,20 @@ See ADR-007 (reads) and ADR-008 (mutations).
 
 ---
 
-# Reservations (Phase 4 — live surface only)
+# Reservations (Postman-aligned)
 
-Confirmed against live OpenAPI / Postman / `../back/TASKS.md` (backend Phase 7.1):
+Confirmed against Postman / live OpenAPI:
 
 | Operation | Method | Path | Notes |
 |---|---|---|---|
-| Search availability | `GET` | `/reservations/availability` | Query: `branchId`, `reservationStartTime`, `partySize`, optional `reservationEndTime`. Returns `TableAvailabilityDto[]` in `data`. Informational only. |
+| Search availability | `GET` | `/reservations/availability` | Query: `branchId`, `reservationStartTime`, `partySize`, optional `reservationEndTime`. Informational only. |
 | Create | `POST` | `/reservations` | Body: `branchId`, `tableId`, `reservationStartTime`, `guests`, optional end/notes. Always `Online` / `Pending` for JWT user. Send `Idempotency-Key`. |
+| Cancel | `POST` | `/reservations/:id/cancel` | Optional `{ reason }`. Customer owner or staff with `reservations:cancel`. |
+| Reschedule | `POST` | `/reservations/:id/reschedule` | `{ tableId, reservationStartTime, guests, reservationEndTime? }`. |
+| Complete | `POST` | `/reservations/:id/complete` | Staff `reservations:complete`; Approved → Completed. |
+| No-show | `POST` | `/reservations/:id/no-show` | Staff `reservations:noshow`. |
 
-**Not live:** list, detail, approve, reject, cancel, complete, no-show, reschedule, phone/walk-in guest create.
+**Not in collection yet:** list, detail (`GET /reservations/:id`), approve, reject, phone/walk-in guest create.
 
 **Status enum (backend):** `Pending` \| `Approved` \| `Rejected` \| `Cancelled` \| `Completed` \| `Expired` \| `NoShow`
 

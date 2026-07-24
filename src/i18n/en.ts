@@ -82,12 +82,12 @@ export const en = {
     reassign: 'Reassign Table',
     changeTime: 'Change Time',
     backendGap: {
-      title: 'Staff reservation management is not live yet',
-      body: 'The backend currently exposes availability search and Online create only. List, detail, approve, reject, cancel, complete, and no-show endpoints are not available. Fake lifecycle actions have been removed from this screen.',
+      title: 'Staff reservation list is not available yet',
+      body: 'Availability search, Online create, and lifecycle actions (cancel / reschedule / complete / no-show) are wired from Postman. There is still no GET list or GET detail endpoint — open a reservation by id to run Domain Actions.',
       listTitle: 'No staff reservation list API',
-      listBody: 'When GET list/detail and Domain Actions ship (backend Phase 7.2+), this page will show branch-scoped reservations from the server.',
-      detailTitle: 'Reservation detail unavailable',
-      detailBody: 'There is no GET /reservations/:id on the live API. Direct links cannot load a reservation until that endpoint exists.',
+      listBody: 'When GET list ships, this page will show branch-scoped reservations. Until then, create below or open /reservations/:id for lifecycle actions.',
+      detailTitle: 'Reservation detail (actions only)',
+      detailBody: 'GET /reservations/:id is not in the collection yet, so profile fields cannot be loaded. Cancel, reschedule, complete, and no-show are available for a known reservation id.',
       actionsUnavailable: 'Staff actions unavailable',
     },
     create: {

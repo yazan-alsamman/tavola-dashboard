@@ -78,8 +78,8 @@ src/api/
 ├── reservations.ts     # GET /reservations/availability, POST /reservations (live Phase 7.1 only)
 ├── floorPlans.ts       # list + create + activate FloorPlan
 ├── tables.ts           # list/get + create/update/delete/move/status Table
-├── employees.ts        # /restaurants/:restaurantId/employees* (future)
-└── taxonomy.ts         # /cuisine-categories, /occasion-categories (future)
+├── employees.ts        # /restaurants/:restaurantId/employees*
+└── taxonomy.ts         # /cuisine-categories, /occasion-categories
 ```
 
 Files marked future must not be created as empty placeholders — add them in the same change that wires the first real call.

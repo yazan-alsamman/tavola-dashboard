@@ -24,6 +24,54 @@ export interface ListRestaurantsParams {
   limit?: number
 }
 
+export interface CreateRestaurantRequest {
+  name: string
+  description?: string | null
+  cuisineType?: string | null
+  priceLevel?: number | null
+}
+
+export interface UpdateRestaurantRequest {
+  name: string
+  description?: string | null
+  cuisineType?: string | null
+  priceLevel?: number | null
+  status?: RestaurantStatus
+}
+
+/** Confirmed restaurant reservation settings (Postman). */
+export interface RestaurantSettingsDto {
+  reservationIntervalMinutes: number
+  maxGuestsPerReservation: number
+  cancellationWindowMinutes: number
+  pendingReservationTimeoutMinutes: number
+  defaultReservationDurationMinutes: number
+  autoApproval: boolean
+  timezone: string
+  defaultCurrency: string
+}
+
+export type UpdateRestaurantSettingsRequest = RestaurantSettingsDto
+
+export interface WorkingHoursEntry {
+  dayOfWeek: number
+  openingTime: string
+  closingTime: string
+  breakStartTime: string | null
+  breakEndTime: string | null
+}
+
+export interface WorkingHoursDto {
+  entries: WorkingHoursEntry[]
+}
+
+export interface GalleryItemDto {
+  galleryItemId: string
+  sortOrder?: number
+  url?: string | null
+  fileId?: string | null
+}
+
 export async function listRestaurants(
   params: ListRestaurantsParams = {},
 ): Promise<PaginatedData<RestaurantDto>> {
@@ -37,6 +85,124 @@ export async function listRestaurants(
 
 export async function getRestaurant(restaurantId: string): Promise<RestaurantDto> {
   return apiRequest<RestaurantDto>(`/restaurants/${restaurantId}`)
+}
+
+export async function createRestaurant(
+  body: CreateRestaurantRequest,
+): Promise<RestaurantDto> {
+  return apiRequest<RestaurantDto>('/restaurants', {
+    method: 'POST',
+    body,
+  })
+}
+
+export async function updateRestaurant(
+  restaurantId: string,
+  body: UpdateRestaurantRequest,
+): Promise<RestaurantDto> {
+  return apiRequest<RestaurantDto>(`/restaurants/${restaurantId}`, {
+    method: 'PATCH',
+    body,
+  })
+}
+
+/** Soft-delete. Not idempotent — already-deleted returns 404. */
+export async function deleteRestaurant(restaurantId: string): Promise<void> {
+  await apiRequest<undefined>(`/restaurants/${restaurantId}`, {
+    method: 'DELETE',
+  })
+}
+
+export async function getRestaurantSettings(
+  restaurantId: string,
+): Promise<RestaurantSettingsDto> {
+  return apiRequest<RestaurantSettingsDto>(`/restaurants/${restaurantId}/settings`)
+}
+
+export async function updateRestaurantSettings(
+  restaurantId: string,
+  body: UpdateRestaurantSettingsRequest,
+): Promise<RestaurantSettingsDto> {
+  return apiRequest<RestaurantSettingsDto>(`/restaurants/${restaurantId}/settings`, {
+    method: 'PATCH',
+    body,
+  })
+}
+
+export async function getRestaurantWorkingHours(
+  restaurantId: string,
+): Promise<WorkingHoursDto> {
+  return apiRequest<WorkingHoursDto>(`/restaurants/${restaurantId}/working-hours`)
+}
+
+export async function updateRestaurantWorkingHours(
+  restaurantId: string,
+  body: WorkingHoursDto,
+): Promise<WorkingHoursDto> {
+  return apiRequest<WorkingHoursDto>(`/restaurants/${restaurantId}/working-hours`, {
+    method: 'PATCH',
+    body,
+  })
+}
+
+export async function listRestaurantGallery(
+  restaurantId: string,
+): Promise<GalleryItemDto[]> {
+  return apiRequest<GalleryItemDto[]>(`/restaurants/${restaurantId}/gallery`)
+}
+
+export async function addRestaurantGalleryImage(
+  restaurantId: string,
+  file: File,
+): Promise<GalleryItemDto> {
+  const form = new FormData()
+  form.append('file', file)
+  return apiRequest<GalleryItemDto>(`/restaurants/${restaurantId}/gallery`, {
+    method: 'POST',
+    body: form,
+  })
+}
+
+export async function removeRestaurantGalleryImage(
+  restaurantId: string,
+  galleryItemId: string,
+): Promise<void> {
+  await apiRequest<undefined>(
+    `/restaurants/${restaurantId}/gallery/${galleryItemId}`,
+    { method: 'DELETE' },
+  )
+}
+
+export async function getRestaurantCuisineCategories(
+  restaurantId: string,
+): Promise<unknown> {
+  return apiRequest(`/restaurants/${restaurantId}/cuisine-categories`)
+}
+
+export async function setRestaurantCuisineCategories(
+  restaurantId: string,
+  cuisineCategoryIds: string[],
+): Promise<unknown> {
+  return apiRequest(`/restaurants/${restaurantId}/cuisine-categories`, {
+    method: 'PATCH',
+    body: { cuisineCategoryIds },
+  })
+}
+
+export async function getRestaurantOccasionCategories(
+  restaurantId: string,
+): Promise<unknown> {
+  return apiRequest(`/restaurants/${restaurantId}/occasion-categories`)
+}
+
+export async function setRestaurantOccasionCategories(
+  restaurantId: string,
+  occasionCategoryIds: string[],
+): Promise<unknown> {
+  return apiRequest(`/restaurants/${restaurantId}/occasion-categories`, {
+    method: 'PATCH',
+    body: { occasionCategoryIds },
+  })
 }
 
 /**

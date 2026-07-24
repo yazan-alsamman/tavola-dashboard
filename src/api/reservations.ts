@@ -2,7 +2,7 @@ import { apiRequest, createIdempotencyKey } from './client'
 
 /**
  * Backend reservation status enum (OpenAPI / DOMAIN_MODEL).
- * Phase 7.1 create always returns `Pending`. Staff transitions are not live yet.
+ * Create returns `Pending`. Lifecycle Domain Actions are wired from Postman.
  */
 export type ReservationStatusDto =
   | 'Pending'
@@ -122,6 +122,74 @@ export async function createReservationWithIdempotency(
   const idempotencyKey = createIdempotencyKey()
   const reservation = await createReservation(body, idempotencyKey)
   return { reservation, idempotencyKey }
+}
+
+export interface CancelReservationRequest {
+  reason?: string | null
+}
+
+export interface RescheduleReservationRequest {
+  tableId: string
+  reservationStartTime: string
+  guests: number
+  reservationEndTime?: string | null
+}
+
+/** Staff or owning customer — cancels a reservation. */
+export async function cancelReservation(
+  reservationId: string,
+  body: CancelReservationRequest = {},
+  idempotencyKey?: string,
+): Promise<ReservationDto> {
+  return apiRequest<ReservationDto>(`/reservations/${reservationId}/cancel`, {
+    method: 'POST',
+    body: {
+      ...(body.reason != null && body.reason !== '' ? { reason: body.reason } : {}),
+    },
+    idempotencyKey,
+  })
+}
+
+/** Staff or owning customer — reschedules table/time/party size. */
+export async function rescheduleReservation(
+  reservationId: string,
+  body: RescheduleReservationRequest,
+  idempotencyKey?: string,
+): Promise<ReservationDto> {
+  return apiRequest<ReservationDto>(`/reservations/${reservationId}/reschedule`, {
+    method: 'POST',
+    body: {
+      tableId: body.tableId,
+      reservationStartTime: body.reservationStartTime,
+      guests: body.guests,
+      ...(body.reservationEndTime != null
+        ? { reservationEndTime: body.reservationEndTime }
+        : {}),
+    },
+    idempotencyKey,
+  })
+}
+
+/** Staff-only — Approved → Completed. */
+export async function completeReservation(
+  reservationId: string,
+  idempotencyKey?: string,
+): Promise<ReservationDto> {
+  return apiRequest<ReservationDto>(`/reservations/${reservationId}/complete`, {
+    method: 'POST',
+    idempotencyKey,
+  })
+}
+
+/** Staff-only — mark NoShow (`reservations:noshow`). */
+export async function markReservationNoShow(
+  reservationId: string,
+  idempotencyKey?: string,
+): Promise<ReservationDto> {
+  return apiRequest<ReservationDto>(`/reservations/${reservationId}/no-show`, {
+    method: 'POST',
+    idempotencyKey,
+  })
 }
 
 export { createIdempotencyKey }
