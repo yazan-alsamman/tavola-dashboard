@@ -71,22 +71,25 @@ src/api/
 ├── types.ts            # envelope / pagination / request option contracts
 ├── errors.ts           # ApiError
 ├── tokenStore.ts       # access (memory) + refresh (sessionStorage) bridge for AuthProvider
-├── auth.ts             # /auth/login, logout, logout-all
-├── users.ts            # GET /users/me
-├── restaurants.ts      # GET /restaurants, GET /restaurants/:id
-├── branches.ts         # GET /restaurants/:restaurantId/branches*
-├── reservations.ts     # GET /reservations/availability, POST /reservations (live Phase 7.1 only)
+├── auth.ts             # staff auth (login/logout/sessions/password)
+├── users.ts            # /users/me profile, preferences, avatar
+├── restaurants.ts      # restaurants CRUD + settings/hours/gallery/categories
+├── branches.ts         # branches CRUD + working-hours
+├── reservations.ts     # availability, create (online + staff), list/get, lifecycle Domain Actions
 ├── floorPlans.ts       # list + create + activate FloorPlan
-├── tables.ts           # list/get + create/update/delete/move/status Table
-├── employees.ts        # /restaurants/:restaurantId/employees*
-└── taxonomy.ts         # /cuisine-categories, /occasion-categories
+├── tables.ts           # list/get + CRUD + move/status + merge/split
+├── employees.ts        # invite / role / branch assign / remove
+├── taxonomy.ts         # cuisine + occasion categories
+├── notifications.ts    # list / unread / OneSignal token / mark read
+├── waitlist.ts         # join / cancel / promote
+└── health.ts           # Terminus health/liveness/readiness (non-envelope)
 ```
 
-Files marked future must not be created as empty placeholders — add them in the same change that wires the first real call.
+Customer Authentication, Platform Admin, Discovery, and customer favorites are intentionally **not** part of this dashboard client.
 
-**Reservations note (ADR-006):** staff list/detail/approve/reject/cancel/complete are not live on the backend. Do not scaffold those client functions until Postman/OpenAPI expose them.
+**Reservations note:** Postman now exposes list/get + approve/reject/cancel/complete/no-show/table-ready + Phone/Walk-In create. Client functions live in `reservations.ts`. Staff branch-scoped inbox (if different from ownership `GET /reservations`) is not a separate path in Postman.
 
-**Floor/Table note (ADR-007/008):** Phase 5 reads + Phase 6 mutations. Domain actions (`move`, `status`, `activate`) are never folded into generic PATCH. Selected FloorPlan for viewing is not auto-activation.
+**Floor/Table note (ADR-007/008):** Domain actions (`move`, `status`, `activate`, `merge`, `split`) are never folded into generic PATCH. Selected FloorPlan for viewing is not auto-activation.
 
 Rules:
 

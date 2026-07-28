@@ -1,4 +1,5 @@
 import { apiRequest, createIdempotencyKey } from './client'
+import type { PaginatedData } from './types'
 
 /**
  * Backend reservation status enum (OpenAPI / DOMAIN_MODEL).
@@ -51,6 +52,24 @@ export interface CreateReservationRequest {
   notes?: string | null
 }
 
+export interface ReservationGuestDto {
+  countryCode: string
+  phoneNumber: string
+  fullName: string
+  email?: string | null
+}
+
+/** Staff Phone / WalkIn create — requires `source` + `reservationGuest`. */
+export interface CreateStaffReservationRequest extends CreateReservationRequest {
+  source: 'Phone' | 'WalkIn'
+  reservationGuest: ReservationGuestDto
+}
+
+export interface ListReservationsParams {
+  page?: number
+  limit?: number
+}
+
 /** Confirmed `ReservationResponseDto` from live OpenAPI. */
 export interface ReservationDto {
   reservationId: string
@@ -90,7 +109,6 @@ export async function searchAvailability(
 
 /**
  * Creates a reservation for the authenticated user (`source=Online`, `status=Pending`).
- * Staff phone/walk-in guest payloads are not live (backend Phase 7.4).
  *
  * `idempotencyKey` must be stable for one logical submit (retries / double-click).
  * Prefer {@link createReservationWithIdempotency} when the caller does not already hold a key.
@@ -115,6 +133,32 @@ export async function createReservation(
   })
 }
 
+/**
+ * Staff Phone / Walk-In create (`reservations:create`).
+ * Requires `source` + `reservationGuest` per Postman.
+ */
+export async function createStaffReservation(
+  body: CreateStaffReservationRequest,
+  idempotencyKey: string,
+): Promise<ReservationDto> {
+  return apiRequest<ReservationDto>('/reservations', {
+    method: 'POST',
+    body: {
+      branchId: body.branchId,
+      tableId: body.tableId,
+      reservationStartTime: body.reservationStartTime,
+      guests: body.guests,
+      source: body.source,
+      reservationGuest: body.reservationGuest,
+      ...(body.reservationEndTime != null
+        ? { reservationEndTime: body.reservationEndTime }
+        : {}),
+      ...(body.notes != null && body.notes !== '' ? { notes: body.notes } : {}),
+    },
+    idempotencyKey,
+  })
+}
+
 /** Convenience wrapper that generates a single Idempotency-Key for one submission. */
 export async function createReservationWithIdempotency(
   body: CreateReservationRequest,
@@ -122,6 +166,61 @@ export async function createReservationWithIdempotency(
   const idempotencyKey = createIdempotencyKey()
   const reservation = await createReservation(body, idempotencyKey)
   return { reservation, idempotencyKey }
+}
+
+export async function createStaffReservationWithIdempotency(
+  body: CreateStaffReservationRequest,
+): Promise<{ reservation: ReservationDto; idempotencyKey: string }> {
+  const idempotencyKey = createIdempotencyKey()
+  const reservation = await createStaffReservation(body, idempotencyKey)
+  return { reservation, idempotencyKey }
+}
+
+/**
+ * List reservations for the authenticated JWT subject (ownership-based).
+ * Guest Phone/WalkIn bookings are not returned on this path.
+ */
+export async function listMyReservations(
+  params: ListReservationsParams = {},
+  signal?: AbortSignal,
+): Promise<PaginatedData<ReservationDto>> {
+  return apiRequest<PaginatedData<ReservationDto>>('/reservations', {
+    query: {
+      page: params.page ?? 1,
+      limit: params.limit ?? 20,
+    },
+    signal,
+  })
+}
+
+/** Ownership-based detail. Foreign / guest bookings → 404. */
+export async function getMyReservation(
+  reservationId: string,
+  signal?: AbortSignal,
+): Promise<ReservationDto> {
+  return apiRequest<ReservationDto>(`/reservations/${reservationId}`, { signal })
+}
+
+/** Staff `reservations:approve` — Pending only. */
+export async function approveReservation(
+  reservationId: string,
+  idempotencyKey?: string,
+): Promise<ReservationDto> {
+  return apiRequest<ReservationDto>(`/reservations/${reservationId}/approve`, {
+    method: 'POST',
+    idempotencyKey,
+  })
+}
+
+/** Staff `reservations:approve` — Pending only; no table hold. */
+export async function rejectReservation(
+  reservationId: string,
+  idempotencyKey?: string,
+): Promise<ReservationDto> {
+  return apiRequest<ReservationDto>(`/reservations/${reservationId}/reject`, {
+    method: 'POST',
+    idempotencyKey,
+  })
 }
 
 export interface CancelReservationRequest {
@@ -187,6 +286,19 @@ export async function markReservationNoShow(
   idempotencyKey?: string,
 ): Promise<ReservationDto> {
   return apiRequest<ReservationDto>(`/reservations/${reservationId}/no-show`, {
+    method: 'POST',
+    idempotencyKey,
+  })
+}
+
+/**
+ * Staff `reservations:tableready` — operational signal; status stays Approved.
+ */
+export async function markReservationTableReady(
+  reservationId: string,
+  idempotencyKey?: string,
+): Promise<ReservationDto> {
+  return apiRequest<ReservationDto>(`/reservations/${reservationId}/table-ready`, {
     method: 'POST',
     idempotencyKey,
   })

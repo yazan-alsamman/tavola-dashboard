@@ -50,11 +50,16 @@ Supporting modules:
 | `src/api/users.ts` | `getCurrentUser`, `updateCurrentUser`, `getMyPreferences`, `updateMyPreferences`, `uploadMyAvatar` |
 | `src/api/restaurants.ts` | list/get/create/update/delete + settings, working-hours, gallery, cuisine/occasion category assignment |
 | `src/api/branches.ts` | list/get/create/update/delete + working-hours |
-| `src/api/reservations.ts` | `searchAvailability`, `createReservation`, `cancelReservation`, `rescheduleReservation`, `completeReservation`, `markReservationNoShow` |
+| `src/api/reservations.ts` | availability, Online + staff Phone/Walk-In create, list/get, approve/reject/cancel/reschedule/complete/no-show/table-ready |
 | `src/api/floorPlans.ts` | `listFloorPlans`, `createFloorPlan`, `activateFloorPlan` |
-| `src/api/tables.ts` | list/get + `createTable`, `updateTable`, `deleteTable`, `moveTable`, `changeTableStatus` |
+| `src/api/tables.ts` | list/get + CRUD + move/status + merge/split |
 | `src/api/employees.ts` | `inviteEmployee`, `assignEmployeeRole`, `assignEmployeeToBranch`, `removeEmployeeFromBranch`, `removeEmployee` |
 | `src/api/taxonomy.ts` | `listCuisineCategories`, `listOccasionCategories` |
+| `src/api/notifications.ts` | list, unread-count, identity-token, mark read / read-all |
+| `src/api/waitlist.ts` | join, cancel, promote |
+| `src/api/health.ts` | health / liveness / readiness (non-envelope) |
+
+See `docs/API_COMPATIBILITY_REPORT.md` for the full Postman ↔ client match matrix (100% for dashboard scope).
 
 ---
 

@@ -213,6 +213,31 @@ export async function changeTableStatus(
   })
 }
 
+export interface MergeTablesRequest {
+  tableIds: string[]
+  primaryTableId?: string | null
+}
+
+/** Merge ≥2 Available tables on the same branch + floor plan. */
+export async function mergeTables(body: MergeTablesRequest): Promise<TableDto> {
+  return apiRequest<TableDto>('/tables/merge', {
+    method: 'POST',
+    body: {
+      tableIds: body.tableIds,
+      ...(body.primaryTableId != null
+        ? { primaryTableId: body.primaryTableId }
+        : {}),
+    },
+  })
+}
+
+/** Undo a merge group — any member table id works. */
+export async function splitTable(tableId: string): Promise<TableDto> {
+  return apiRequest<TableDto>(`/tables/${tableId}/split`, {
+    method: 'POST',
+  })
+}
+
 /** Builds a full UpdateTableRequest from an existing table + overrides (never status/floorPlanId). */
 export function tableToUpdateRequest(
   table: TableDto,
