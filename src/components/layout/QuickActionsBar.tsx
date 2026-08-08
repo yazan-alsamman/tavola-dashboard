@@ -1,31 +1,30 @@
 import { Link, useLocation } from 'react-router-dom'
 import { MaterialIcon } from '@/components/ui/Icon'
 import { useLocale } from '@/context/LocaleContext'
-import { useRestaurant } from '@/context/RestaurantContext'
+import { useUnreadNotificationCount } from '@/hooks/useNotificationQueries'
 import { cn } from '@/lib/utils'
+import { Num } from '@/components/ui/Num'
 
 const actions = [
   { key: 'walkIn' as const, path: '/walk-in', icon: 'person_add', color: 'bg-primary text-white' },
   { key: 'waitlist' as const, path: '/waitlist', icon: 'schedule', color: 'bg-warning text-white' },
   { key: 'floorPlan' as const, path: '/floor-plan', icon: 'map', color: 'bg-success text-white' },
   { key: 'reservations' as const, path: '/reservations', icon: 'calendar_month', color: 'bg-info text-white' },
+  { key: 'notifications' as const, path: '/notifications', icon: 'notifications', color: 'bg-danger text-white' },
 ]
 
 export function QuickActionsBar() {
   const { t } = useLocale()
-  const { pendingCount, waitlist } = useRestaurant()
+  const unreadQuery = useUnreadNotificationCount()
   const location = useLocation()
-
-  const badges: Record<string, number> = {
-    waitlist: waitlist.length,
-    reservations: pendingCount,
-  }
+  const unreadCount = unreadQuery.data ?? 0
 
   return (
     <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none -mx-1 px-1">
       {actions.map(({ key, path, icon, color }) => {
         const isActive = location.pathname === path
-        const badge = badges[key]
+        const badge = key === 'notifications' ? unreadCount : 0
+
         return (
           <Link
             key={key}
@@ -41,10 +40,12 @@ export function QuickActionsBar() {
             <span className={cn('w-7 h-7 rounded-lg flex items-center justify-center', color)}>
               <MaterialIcon name={icon} size={14} />
             </span>
-            {t.quickActions[key]}
+            {key === 'notifications'
+              ? t.header.notifications
+              : t.quickActions[key as keyof typeof t.quickActions]}
             {badge > 0 && (
               <span className="text-xs font-bold bg-danger text-white px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
-                {badge}
+                <Num>{badge}</Num>
               </span>
             )}
           </Link>

@@ -1,14 +1,15 @@
 import { useState, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import { format } from 'date-fns'
 import { MaterialIcon } from '@/components/ui/Icon'
 import { useLocale } from '@/context/LocaleContext'
-import { useRestaurant } from '@/context/RestaurantContext'
+import { useUnreadNotificationCount } from '@/hooks/useNotificationQueries'
 import { getServicePeriod } from '@/lib/utils'
 import { Num } from '@/components/ui/Num'
 
 export function ContextBar() {
   const { t } = useLocale()
-  const { stats, pendingCount, waitlist } = useRestaurant()
+  const unreadQuery = useUnreadNotificationCount()
   const [now, setNow] = useState(new Date())
 
   useEffect(() => {
@@ -19,23 +20,24 @@ export function ContextBar() {
   const period = getServicePeriod()
   const timeStr = format(now, 'h:mm')
   const suffix = now.getHours() >= 12 ? 'م' : 'ص'
+  const unreadCount = unreadQuery.data ?? 0
 
   const items = [
     { icon: 'schedule', label: t.ops.liveNow, value: <><Num>{timeStr}</Num> {suffix}</> },
     { icon: 'pie_chart', label: t.ops.service, value: t.servicePeriods[period] },
-    { icon: 'group', label: t.ops.occupancy, value: <><Num>{stats.occupancyRate}</Num>%</> },
-    { icon: 'group', label: t.ops.covers, value: <><Num>{stats.expectedGuests}</Num></> },
-    { icon: 'queue', label: t.waitlist.title, value: <Num>{waitlist.length}</Num> },
   ]
 
   return (
     <div className="flex items-center gap-0 px-3 py-2 bg-surface border border-outline-variant/30 rounded-lg text-meta overflow-x-auto">
-      {pendingCount > 0 && (
-        <div className="flex items-center gap-1.5 px-3 py-1 rounded-md bg-warning-light text-warning font-semibold shrink-0 me-3">
-          <MaterialIcon name="warning" size={16} filled className="shrink-0" />
-          <Num>{pendingCount}</Num>
-          <span className="hidden sm:inline">{t.ops.pendingApproval}</span>
-        </div>
+      {unreadCount > 0 && (
+        <Link
+          to="/notifications"
+          className="flex items-center gap-1.5 px-3 py-1 rounded-md bg-warning-light text-warning font-semibold shrink-0 me-3 hover:bg-warning/20 transition-colors"
+        >
+          <MaterialIcon name="notifications" size={16} filled className="shrink-0" />
+          <Num>{unreadCount}</Num>
+          <span className="hidden sm:inline">{t.dashboard.unreadNotifications}</span>
+        </Link>
       )}
       {items.map((item, i) => (
         <div key={i} className="flex items-center gap-4 shrink-0">

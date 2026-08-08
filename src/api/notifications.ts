@@ -14,7 +14,7 @@ export interface NotificationDto {
 
 export interface ListNotificationsParams {
   page?: number
-  limit?: number
+  pageSize?: number
   /** When true, only unread notifications. */
   unread?: boolean
 }
@@ -32,11 +32,13 @@ export async function listNotifications(
   params: ListNotificationsParams = {},
   signal?: AbortSignal,
 ): Promise<PaginatedData<NotificationDto>> {
+  const limit = params.pageSize ?? 20
   return apiRequest<PaginatedData<NotificationDto>>('/notifications', {
     query: {
       page: params.page ?? 1,
-      limit: params.limit ?? 20,
-      unread: params.unread ?? false,
+      limit,
+      // Only send when filtering; string "false" can fail boolean query validation.
+      ...(params.unread === true ? { unread: true } : {}),
     },
     signal,
   })

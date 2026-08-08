@@ -7,10 +7,13 @@ import {
   changeTableStatus,
   createTable,
   deleteTable,
+  mergeTables,
   moveTable,
+  splitTable,
   updateTable,
   type ChangeTableStatusRequest,
   type CreateTableRequest,
+  type MergeTablesRequest,
   type MoveTableRequest,
   type TableDto,
   type UpdateTableRequest,
@@ -190,6 +193,49 @@ export function useChangeTableStatusMutation() {
     onSuccess: async (table: TableDto, vars) => {
       await Promise.all([
         invalidateTableDetail(queryClient, vars.tableId),
+        invalidateBranchTables(queryClient, vars.scope),
+        invalidateFloorTables(queryClient, vars.scope, vars.floorPlanId),
+        table.floorPlanId !== vars.floorPlanId
+          ? invalidateFloorTables(queryClient, vars.scope, table.floorPlanId)
+          : Promise.resolve(),
+      ])
+    },
+  })
+}
+
+export function useMergeTablesMutation() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (input: {
+      body: MergeTablesRequest
+      scope: InventoryMutationScope
+      floorPlanId: string
+    }) => mergeTables(input.body),
+    onSuccess: async (table, vars) => {
+      await Promise.all([
+        invalidateTableDetail(queryClient, table.tableId),
+        invalidateBranchTables(queryClient, vars.scope),
+        invalidateFloorTables(queryClient, vars.scope, vars.floorPlanId),
+        table.floorPlanId !== vars.floorPlanId
+          ? invalidateFloorTables(queryClient, vars.scope, table.floorPlanId)
+          : Promise.resolve(),
+      ])
+    },
+  })
+}
+
+export function useSplitTableMutation() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (input: {
+      tableId: string
+      scope: InventoryMutationScope
+      floorPlanId: string
+    }) => splitTable(input.tableId),
+    onSuccess: async (table, vars) => {
+      await Promise.all([
+        invalidateTableDetail(queryClient, vars.tableId),
+        invalidateTableDetail(queryClient, table.tableId),
         invalidateBranchTables(queryClient, vars.scope),
         invalidateFloorTables(queryClient, vars.scope, vars.floorPlanId),
         table.floorPlanId !== vars.floorPlanId

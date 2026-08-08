@@ -66,7 +66,9 @@ export type ApiEnvelope<T> = ApiSuccessEnvelope<T> | ApiErrorEnvelope
 export interface PaginatedData<T> {
   items: T[]
   page: number
-  limit: number
+  /** Older payloads use `limit`; Postman uses `pageSize`. */
+  limit?: number
+  pageSize?: number
   total: number
 }
 

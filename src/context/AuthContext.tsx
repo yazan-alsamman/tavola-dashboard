@@ -7,7 +7,12 @@ import {
   useState,
   type ReactNode,
 } from 'react'
-import { login as loginRequest, logout as logoutRequest } from '@/api/auth'
+import {
+  login as loginRequest,
+  logout as logoutRequest,
+  logoutAll as logoutAllRequest,
+} from '@/api/auth'
+import { isApiError } from '@/api/errors'
 import { refreshSession } from '@/api/client'
 import { tokenStore } from '@/api/tokenStore'
 import { getCurrentUser } from '@/api/users'
@@ -29,6 +34,9 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null)
 
+const DASHBOARD_DEVICE_NAME = 'Tavola Dashboard'
+const DASHBOARD_DEVICE_TYPE = 'web' as const
+
 async function fetchProfileBestEffort(): Promise<Awaited<ReturnType<typeof getCurrentUser>> | null> {
   try {
     return await getCurrentUser()
@@ -41,6 +49,53 @@ function claimsFromAccessToken(): ReturnType<typeof parseAccessTokenClaims> {
   const accessToken = tokenStore.getAccessToken()
   if (!accessToken) return null
   return parseAccessTokenClaims(accessToken)
+}
+
+/**
+ * When login hits the 10-session cap, reuse a stored refresh token (if any)
+ * to call logout-all, then retry login once.
+ */
+async function loginClearingStaleSessions(
+  email: string,
+  password: string,
+): Promise<Awaited<ReturnType<typeof loginRequest>>> {
+  try {
+    return await loginRequest({
+      email,
+      password,
+      deviceName: DASHBOARD_DEVICE_NAME,
+      deviceType: DASHBOARD_DEVICE_TYPE,
+    })
+  } catch (err) {
+    if (!isApiError(err) || err.code !== 'AUTH_TOO_MANY_SESSIONS') {
+      throw err
+    }
+
+    const hasRefresh = Boolean(tokenStore.getRefreshToken())
+    if (!hasRefresh) {
+      throw err
+    }
+
+    const refreshed = await refreshSession()
+    if (!refreshed) {
+      throw err
+    }
+
+    try {
+      await logoutAllRequest()
+    } catch {
+      // Still attempt a fresh login; local tokens are cleared below on failure.
+    }
+
+    tokenStore.clear()
+
+    return loginRequest({
+      email,
+      password,
+      deviceName: DASHBOARD_DEVICE_NAME,
+      deviceType: DASHBOARD_DEVICE_TYPE,
+    })
+  }
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -114,7 +169,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const login = useCallback(async (email: string, password: string): Promise<void> => {
-    const data = await loginRequest({ email, password })
+    const data = await loginClearingStaleSessions(email, password)
 
     tokenStore.setTokens({
       accessToken: data.accessToken,
@@ -134,7 +189,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = useCallback(async (): Promise<void> => {
     try {
-      // Access token must still be present for the backend logout call.
       await logoutRequest()
     } catch {
       // Always clear local auth state even if the network call fails.

@@ -6,7 +6,6 @@ import { DesignerCanvas } from './DesignerCanvas'
 import { PropertiesPanel } from './PropertiesPanel'
 import { Minimap } from './Minimap'
 import { useFloorDesigner } from '@/context/FloorDesignerContext'
-import { useRestaurant } from '@/context/RestaurantContext'
 import { useRestaurantScope } from '@/context/RestaurantScopeContext'
 import { useToast } from '@/context/ToastContext'
 import { useLocale } from '@/context/LocaleContext'
@@ -17,6 +16,9 @@ interface FloorDesignerProps {
   onSelectTable: (id: string | null) => void
   onTableStatusChange: (tableId: string, status: TableStatus) => void
   getGuestName: (table: Table) => string | undefined
+  /** Optional inventory tables for panels; designer layout remains local. */
+  tables?: Table[]
+  onUpdateSeatCount?: (tableId: string, seatCount: number) => void
   readOnly?: boolean
 }
 
@@ -25,16 +27,16 @@ export function FloorDesigner({
   onSelectTable,
   onTableStatusChange,
   getGuestName,
+  tables = [],
+  onUpdateSeatCount,
   readOnly = false,
 }: FloorDesignerProps) {
   const { t } = useLocale()
   const { toast } = useToast()
-  const { updateTableCapacity, tables } = useRestaurant()
   const { selectedBranchId } = useRestaurantScope()
   const { mode, setMode, resetDocument, saveDocument } = useFloorDesigner()
   const floorBranchId = selectedBranchId ?? 'unscoped'
 
-  // Force operations mode for read-only users
   useEffect(() => {
     if (readOnly && mode === 'edit') setMode('operations')
   }, [readOnly, mode, setMode])
@@ -58,7 +60,6 @@ export function FloorDesigner({
       <DesignerToolbar onSave={handleSave} onReset={handleReset} readOnly={readOnly} />
 
       <div className="flex flex-1 min-h-0">
-        {/* Left sidebar */}
         {mode === 'edit' && (
           <div className="w-52 shrink-0 flex flex-col border-e border-outline-variant/30 overflow-hidden">
             <SectionsPanel tables={tables} />
@@ -68,7 +69,6 @@ export function FloorDesigner({
           </div>
         )}
 
-        {/* Canvas area */}
         <div className="flex-1 relative min-w-0 flex flex-col">
           <DesignerCanvas
             tables={tables}
@@ -79,13 +79,12 @@ export function FloorDesigner({
           <Minimap />
         </div>
 
-        {/* Right properties panel */}
         <div className="w-56 shrink-0 border-s border-outline-variant/30 bg-surface-container-lowest overflow-y-auto">
           <PropertiesPanel
             tables={tables}
             selectedTableId={selectedTableId}
             onTableAction={handleTableAction}
-            onUpdateSeatCount={updateTableCapacity}
+            onUpdateSeatCount={onUpdateSeatCount}
             getGuestName={getGuestName}
           />
         </div>

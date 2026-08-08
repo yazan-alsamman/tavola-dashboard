@@ -34,11 +34,13 @@ export interface TableAvailabilityDto {
 }
 
 export interface SearchAvailabilityParams {
+  restaurantId: string
   branchId: string
-  reservationStartTime: string
+  /** Calendar date YYYY-MM-DD (Postman SearchAvailabilityQueryDto). */
+  date: string
   partySize: number
-  /** When omitted, backend derives end from restaurant default duration. */
-  reservationEndTime?: string | null
+  page?: number
+  pageSize?: number
 }
 
 /** Confirmed `CreateReservationRequestDto` from live OpenAPI / Postman. */
@@ -67,7 +69,7 @@ export interface CreateStaffReservationRequest extends CreateReservationRequest 
 
 export interface ListReservationsParams {
   page?: number
-  limit?: number
+  pageSize?: number
 }
 
 /** Confirmed `ReservationResponseDto` from live OpenAPI. */
@@ -89,22 +91,28 @@ export interface ReservationDto {
 }
 
 /**
- * Informational table availability for a branch + time window.
- * Does not reserve anything. Never send organizationId / tenant headers.
+ * Informational table availability for a branch + date (Postman contract).
+ * Does not reserve anything.
  */
 export async function searchAvailability(
   params: SearchAvailabilityParams,
   signal?: AbortSignal,
 ): Promise<TableAvailabilityDto[]> {
-  return apiRequest<TableAvailabilityDto[]>('/reservations/availability', {
+  const data = await apiRequest<
+    TableAvailabilityDto[] | PaginatedData<TableAvailabilityDto>
+  >('/reservations/availability', {
     query: {
+      restaurantId: params.restaurantId,
       branchId: params.branchId,
-      reservationStartTime: params.reservationStartTime,
+      date: params.date,
       partySize: params.partySize,
-      reservationEndTime: params.reservationEndTime ?? undefined,
+      page: params.page ?? 1,
+      limit: params.pageSize ?? 20,
     },
     signal,
   })
+  if (Array.isArray(data)) return data
+  return data.items ?? []
 }
 
 /**
@@ -187,7 +195,7 @@ export async function listMyReservations(
   return apiRequest<PaginatedData<ReservationDto>>('/reservations', {
     query: {
       page: params.page ?? 1,
-      limit: params.limit ?? 20,
+      limit: params.pageSize ?? 20,
     },
     signal,
   })

@@ -3,10 +3,10 @@ import { cn } from '@/lib/utils'
 import { useLocale } from '@/context/LocaleContext'
 import { useSidebar } from '@/context/SidebarContext'
 import { useAuth } from '@/context/AuthContext'
-import { useRestaurant } from '@/context/RestaurantContext'
 import { useRestaurantScope } from '@/context/RestaurantScopeContext'
 import { Num } from '@/components/ui/Num'
 import { MaterialIcon } from '@/components/ui/Icon'
+import { useUnreadNotificationCount } from '@/hooks/useNotificationQueries'
 
 type NavKey = keyof typeof import('@/i18n/en').en.nav
 
@@ -16,32 +16,33 @@ const opsNav: { key: NavKey; path: string; icon: string }[] = [
   { key: 'floorPlan', path: '/floor-plan', icon: 'layers' },
   { key: 'waitlist', path: '/waitlist', icon: 'hourglass_empty' },
   { key: 'walkIn', path: '/walk-in', icon: 'directions_walk' },
-  { key: 'calendar', path: '/calendar', icon: 'calendar_today' },
 ]
 
 const mgmtNav: { key: NavKey; path: string; icon: string }[] = [
-  { key: 'customers', path: '/customers', icon: 'group' },
-  { key: 'specialOccasions', path: '/special-occasions', icon: 'star' },
+  { key: 'menu', path: '/menu', icon: 'restaurant_menu' },
+  { key: 'offers', path: '/offers', icon: 'local_offer' },
+  { key: 'reviews', path: '/reviews', icon: 'rate_review' },
   { key: 'tables', path: '/tables', icon: 'restaurant' },
+  { key: 'messaging', path: '/messaging', icon: 'inbox' },
+  { key: 'notifications', path: '/notifications', icon: 'notifications' },
 ]
 
 const adminNav: { key: NavKey; path: string; icon: string }[] = [
+  { key: 'staff', path: '/staff', icon: 'badge' },
   { key: 'reports', path: '/reports', icon: 'analytics' },
   { key: 'branches', path: '/branches', icon: 'store' },
   { key: 'settings', path: '/settings', icon: 'settings' },
-  { key: 'activityLogs', path: '/activity-logs', icon: 'history' },
 ]
 
 export function Sidebar() {
   const { t } = useLocale()
   const { isOpen, isCollapsed, close } = useSidebar()
   const { user, logout } = useAuth()
-  const { pendingCount, waitlist } = useRestaurant()
   const { selectedRestaurant, status: scopeStatus } = useRestaurantScope()
+  const unreadQuery = useUnreadNotificationCount(Boolean(user))
 
   const badges: Partial<Record<NavKey, number>> = {
-    reservations: pendingCount,
-    waitlist: waitlist.length,
+    notifications: unreadQuery.data ?? 0,
   }
 
   const renderGroup = (label: string, items: typeof opsNav) => (

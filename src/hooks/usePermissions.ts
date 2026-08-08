@@ -39,3 +39,39 @@ export function useCanManageInventory(): boolean {
   const role = user?.organization?.role
   return role === 'Owner' || role === 'Admin'
 }
+
+/**
+ * Advisory UI gate for offer CRUD / publish / delete.
+ * Backend routes require organization Owner/Admin — optional `offers:manage` slug.
+ */
+export function useCanManageOffers(): boolean {
+  const { user } = useAuth()
+  if (!user) return false
+  const orgRole = user.organization?.role
+  if (orgRole === 'Owner' || orgRole === 'Admin') return true
+  return user.permissions.includes('offers:manage')
+}
+
+/**
+ * Advisory UI gate for replying to reviews (Domain Action).
+ * Backend requires organization Owner/Admin — optional `reviews:manage` slug.
+ */
+export function useCanReplyToReviews(): boolean {
+  const { user } = useAuth()
+  if (!user) return false
+  const orgRole = user.organization?.role
+  if (orgRole === 'Owner' || orgRole === 'Admin') return true
+  return user.permissions.includes('reviews:manage')
+}
+
+/**
+ * Advisory UI gate for menu management mutations.
+ * Org Owner/Admin, or explicit menu:manage permission from JWT claims.
+ */
+export function useCanManageMenu(): boolean {
+  const { user } = useAuth()
+  if (!user) return false
+  const orgRole = user.organization?.role
+  if (orgRole === 'Owner' || orgRole === 'Admin') return true
+  return user.permissions.includes('menu:manage')
+}

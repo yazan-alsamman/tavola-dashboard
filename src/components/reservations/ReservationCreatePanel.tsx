@@ -48,6 +48,7 @@ export function ReservationCreatePanel() {
   const { t, locale } = useLocale()
   const { toast } = useToast()
   const {
+    selectedRestaurantId,
     selectedBranch,
     selectedBranchId,
     status: scopeStatus,
@@ -68,10 +69,13 @@ export function ReservationCreatePanel() {
 
   const branchTimezone = selectedBranch?.timezone ?? 'UTC'
   const canOperate =
-    scopeStatus === 'ready' && Boolean(selectedBranchId) && Boolean(selectedBranch)
+    scopeStatus === 'ready' &&
+    Boolean(selectedRestaurantId) &&
+    Boolean(selectedBranchId) &&
+    Boolean(selectedBranch)
 
   const handleSearch = async (): Promise<void> => {
-    if (!selectedBranchId || !localStart) {
+    if (!selectedRestaurantId || !selectedBranchId || !localStart) {
       setFormError(t.reservations.create.missingFields)
       return
     }
@@ -82,10 +86,11 @@ export function ReservationCreatePanel() {
     idempotencyKeyRef.current = null
 
     try {
-      const startIso = branchLocalDateTimeToUtcIso(localStart, branchTimezone)
+      const date = localStart.slice(0, 10)
       const result = await searchAvailability({
+        restaurantId: selectedRestaurantId,
         branchId: selectedBranchId,
-        reservationStartTime: startIso,
+        date,
         partySize,
       })
       setTables(result)

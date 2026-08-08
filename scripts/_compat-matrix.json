@@ -1,0 +1,2856 @@
+{
+  "matched": [
+    {
+      "folder": "00 - Authentication",
+      "name": "Login",
+      "method": "POST",
+      "path": "/auth/login",
+      "key": "POST /auth/login",
+      "client": "auth.login",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "00 - Authentication",
+      "name": "Refresh Token",
+      "method": "POST",
+      "path": "/auth/refresh",
+      "key": "POST /auth/refresh",
+      "client": "client.refreshSession",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "00 - Authentication",
+      "name": "Forgot Password",
+      "method": "POST",
+      "path": "/auth/forgot-password",
+      "key": "POST /auth/forgot-password",
+      "client": "auth.forgotPassword",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "00 - Authentication",
+      "name": "Reset Password",
+      "method": "POST",
+      "path": "/auth/reset-password",
+      "key": "POST /auth/reset-password",
+      "client": "auth.resetPassword",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "00 - Authentication",
+      "name": "List Active Sessions",
+      "method": "GET",
+      "path": "/auth/sessions",
+      "key": "GET /auth/sessions",
+      "client": "auth.listSessions",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "00 - Authentication",
+      "name": "Change Password",
+      "method": "POST",
+      "path": "/auth/change-password",
+      "key": "POST /auth/change-password",
+      "client": "auth.changePassword",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "00 - Authentication",
+      "name": "Logout All Devices",
+      "method": "POST",
+      "path": "/auth/logout-all",
+      "key": "POST /auth/logout-all",
+      "client": "auth.logoutAll",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "00 - Authentication",
+      "name": "Logout Current Session",
+      "method": "POST",
+      "path": "/auth/logout",
+      "key": "POST /auth/logout",
+      "client": "auth.logout",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "00 - Authentication",
+      "name": "Revoke Session",
+      "method": "DELETE",
+      "path": "/auth/sessions/:id",
+      "key": "DELETE /auth/sessions/:id",
+      "client": "auth.revokeSession",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "02 - Customer API",
+      "name": "Get Current Profile",
+      "method": "GET",
+      "path": "/users/me",
+      "key": "GET /users/me",
+      "client": "users.getCurrentUser",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "02 - Customer API",
+      "name": "Get Preferences",
+      "method": "GET",
+      "path": "/users/me/preferences",
+      "key": "GET /users/me/preferences",
+      "client": "users.getMyPreferences",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "02 - Customer API",
+      "name": "Update Preferences",
+      "method": "PATCH",
+      "path": "/users/me/preferences",
+      "key": "PATCH /users/me/preferences",
+      "client": "users.updateMyPreferences",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "02 - Customer API",
+      "name": "Update the authenticated user",
+      "method": "PATCH",
+      "path": "/users/me",
+      "key": "PATCH /users/me",
+      "client": "users.updateCurrentUser",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "02 - Customer API",
+      "name": "Upload Avatar",
+      "method": "POST",
+      "path": "/users/me/avatar",
+      "key": "POST /users/me/avatar",
+      "client": "users.uploadMyAvatar",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "08 - Reservations",
+      "name": "Create a reservation (Online, Phone, or WalkIn source)",
+      "method": "POST",
+      "path": "/reservations",
+      "key": "POST /reservations",
+      "client": "reservations.createReservation + createStaffReservation",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "08 - Reservations",
+      "name": "Create Reservation",
+      "method": "POST",
+      "path": "/reservations/:id/no-show",
+      "key": "POST /reservations/:id/no-show",
+      "client": "reservations.markReservationNoShow",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "08 - Reservations",
+      "name": "List the authenticated Customer",
+      "method": "GET",
+      "path": "/reservations",
+      "key": "GET /reservations",
+      "client": "reservations.listMyReservations",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "08 - Reservations",
+      "name": "Get one of the authenticated Customer",
+      "method": "GET",
+      "path": "/reservations/:id",
+      "key": "GET /reservations/:id",
+      "client": "reservations.getMyReservation",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "08 - Reservations",
+      "name": "Replace Item Availability Windows",
+      "method": "GET",
+      "path": "/reservations/availability",
+      "key": "GET /reservations/availability",
+      "client": "reservations.searchAvailability",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "08 - Reservations",
+      "name": "approve Reservation",
+      "method": "POST",
+      "path": "/reservations/:id/approve",
+      "key": "POST /reservations/:id/approve",
+      "client": "reservations.approveReservation",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "08 - Reservations",
+      "name": "cancel Reservation",
+      "method": "POST",
+      "path": "/reservations/:id/cancel",
+      "key": "POST /reservations/:id/cancel",
+      "client": "reservations.cancelReservation",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "08 - Reservations",
+      "name": "complete Reservation",
+      "method": "POST",
+      "path": "/reservations/:id/complete",
+      "key": "POST /reservations/:id/complete",
+      "client": "reservations.completeReservation",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "08 - Reservations",
+      "name": "Mark an Approved reservation",
+      "method": "POST",
+      "path": "/reservations/:id/table-ready",
+      "key": "POST /reservations/:id/table-ready",
+      "client": "reservations.markReservationTableReady",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "08 - Reservations",
+      "name": "reject Reservation",
+      "method": "POST",
+      "path": "/reservations/:id/reject",
+      "key": "POST /reservations/:id/reject",
+      "client": "reservations.rejectReservation",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "08 - Reservations",
+      "name": "reschedule Reservation",
+      "method": "POST",
+      "path": "/reservations/:id/reschedule",
+      "key": "POST /reservations/:id/reschedule",
+      "client": "reservations.rescheduleReservation",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "09 - Waitlist",
+      "name": "cancel Waitlist Entry",
+      "method": "POST",
+      "path": "/waitlist/:id/cancel",
+      "key": "POST /waitlist/:id/cancel",
+      "client": "waitlist.cancelWaitlistEntry",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "09 - Waitlist",
+      "name": "promote Waitlist Entry",
+      "method": "POST",
+      "path": "/waitlist/:id/promote",
+      "key": "POST /waitlist/:id/promote",
+      "client": "waitlist.promoteWaitlistEntry",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "09 - Waitlist",
+      "name": "Join a branch waitlist for a preferred date/time",
+      "method": "POST",
+      "path": "/waitlist",
+      "key": "POST /waitlist",
+      "client": "waitlist.joinWaitlist",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "10 - Reviews",
+      "name": "List a restaurant",
+      "method": "GET",
+      "path": "/restaurants/:id/reviews",
+      "key": "GET /restaurants/:id/reviews",
+      "client": "reviews.listRestaurantReviews",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "10 - Reviews",
+      "name": "Get a single review by id",
+      "method": "GET",
+      "path": "/reviews/:id",
+      "key": "GET /reviews/:id",
+      "client": "reviews.getReview",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "10 - Reviews",
+      "name": "Reply To Review",
+      "method": "POST",
+      "path": "/reviews/:id/reply",
+      "key": "POST /reviews/:id/reply",
+      "client": "reviews.replyToReview",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "10 - Reviews",
+      "name": "Soft-delete a review (Domain Action)",
+      "method": "DELETE",
+      "path": "/reviews/:id",
+      "key": "DELETE /reviews/:id",
+      "client": "reviews.deleteReview",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "11 - Offers",
+      "name": "Create an offer under a restaurant",
+      "method": "POST",
+      "path": "/restaurants/:id/offers",
+      "key": "POST /restaurants/:id/offers",
+      "client": "offers.createOffer",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "11 - Offers",
+      "name": "List offers of a restaurant (management, every status)",
+      "method": "GET",
+      "path": "/restaurants/:id/offers",
+      "key": "GET /restaurants/:id/offers",
+      "client": "offers.listOffers",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "11 - Offers",
+      "name": "Update an offer (full-replace, Draft only)",
+      "method": "PATCH",
+      "path": "/restaurants/:id/offers/:id",
+      "key": "PATCH /restaurants/:id/offers/:id",
+      "client": "offers.updateOffer",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "11 - Offers",
+      "name": "Publish Offer",
+      "method": "POST",
+      "path": "/restaurants/:id/offers/:id/publish",
+      "key": "POST /restaurants/:id/offers/:id/publish",
+      "client": "offers.publishOffer",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "11 - Offers",
+      "name": "Soft-delete an offer",
+      "method": "DELETE",
+      "path": "/restaurants/:id/offers/:id",
+      "key": "DELETE /restaurants/:id/offers/:id",
+      "client": "offers.deleteOffer",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "12 - Menu",
+      "name": "Create a Category under a Menu",
+      "method": "POST",
+      "path": "/restaurants/:id/menus/:id/categories",
+      "key": "POST /restaurants/:id/menus/:id/categories",
+      "client": "menus.createMenuCategory",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "12 - Menu",
+      "name": "Create a Menu under a Restaurant",
+      "method": "POST",
+      "path": "/restaurants/:id/menus",
+      "key": "POST /restaurants/:id/menus",
+      "client": "menus.createMenu",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "12 - Menu",
+      "name": "Create an Add-on under an Item",
+      "method": "POST",
+      "path": "/restaurants/:id/menus/:id/categories/:id/items/:id/add-ons",
+      "key": "POST /restaurants/:id/menus/:id/categories/:id/items/:id/add-ons",
+      "client": "menus.createMenuItemAddOn",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "12 - Menu",
+      "name": "Create an Item under a Category",
+      "method": "POST",
+      "path": "/restaurants/:id/menus/:id/categories/:id/items",
+      "key": "POST /restaurants/:id/menus/:id/categories/:id/items",
+      "client": "menus.createMenuItem",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "12 - Menu",
+      "name": "Create an Option Group under an Item",
+      "method": "POST",
+      "path": "/restaurants/:id/menus/:id/categories/:id/items/:id/option-groups",
+      "key": "POST /restaurants/:id/menus/:id/categories/:id/items/:id/option-groups",
+      "client": "menus.createMenuItemOptionGroup",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "12 - Menu",
+      "name": "Create an Option under an Option Group",
+      "method": "POST",
+      "path": "/restaurants/:id/menus/:id/categories/:id/items/:id/option-groups/:id/options",
+      "key": "POST /restaurants/:id/menus/:id/categories/:id/items/:id/option-groups/:id/options",
+      "client": "menus.createMenuItemOption",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "12 - Menu",
+      "name": "List a Restaurant",
+      "method": "GET",
+      "path": "/restaurants/:id/menus",
+      "key": "GET /restaurants/:id/menus",
+      "client": "menus.listMenus",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "12 - Menu",
+      "name": "Get a Category (Customer, public)",
+      "method": "GET",
+      "path": "/restaurants/:id/menus/:id/categories/:id",
+      "key": "GET /restaurants/:id/menus/:id/categories/:id",
+      "client": "menus.getMenu",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "12 - Menu",
+      "name": "Get a specific Menu (Customer, public, full nested tree)",
+      "method": "GET",
+      "path": "/restaurants/:id/menus/:id",
+      "key": "GET /restaurants/:id/menus/:id",
+      "client": "menus.getMenu",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "12 - Menu",
+      "name": "Get Default Menu",
+      "method": "GET",
+      "path": "/restaurants/:id/menus/default",
+      "key": "GET /restaurants/:id/menus/default",
+      "client": "menus.getDefaultMenu",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "12 - Menu",
+      "name": "Get Item Details (Customer, public)",
+      "method": "GET",
+      "path": "/restaurants/:id/menus/:id/categories/:id/items/:id",
+      "key": "GET /restaurants/:id/menus/:id/categories/:id/items/:id",
+      "client": "menus.getMenu",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "12 - Menu",
+      "name": "Replace Item Availability Windows",
+      "method": "PATCH",
+      "path": "/restaurants/:id/menus/:id/categories/:id/items/:id/availability",
+      "key": "PATCH /restaurants/:id/menus/:id/categories/:id/items/:id/availability",
+      "client": "menus.replaceMenuItemAvailability",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "12 - Menu",
+      "name": "Set Default Menu",
+      "method": "POST",
+      "path": "/restaurants/:id/menus/:id/set-default",
+      "key": "POST /restaurants/:id/menus/:id/set-default",
+      "client": "menus.setDefaultMenu",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "12 - Menu",
+      "name": "Update a Category",
+      "method": "PATCH",
+      "path": "/restaurants/:id/menus/:id/categories/:id",
+      "key": "PATCH /restaurants/:id/menus/:id/categories/:id",
+      "client": "menus.updateMenuCategory",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "12 - Menu",
+      "name": "Update a Menu (name, displayOrder)",
+      "method": "PATCH",
+      "path": "/restaurants/:id/menus/:id",
+      "key": "PATCH /restaurants/:id/menus/:id",
+      "client": "menus.updateMenu",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "12 - Menu",
+      "name": "Update an Add-on (name/price/active)",
+      "method": "PATCH",
+      "path": "/restaurants/:id/menus/:id/categories/:id/items/:id/add-ons/:id",
+      "key": "PATCH /restaurants/:id/menus/:id/categories/:id/items/:id/add-ons/:id",
+      "client": "menus.updateMenuItemAddOn",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "12 - Menu",
+      "name": "Update an Option (name/priceModifier/active)",
+      "method": "PATCH",
+      "path": "/restaurants/:id/menus/:id/categories/:id/items/:id/option-groups/:id/options/:id",
+      "key": "PATCH /restaurants/:id/menus/:id/categories/:id/items/:id/option-groups/:id/options/:id",
+      "client": "menus.updateMenuItemOption",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "12 - Menu",
+      "name": "Update an Option Group",
+      "method": "PATCH",
+      "path": "/restaurants/:id/menus/:id/categories/:id/items/:id/option-groups/:id",
+      "key": "PATCH /restaurants/:id/menus/:id/categories/:id/items/:id/option-groups/:id",
+      "client": "menus.updateMenuItemOptionGroup",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "12 - Menu",
+      "name": "Update Menu Item",
+      "method": "PATCH",
+      "path": "/restaurants/:id/menus/:id/categories/:id/items/:id",
+      "key": "PATCH /restaurants/:id/menus/:id/categories/:id/items/:id",
+      "client": "menus.updateMenuItem",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "12 - Menu",
+      "name": "Activate Menu",
+      "method": "POST",
+      "path": "/restaurants/:id/menus/:id/activate",
+      "key": "POST /restaurants/:id/menus/:id/activate",
+      "client": "menus.activateMenu",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "12 - Menu",
+      "name": "Deactivate Menu",
+      "method": "POST",
+      "path": "/restaurants/:id/menus/:id/deactivate",
+      "key": "POST /restaurants/:id/menus/:id/deactivate",
+      "client": "menus.deactivateMenu",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "12 - Menu",
+      "name": "Feature Item",
+      "method": "POST",
+      "path": "/restaurants/:id/menus/:id/categories/:id/items/:id/feature",
+      "key": "POST /restaurants/:id/menus/:id/categories/:id/items/:id/feature",
+      "client": "menus.featureMenuItem",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "12 - Menu",
+      "name": "Remove Category Image",
+      "method": "DELETE",
+      "path": "/restaurants/:id/menus/:id/categories/:id/image",
+      "key": "DELETE /restaurants/:id/menus/:id/categories/:id/image",
+      "client": "menus.removeMenuCategoryImage",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "12 - Menu",
+      "name": "Remove Item Image",
+      "method": "DELETE",
+      "path": "/restaurants/:id/menus/:id/categories/:id/items/:id/image",
+      "key": "DELETE /restaurants/:id/menus/:id/categories/:id/items/:id/image",
+      "client": "menus.removeMenuItemImage",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "12 - Menu",
+      "name": "Reorder Categories",
+      "method": "PATCH",
+      "path": "/restaurants/:id/menus/:id/categories/reorder",
+      "key": "PATCH /restaurants/:id/menus/:id/categories/reorder",
+      "client": "menus.reorderMenuCategories",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "12 - Menu",
+      "name": "Reorder Items",
+      "method": "PATCH",
+      "path": "/restaurants/:id/menus/:id/categories/:id/items/reorder",
+      "key": "PATCH /restaurants/:id/menus/:id/categories/:id/items/reorder",
+      "client": "menus.reorderMenuItems",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "12 - Menu",
+      "name": "Unfeature Item",
+      "method": "POST",
+      "path": "/restaurants/:id/menus/:id/categories/:id/items/:id/unfeature",
+      "key": "POST /restaurants/:id/menus/:id/categories/:id/items/:id/unfeature",
+      "client": "menus.unfeatureMenuItem",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "12 - Menu",
+      "name": "Upload Category Image",
+      "method": "POST",
+      "path": "/restaurants/:id/menus/:id/categories/:id/image",
+      "key": "POST /restaurants/:id/menus/:id/categories/:id/image",
+      "client": "menus.uploadMenuCategoryImage",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "12 - Menu",
+      "name": "Upload Item Image",
+      "method": "POST",
+      "path": "/restaurants/:id/menus/:id/categories/:id/items/:id/image",
+      "key": "POST /restaurants/:id/menus/:id/categories/:id/items/:id/image",
+      "client": "menus.uploadMenuItemImage",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "12 - Menu",
+      "name": "Soft-delete a Category",
+      "method": "DELETE",
+      "path": "/restaurants/:id/menus/:id/categories/:id",
+      "key": "DELETE /restaurants/:id/menus/:id/categories/:id",
+      "client": "menus.deleteMenuCategory",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "12 - Menu",
+      "name": "Soft-delete a Menu",
+      "method": "DELETE",
+      "path": "/restaurants/:id/menus/:id",
+      "key": "DELETE /restaurants/:id/menus/:id",
+      "client": "menus.deleteMenu",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "12 - Menu",
+      "name": "Soft-delete an Add-on",
+      "method": "DELETE",
+      "path": "/restaurants/:id/menus/:id/categories/:id/items/:id/add-ons/:id",
+      "key": "DELETE /restaurants/:id/menus/:id/categories/:id/items/:id/add-ons/:id",
+      "client": "menus.deleteMenuItemAddOn",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "12 - Menu",
+      "name": "Soft-delete an Item",
+      "method": "DELETE",
+      "path": "/restaurants/:id/menus/:id/categories/:id/items/:id",
+      "key": "DELETE /restaurants/:id/menus/:id/categories/:id/items/:id",
+      "client": "menus.deleteMenuItem",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "12 - Menu",
+      "name": "Soft-delete an Option",
+      "method": "DELETE",
+      "path": "/restaurants/:id/menus/:id/categories/:id/items/:id/option-groups/:id/options/:id",
+      "key": "DELETE /restaurants/:id/menus/:id/categories/:id/items/:id/option-groups/:id/options/:id",
+      "client": "menus.deleteMenuItemOption",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "12 - Menu",
+      "name": "Soft-delete an Option Group",
+      "method": "DELETE",
+      "path": "/restaurants/:id/menus/:id/categories/:id/items/:id/option-groups/:id",
+      "key": "DELETE /restaurants/:id/menus/:id/categories/:id/items/:id/option-groups/:id",
+      "client": "menus.deleteMenuItemOptionGroup",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "13 - Messaging",
+      "name": "List conversations for a restaurant (staff inbox)",
+      "method": "GET",
+      "path": "/restaurants/:id/conversations",
+      "key": "GET /restaurants/:id/conversations",
+      "client": "messaging.listRestaurantConversations",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "13 - Messaging",
+      "name": "List Messages",
+      "method": "GET",
+      "path": "/conversations/:id/messages",
+      "key": "GET /conversations/:id/messages",
+      "client": "messaging.listConversationMessages",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "13 - Messaging",
+      "name": "List the authenticated Customer",
+      "method": "GET",
+      "path": "/conversations",
+      "key": "GET /conversations",
+      "client": "messaging.listConversations",
+      "match": true,
+      "ui": "client-only"
+    },
+    {
+      "folder": "13 - Messaging",
+      "name": "Get a single conversation",
+      "method": "GET",
+      "path": "/conversations/:id",
+      "key": "GET /conversations/:id",
+      "client": "messaging.getConversation",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "13 - Messaging",
+      "name": "close Conversation",
+      "method": "POST",
+      "path": "/conversations/:id/close",
+      "key": "POST /conversations/:id/close",
+      "client": "messaging.closeConversation",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "13 - Messaging",
+      "name": "read Conversation",
+      "method": "POST",
+      "path": "/conversations/:id/read",
+      "key": "POST /conversations/:id/read",
+      "client": "messaging.markConversationRead",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "13 - Messaging",
+      "name": "Send Message",
+      "method": "POST",
+      "path": "/conversations/:id/messages",
+      "key": "POST /conversations/:id/messages",
+      "client": "messaging.sendConversationMessage",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "13 - Messaging",
+      "name": "Start a conversation",
+      "method": "POST",
+      "path": "/conversations",
+      "key": "POST /conversations",
+      "client": "messaging.startConversation",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "14 - Analytics",
+      "name": "Get Customer Insights",
+      "method": "GET",
+      "path": "/restaurants/:id/analytics/customers",
+      "key": "GET /restaurants/:id/analytics/customers",
+      "client": "analytics.getCustomerInsights",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "14 - Analytics",
+      "name": "Get Peak Hours",
+      "method": "GET",
+      "path": "/restaurants/:id/analytics/branches/:id/peak-hours",
+      "key": "GET /restaurants/:id/analytics/branches/:id/peak-hours",
+      "client": "analytics.getBranchPeakHours",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "14 - Analytics",
+      "name": "Get Reservation Trends",
+      "method": "GET",
+      "path": "/restaurants/:id/analytics/branches/:id/reservations/trends",
+      "key": "GET /restaurants/:id/analytics/branches/:id/reservations/trends",
+      "client": "analytics.getBranchReservationTrends",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "14 - Analytics",
+      "name": "Get Reservations Summary",
+      "method": "GET",
+      "path": "/restaurants/:id/analytics/reservations/summary",
+      "key": "GET /restaurants/:id/analytics/reservations/summary",
+      "client": "analytics.getReservationSummary",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "14 - Analytics",
+      "name": "Get Reservations Summary (GET)",
+      "method": "GET",
+      "path": "/organization/analytics/reservations/summary",
+      "key": "GET /organization/analytics/reservations/summary",
+      "client": "analytics.getOrganizationReservationSummary",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "14 - Analytics",
+      "name": "Get Reviews Summary",
+      "method": "GET",
+      "path": "/restaurants/:id/analytics/reviews-summary",
+      "key": "GET /restaurants/:id/analytics/reviews-summary",
+      "client": "analytics.getReviewsSummary",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "14 - Analytics",
+      "name": "Get Waitlist Analytics",
+      "method": "GET",
+      "path": "/restaurants/:id/analytics/waitlist",
+      "key": "GET /restaurants/:id/analytics/waitlist",
+      "client": "analytics.getWaitlistAnalytics",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "15 - Restaurants",
+      "name": "Create a restaurant within the caller organization",
+      "method": "POST",
+      "path": "/restaurants",
+      "key": "POST /restaurants",
+      "client": "restaurants.createRestaurant",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "15 - Restaurants",
+      "name": "List Gallery",
+      "method": "GET",
+      "path": "/restaurants/:id/gallery",
+      "key": "GET /restaurants/:id/gallery",
+      "client": "restaurants.listRestaurantGallery",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "15 - Restaurants",
+      "name": "List restaurants in the caller organization",
+      "method": "GET",
+      "path": "/restaurants",
+      "key": "GET /restaurants",
+      "client": "restaurants.listRestaurants",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "15 - Restaurants",
+      "name": "Get a restaurant by id",
+      "method": "GET",
+      "path": "/restaurants/:id",
+      "key": "GET /restaurants/:id",
+      "client": "restaurants.getRestaurant",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "15 - Restaurants",
+      "name": "Get Restaurant Cuisine Categories",
+      "method": "GET",
+      "path": "/restaurants/:id/cuisine-categories",
+      "key": "GET /restaurants/:id/cuisine-categories",
+      "client": "restaurants.getRestaurantCuisineCategories",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "15 - Restaurants",
+      "name": "Get Restaurant Occasion Categories",
+      "method": "GET",
+      "path": "/restaurants/:id/occasion-categories",
+      "key": "GET /restaurants/:id/occasion-categories",
+      "client": "restaurants.getRestaurantOccasionCategories",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "15 - Restaurants",
+      "name": "Get Restaurant Settings",
+      "method": "GET",
+      "path": "/restaurants/:id/settings",
+      "key": "GET /restaurants/:id/settings",
+      "client": "restaurants.getRestaurantSettings",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "15 - Restaurants",
+      "name": "Get Restaurant Working Hours",
+      "method": "GET",
+      "path": "/restaurants/:id/working-hours",
+      "key": "GET /restaurants/:id/working-hours",
+      "client": "restaurants.getRestaurantWorkingHours",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "15 - Restaurants",
+      "name": "Set Restaurant Cuisine Categories",
+      "method": "PATCH",
+      "path": "/restaurants/:id/cuisine-categories",
+      "key": "PATCH /restaurants/:id/cuisine-categories",
+      "client": "restaurants.setRestaurantCuisineCategories",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "15 - Restaurants",
+      "name": "Set Restaurant Occasion Categories",
+      "method": "PATCH",
+      "path": "/restaurants/:id/occasion-categories",
+      "key": "PATCH /restaurants/:id/occasion-categories",
+      "client": "restaurants.setRestaurantOccasionCategories",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "15 - Restaurants",
+      "name": "Update a restaurant (full-replace)",
+      "method": "PATCH",
+      "path": "/restaurants/:id",
+      "key": "PATCH /restaurants/:id",
+      "client": "restaurants.updateRestaurant",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "15 - Restaurants",
+      "name": "Update Restaurant Settings",
+      "method": "PATCH",
+      "path": "/restaurants/:id/settings",
+      "key": "PATCH /restaurants/:id/settings",
+      "client": "restaurants.updateRestaurantSettings",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "15 - Restaurants",
+      "name": "Update Restaurant Working Hours",
+      "method": "PATCH",
+      "path": "/restaurants/:id/working-hours",
+      "key": "PATCH /restaurants/:id/working-hours",
+      "client": "restaurants.updateRestaurantWorkingHours",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "15 - Restaurants",
+      "name": "Remove Gallery Image",
+      "method": "DELETE",
+      "path": "/restaurants/:id/gallery/:id",
+      "key": "DELETE /restaurants/:id/gallery/:id",
+      "client": "restaurants.removeRestaurantGalleryImage",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "15 - Restaurants",
+      "name": "Upload Gallery Image",
+      "method": "POST",
+      "path": "/restaurants/:id/gallery",
+      "key": "POST /restaurants/:id/gallery",
+      "client": "restaurants.addRestaurantGalleryImage",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "15 - Restaurants",
+      "name": "Soft-delete a restaurant",
+      "method": "DELETE",
+      "path": "/restaurants/:id",
+      "key": "DELETE /restaurants/:id",
+      "client": "restaurants.deleteRestaurant",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "16 - Branches",
+      "name": "Create a branch under a restaurant",
+      "method": "POST",
+      "path": "/restaurants/:id/branches",
+      "key": "POST /restaurants/:id/branches",
+      "client": "branches.createBranch",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "16 - Branches",
+      "name": "List branches of a restaurant",
+      "method": "GET",
+      "path": "/restaurants/:id/branches",
+      "key": "GET /restaurants/:id/branches",
+      "client": "branches.listBranches",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "16 - Branches",
+      "name": "Get a branch by id",
+      "method": "GET",
+      "path": "/restaurants/:id/branches/:id",
+      "key": "GET /restaurants/:id/branches/:id",
+      "client": "branches.getBranch",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "16 - Branches",
+      "name": "Get Branch Working Hours",
+      "method": "GET",
+      "path": "/restaurants/:id/branches/:id/working-hours",
+      "key": "GET /restaurants/:id/branches/:id/working-hours",
+      "client": "branches.getBranchWorkingHours",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "16 - Branches",
+      "name": "Update a branch (full-replace)",
+      "method": "PATCH",
+      "path": "/restaurants/:id/branches/:id",
+      "key": "PATCH /restaurants/:id/branches/:id",
+      "client": "branches.updateBranch",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "16 - Branches",
+      "name": "Update Branch Working Hours",
+      "method": "PATCH",
+      "path": "/restaurants/:id/branches/:id/working-hours",
+      "key": "PATCH /restaurants/:id/branches/:id/working-hours",
+      "client": "branches.updateBranchWorkingHours",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "16 - Branches",
+      "name": "Soft-delete a branch",
+      "method": "DELETE",
+      "path": "/restaurants/:id/branches/:id",
+      "key": "DELETE /restaurants/:id/branches/:id",
+      "client": "branches.deleteBranch",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "17 - Floor Plans",
+      "name": "Create a floor plan under a branch",
+      "method": "POST",
+      "path": "/restaurants/:id/branches/:id/floor-plans",
+      "key": "POST /restaurants/:id/branches/:id/floor-plans",
+      "client": "floorPlans.createFloorPlan",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "17 - Floor Plans",
+      "name": "List floor plans of a branch",
+      "method": "GET",
+      "path": "/restaurants/:id/branches/:id/floor-plans",
+      "key": "GET /restaurants/:id/branches/:id/floor-plans",
+      "client": "floorPlans.listFloorPlans",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "17 - Floor Plans",
+      "name": "List tables belonging to one floor plan",
+      "method": "GET",
+      "path": "/restaurants/:id/branches/:id/floor-plans/:id/tables",
+      "key": "GET /restaurants/:id/branches/:id/floor-plans/:id/tables",
+      "client": "tables.listTablesByFloorPlan",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "17 - Floor Plans",
+      "name": "Update Branch",
+      "method": "PATCH",
+      "path": "/restaurants/:id/branches/:id/floor-plans/:id/activate",
+      "key": "PATCH /restaurants/:id/branches/:id/floor-plans/:id/activate",
+      "client": "floorPlans.activateFloorPlan",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "18 - Tables",
+      "name": "Create a table under a branch",
+      "method": "POST",
+      "path": "/restaurants/:id/branches/:id/tables",
+      "key": "POST /restaurants/:id/branches/:id/tables",
+      "client": "tables.createTable",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "18 - Tables",
+      "name": "List tables of a branch",
+      "method": "GET",
+      "path": "/restaurants/:id/branches/:id/tables",
+      "key": "GET /restaurants/:id/branches/:id/tables",
+      "client": "tables.listTablesByBranch",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "18 - Tables",
+      "name": "Get a table by id",
+      "method": "GET",
+      "path": "/tables/:id",
+      "key": "GET /tables/:id",
+      "client": "tables.getTable",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "18 - Tables",
+      "name": "Change Table Status",
+      "method": "POST",
+      "path": "/tables/:id/status",
+      "key": "POST /tables/:id/status",
+      "client": "tables.changeTableStatus",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "18 - Tables",
+      "name": "Update a table (full-replace)",
+      "method": "PATCH",
+      "path": "/tables/:id",
+      "key": "PATCH /tables/:id",
+      "client": "tables.updateTable",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "18 - Tables",
+      "name": "merge Table",
+      "method": "POST",
+      "path": "/tables/merge",
+      "key": "POST /tables/merge",
+      "client": "tables.mergeTables",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "18 - Tables",
+      "name": "move Table",
+      "method": "POST",
+      "path": "/tables/:id/move",
+      "key": "POST /tables/:id/move",
+      "client": "tables.moveTable",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "18 - Tables",
+      "name": "split Table",
+      "method": "POST",
+      "path": "/tables/:id/split",
+      "key": "POST /tables/:id/split",
+      "client": "tables.splitTable",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "18 - Tables",
+      "name": "Soft-delete a table",
+      "method": "DELETE",
+      "path": "/tables/:id",
+      "key": "DELETE /tables/:id",
+      "client": "tables.deleteTable",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "19 - Employees",
+      "name": "Assign Employee Branch",
+      "method": "POST",
+      "path": "/restaurants/:id/employees/:id/branches",
+      "key": "POST /restaurants/:id/employees/:id/branches",
+      "client": "employees.assignEmployeeToBranch",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "19 - Employees",
+      "name": "Assign Employee Role",
+      "method": "POST",
+      "path": "/restaurants/:id/employees/:id/role",
+      "key": "POST /restaurants/:id/employees/:id/role",
+      "client": "employees.assignEmployeeRole",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "19 - Employees",
+      "name": "Remove Employee Branch",
+      "method": "DELETE",
+      "path": "/restaurants/:id/employees/:id/branches/:id",
+      "key": "DELETE /restaurants/:id/employees/:id/branches/:id",
+      "client": "employees.removeEmployeeFromBranch",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "19 - Employees",
+      "name": "Invite a new employee (Domain Action)",
+      "method": "POST",
+      "path": "/restaurants/:id/employees",
+      "key": "POST /restaurants/:id/employees",
+      "client": "employees.inviteEmployee",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "19 - Employees",
+      "name": "Soft-delete an employee",
+      "method": "DELETE",
+      "path": "/restaurants/:id/employees/:id",
+      "key": "DELETE /restaurants/:id/employees/:id",
+      "client": "employees.removeEmployee",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "21 - Organizations",
+      "name": "Get Subscription",
+      "method": "GET",
+      "path": "/organizations/subscription",
+      "key": "GET /organizations/subscription",
+      "client": "organizations.getOrganizationSubscription",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "21 - Organizations",
+      "name": "Get Subscription Usage",
+      "method": "GET",
+      "path": "/organizations/subscription/usage",
+      "key": "GET /organizations/subscription/usage",
+      "client": "organizations.getOrganizationSubscriptionUsage",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "23 - Notifications",
+      "name": "List the authenticated user",
+      "method": "GET",
+      "path": "/notifications",
+      "key": "GET /notifications",
+      "client": "notifications.listNotifications",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "23 - Notifications",
+      "name": "Get OneSignal Identity Token",
+      "method": "GET",
+      "path": "/notifications/identity-token",
+      "key": "GET /notifications/identity-token",
+      "client": "notifications.getOneSignalIdentityToken",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "23 - Notifications",
+      "name": "Get Unread Count",
+      "method": "GET",
+      "path": "/notifications/unread-count",
+      "key": "GET /notifications/unread-count",
+      "client": "notifications.getUnreadNotificationCount",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "23 - Notifications",
+      "name": "Mark All Notifications Read",
+      "method": "PATCH",
+      "path": "/notifications/read-all",
+      "key": "PATCH /notifications/read-all",
+      "client": "notifications.markAllNotificationsRead",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "23 - Notifications",
+      "name": "Mark Notification Read",
+      "method": "PATCH",
+      "path": "/notifications/:id/read",
+      "key": "PATCH /notifications/:id/read",
+      "client": "notifications.markNotificationRead",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "25 - Health",
+      "name": "Health Check",
+      "method": "GET",
+      "path": "/health",
+      "key": "GET /health",
+      "client": "health.getHealth",
+      "match": true,
+      "ui": "client-only"
+    },
+    {
+      "folder": "25 - Health",
+      "name": "Liveness",
+      "method": "GET",
+      "path": "/health/liveness",
+      "key": "GET /health/liveness",
+      "client": "health.getLiveness",
+      "match": true,
+      "ui": "client-only"
+    },
+    {
+      "folder": "25 - Health",
+      "name": "Readiness",
+      "method": "GET",
+      "path": "/health/readiness",
+      "key": "GET /health/readiness",
+      "client": "health.getReadiness",
+      "match": true,
+      "ui": "client-only"
+    }
+  ],
+  "missing": [
+    {
+      "folder": "02 - Customer API",
+      "name": "List the authenticated Customer",
+      "method": "GET",
+      "path": "/users/me/reviews",
+      "key": "GET /users/me/reviews",
+      "client": null,
+      "match": false,
+      "ui": null
+    },
+    {
+      "folder": "10 - Reviews",
+      "name": "Remove Review Image",
+      "method": "DELETE",
+      "path": "/reviews/:id/images/:id",
+      "key": "DELETE /reviews/:id/images/:id",
+      "client": null,
+      "match": false,
+      "ui": null
+    },
+    {
+      "folder": "10 - Reviews",
+      "name": "Submit a review for a completed reservation",
+      "method": "POST",
+      "path": "/reviews",
+      "key": "POST /reviews",
+      "client": null,
+      "match": false,
+      "ui": null
+    },
+    {
+      "folder": "10 - Reviews",
+      "name": "Upload Review Image",
+      "method": "POST",
+      "path": "/reviews/:id/images",
+      "key": "POST /reviews/:id/images",
+      "client": null,
+      "match": false,
+      "ui": null
+    }
+  ],
+  "rows": [
+    {
+      "folder": "00 - Authentication",
+      "name": "Login",
+      "method": "POST",
+      "path": "/auth/login",
+      "key": "POST /auth/login",
+      "client": "auth.login",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "00 - Authentication",
+      "name": "Refresh Token",
+      "method": "POST",
+      "path": "/auth/refresh",
+      "key": "POST /auth/refresh",
+      "client": "client.refreshSession",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "00 - Authentication",
+      "name": "Forgot Password",
+      "method": "POST",
+      "path": "/auth/forgot-password",
+      "key": "POST /auth/forgot-password",
+      "client": "auth.forgotPassword",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "00 - Authentication",
+      "name": "Reset Password",
+      "method": "POST",
+      "path": "/auth/reset-password",
+      "key": "POST /auth/reset-password",
+      "client": "auth.resetPassword",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "00 - Authentication",
+      "name": "List Active Sessions",
+      "method": "GET",
+      "path": "/auth/sessions",
+      "key": "GET /auth/sessions",
+      "client": "auth.listSessions",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "00 - Authentication",
+      "name": "Change Password",
+      "method": "POST",
+      "path": "/auth/change-password",
+      "key": "POST /auth/change-password",
+      "client": "auth.changePassword",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "00 - Authentication",
+      "name": "Logout All Devices",
+      "method": "POST",
+      "path": "/auth/logout-all",
+      "key": "POST /auth/logout-all",
+      "client": "auth.logoutAll",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "00 - Authentication",
+      "name": "Logout Current Session",
+      "method": "POST",
+      "path": "/auth/logout",
+      "key": "POST /auth/logout",
+      "client": "auth.logout",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "00 - Authentication",
+      "name": "Revoke Session",
+      "method": "DELETE",
+      "path": "/auth/sessions/:id",
+      "key": "DELETE /auth/sessions/:id",
+      "client": "auth.revokeSession",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "02 - Customer API",
+      "name": "List the authenticated Customer",
+      "method": "GET",
+      "path": "/users/me/reviews",
+      "key": "GET /users/me/reviews",
+      "client": null,
+      "match": false,
+      "ui": null
+    },
+    {
+      "folder": "02 - Customer API",
+      "name": "Get Current Profile",
+      "method": "GET",
+      "path": "/users/me",
+      "key": "GET /users/me",
+      "client": "users.getCurrentUser",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "02 - Customer API",
+      "name": "Get Preferences",
+      "method": "GET",
+      "path": "/users/me/preferences",
+      "key": "GET /users/me/preferences",
+      "client": "users.getMyPreferences",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "02 - Customer API",
+      "name": "Update Preferences",
+      "method": "PATCH",
+      "path": "/users/me/preferences",
+      "key": "PATCH /users/me/preferences",
+      "client": "users.updateMyPreferences",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "02 - Customer API",
+      "name": "Update the authenticated user",
+      "method": "PATCH",
+      "path": "/users/me",
+      "key": "PATCH /users/me",
+      "client": "users.updateCurrentUser",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "02 - Customer API",
+      "name": "Upload Avatar",
+      "method": "POST",
+      "path": "/users/me/avatar",
+      "key": "POST /users/me/avatar",
+      "client": "users.uploadMyAvatar",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "08 - Reservations",
+      "name": "Create a reservation (Online, Phone, or WalkIn source)",
+      "method": "POST",
+      "path": "/reservations",
+      "key": "POST /reservations",
+      "client": "reservations.createReservation + createStaffReservation",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "08 - Reservations",
+      "name": "Create Reservation",
+      "method": "POST",
+      "path": "/reservations/:id/no-show",
+      "key": "POST /reservations/:id/no-show",
+      "client": "reservations.markReservationNoShow",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "08 - Reservations",
+      "name": "List the authenticated Customer",
+      "method": "GET",
+      "path": "/reservations",
+      "key": "GET /reservations",
+      "client": "reservations.listMyReservations",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "08 - Reservations",
+      "name": "Get one of the authenticated Customer",
+      "method": "GET",
+      "path": "/reservations/:id",
+      "key": "GET /reservations/:id",
+      "client": "reservations.getMyReservation",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "08 - Reservations",
+      "name": "Replace Item Availability Windows",
+      "method": "GET",
+      "path": "/reservations/availability",
+      "key": "GET /reservations/availability",
+      "client": "reservations.searchAvailability",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "08 - Reservations",
+      "name": "approve Reservation",
+      "method": "POST",
+      "path": "/reservations/:id/approve",
+      "key": "POST /reservations/:id/approve",
+      "client": "reservations.approveReservation",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "08 - Reservations",
+      "name": "cancel Reservation",
+      "method": "POST",
+      "path": "/reservations/:id/cancel",
+      "key": "POST /reservations/:id/cancel",
+      "client": "reservations.cancelReservation",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "08 - Reservations",
+      "name": "complete Reservation",
+      "method": "POST",
+      "path": "/reservations/:id/complete",
+      "key": "POST /reservations/:id/complete",
+      "client": "reservations.completeReservation",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "08 - Reservations",
+      "name": "Mark an Approved reservation",
+      "method": "POST",
+      "path": "/reservations/:id/table-ready",
+      "key": "POST /reservations/:id/table-ready",
+      "client": "reservations.markReservationTableReady",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "08 - Reservations",
+      "name": "reject Reservation",
+      "method": "POST",
+      "path": "/reservations/:id/reject",
+      "key": "POST /reservations/:id/reject",
+      "client": "reservations.rejectReservation",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "08 - Reservations",
+      "name": "reschedule Reservation",
+      "method": "POST",
+      "path": "/reservations/:id/reschedule",
+      "key": "POST /reservations/:id/reschedule",
+      "client": "reservations.rescheduleReservation",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "09 - Waitlist",
+      "name": "cancel Waitlist Entry",
+      "method": "POST",
+      "path": "/waitlist/:id/cancel",
+      "key": "POST /waitlist/:id/cancel",
+      "client": "waitlist.cancelWaitlistEntry",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "09 - Waitlist",
+      "name": "promote Waitlist Entry",
+      "method": "POST",
+      "path": "/waitlist/:id/promote",
+      "key": "POST /waitlist/:id/promote",
+      "client": "waitlist.promoteWaitlistEntry",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "09 - Waitlist",
+      "name": "Join a branch waitlist for a preferred date/time",
+      "method": "POST",
+      "path": "/waitlist",
+      "key": "POST /waitlist",
+      "client": "waitlist.joinWaitlist",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "10 - Reviews",
+      "name": "List a restaurant",
+      "method": "GET",
+      "path": "/restaurants/:id/reviews",
+      "key": "GET /restaurants/:id/reviews",
+      "client": "reviews.listRestaurantReviews",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "10 - Reviews",
+      "name": "Get a single review by id",
+      "method": "GET",
+      "path": "/reviews/:id",
+      "key": "GET /reviews/:id",
+      "client": "reviews.getReview",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "10 - Reviews",
+      "name": "Remove Review Image",
+      "method": "DELETE",
+      "path": "/reviews/:id/images/:id",
+      "key": "DELETE /reviews/:id/images/:id",
+      "client": null,
+      "match": false,
+      "ui": null
+    },
+    {
+      "folder": "10 - Reviews",
+      "name": "Reply To Review",
+      "method": "POST",
+      "path": "/reviews/:id/reply",
+      "key": "POST /reviews/:id/reply",
+      "client": "reviews.replyToReview",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "10 - Reviews",
+      "name": "Submit a review for a completed reservation",
+      "method": "POST",
+      "path": "/reviews",
+      "key": "POST /reviews",
+      "client": null,
+      "match": false,
+      "ui": null
+    },
+    {
+      "folder": "10 - Reviews",
+      "name": "Upload Review Image",
+      "method": "POST",
+      "path": "/reviews/:id/images",
+      "key": "POST /reviews/:id/images",
+      "client": null,
+      "match": false,
+      "ui": null
+    },
+    {
+      "folder": "10 - Reviews",
+      "name": "Soft-delete a review (Domain Action)",
+      "method": "DELETE",
+      "path": "/reviews/:id",
+      "key": "DELETE /reviews/:id",
+      "client": "reviews.deleteReview",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "11 - Offers",
+      "name": "Create an offer under a restaurant",
+      "method": "POST",
+      "path": "/restaurants/:id/offers",
+      "key": "POST /restaurants/:id/offers",
+      "client": "offers.createOffer",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "11 - Offers",
+      "name": "List offers of a restaurant (management, every status)",
+      "method": "GET",
+      "path": "/restaurants/:id/offers",
+      "key": "GET /restaurants/:id/offers",
+      "client": "offers.listOffers",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "11 - Offers",
+      "name": "Update an offer (full-replace, Draft only)",
+      "method": "PATCH",
+      "path": "/restaurants/:id/offers/:id",
+      "key": "PATCH /restaurants/:id/offers/:id",
+      "client": "offers.updateOffer",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "11 - Offers",
+      "name": "Publish Offer",
+      "method": "POST",
+      "path": "/restaurants/:id/offers/:id/publish",
+      "key": "POST /restaurants/:id/offers/:id/publish",
+      "client": "offers.publishOffer",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "11 - Offers",
+      "name": "Soft-delete an offer",
+      "method": "DELETE",
+      "path": "/restaurants/:id/offers/:id",
+      "key": "DELETE /restaurants/:id/offers/:id",
+      "client": "offers.deleteOffer",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "12 - Menu",
+      "name": "Create a Category under a Menu",
+      "method": "POST",
+      "path": "/restaurants/:id/menus/:id/categories",
+      "key": "POST /restaurants/:id/menus/:id/categories",
+      "client": "menus.createMenuCategory",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "12 - Menu",
+      "name": "Create a Menu under a Restaurant",
+      "method": "POST",
+      "path": "/restaurants/:id/menus",
+      "key": "POST /restaurants/:id/menus",
+      "client": "menus.createMenu",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "12 - Menu",
+      "name": "Create an Add-on under an Item",
+      "method": "POST",
+      "path": "/restaurants/:id/menus/:id/categories/:id/items/:id/add-ons",
+      "key": "POST /restaurants/:id/menus/:id/categories/:id/items/:id/add-ons",
+      "client": "menus.createMenuItemAddOn",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "12 - Menu",
+      "name": "Create an Item under a Category",
+      "method": "POST",
+      "path": "/restaurants/:id/menus/:id/categories/:id/items",
+      "key": "POST /restaurants/:id/menus/:id/categories/:id/items",
+      "client": "menus.createMenuItem",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "12 - Menu",
+      "name": "Create an Option Group under an Item",
+      "method": "POST",
+      "path": "/restaurants/:id/menus/:id/categories/:id/items/:id/option-groups",
+      "key": "POST /restaurants/:id/menus/:id/categories/:id/items/:id/option-groups",
+      "client": "menus.createMenuItemOptionGroup",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "12 - Menu",
+      "name": "Create an Option under an Option Group",
+      "method": "POST",
+      "path": "/restaurants/:id/menus/:id/categories/:id/items/:id/option-groups/:id/options",
+      "key": "POST /restaurants/:id/menus/:id/categories/:id/items/:id/option-groups/:id/options",
+      "client": "menus.createMenuItemOption",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "12 - Menu",
+      "name": "List a Restaurant",
+      "method": "GET",
+      "path": "/restaurants/:id/menus",
+      "key": "GET /restaurants/:id/menus",
+      "client": "menus.listMenus",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "12 - Menu",
+      "name": "Get a Category (Customer, public)",
+      "method": "GET",
+      "path": "/restaurants/:id/menus/:id/categories/:id",
+      "key": "GET /restaurants/:id/menus/:id/categories/:id",
+      "client": "menus.getMenu",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "12 - Menu",
+      "name": "Get a specific Menu (Customer, public, full nested tree)",
+      "method": "GET",
+      "path": "/restaurants/:id/menus/:id",
+      "key": "GET /restaurants/:id/menus/:id",
+      "client": "menus.getMenu",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "12 - Menu",
+      "name": "Get Default Menu",
+      "method": "GET",
+      "path": "/restaurants/:id/menus/default",
+      "key": "GET /restaurants/:id/menus/default",
+      "client": "menus.getDefaultMenu",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "12 - Menu",
+      "name": "Get Item Details (Customer, public)",
+      "method": "GET",
+      "path": "/restaurants/:id/menus/:id/categories/:id/items/:id",
+      "key": "GET /restaurants/:id/menus/:id/categories/:id/items/:id",
+      "client": "menus.getMenu",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "12 - Menu",
+      "name": "Replace Item Availability Windows",
+      "method": "PATCH",
+      "path": "/restaurants/:id/menus/:id/categories/:id/items/:id/availability",
+      "key": "PATCH /restaurants/:id/menus/:id/categories/:id/items/:id/availability",
+      "client": "menus.replaceMenuItemAvailability",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "12 - Menu",
+      "name": "Set Default Menu",
+      "method": "POST",
+      "path": "/restaurants/:id/menus/:id/set-default",
+      "key": "POST /restaurants/:id/menus/:id/set-default",
+      "client": "menus.setDefaultMenu",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "12 - Menu",
+      "name": "Update a Category",
+      "method": "PATCH",
+      "path": "/restaurants/:id/menus/:id/categories/:id",
+      "key": "PATCH /restaurants/:id/menus/:id/categories/:id",
+      "client": "menus.updateMenuCategory",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "12 - Menu",
+      "name": "Update a Menu (name, displayOrder)",
+      "method": "PATCH",
+      "path": "/restaurants/:id/menus/:id",
+      "key": "PATCH /restaurants/:id/menus/:id",
+      "client": "menus.updateMenu",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "12 - Menu",
+      "name": "Update an Add-on (name/price/active)",
+      "method": "PATCH",
+      "path": "/restaurants/:id/menus/:id/categories/:id/items/:id/add-ons/:id",
+      "key": "PATCH /restaurants/:id/menus/:id/categories/:id/items/:id/add-ons/:id",
+      "client": "menus.updateMenuItemAddOn",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "12 - Menu",
+      "name": "Update an Option (name/priceModifier/active)",
+      "method": "PATCH",
+      "path": "/restaurants/:id/menus/:id/categories/:id/items/:id/option-groups/:id/options/:id",
+      "key": "PATCH /restaurants/:id/menus/:id/categories/:id/items/:id/option-groups/:id/options/:id",
+      "client": "menus.updateMenuItemOption",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "12 - Menu",
+      "name": "Update an Option Group",
+      "method": "PATCH",
+      "path": "/restaurants/:id/menus/:id/categories/:id/items/:id/option-groups/:id",
+      "key": "PATCH /restaurants/:id/menus/:id/categories/:id/items/:id/option-groups/:id",
+      "client": "menus.updateMenuItemOptionGroup",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "12 - Menu",
+      "name": "Update Menu Item",
+      "method": "PATCH",
+      "path": "/restaurants/:id/menus/:id/categories/:id/items/:id",
+      "key": "PATCH /restaurants/:id/menus/:id/categories/:id/items/:id",
+      "client": "menus.updateMenuItem",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "12 - Menu",
+      "name": "Activate Menu",
+      "method": "POST",
+      "path": "/restaurants/:id/menus/:id/activate",
+      "key": "POST /restaurants/:id/menus/:id/activate",
+      "client": "menus.activateMenu",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "12 - Menu",
+      "name": "Deactivate Menu",
+      "method": "POST",
+      "path": "/restaurants/:id/menus/:id/deactivate",
+      "key": "POST /restaurants/:id/menus/:id/deactivate",
+      "client": "menus.deactivateMenu",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "12 - Menu",
+      "name": "Feature Item",
+      "method": "POST",
+      "path": "/restaurants/:id/menus/:id/categories/:id/items/:id/feature",
+      "key": "POST /restaurants/:id/menus/:id/categories/:id/items/:id/feature",
+      "client": "menus.featureMenuItem",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "12 - Menu",
+      "name": "Remove Category Image",
+      "method": "DELETE",
+      "path": "/restaurants/:id/menus/:id/categories/:id/image",
+      "key": "DELETE /restaurants/:id/menus/:id/categories/:id/image",
+      "client": "menus.removeMenuCategoryImage",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "12 - Menu",
+      "name": "Remove Item Image",
+      "method": "DELETE",
+      "path": "/restaurants/:id/menus/:id/categories/:id/items/:id/image",
+      "key": "DELETE /restaurants/:id/menus/:id/categories/:id/items/:id/image",
+      "client": "menus.removeMenuItemImage",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "12 - Menu",
+      "name": "Reorder Categories",
+      "method": "PATCH",
+      "path": "/restaurants/:id/menus/:id/categories/reorder",
+      "key": "PATCH /restaurants/:id/menus/:id/categories/reorder",
+      "client": "menus.reorderMenuCategories",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "12 - Menu",
+      "name": "Reorder Items",
+      "method": "PATCH",
+      "path": "/restaurants/:id/menus/:id/categories/:id/items/reorder",
+      "key": "PATCH /restaurants/:id/menus/:id/categories/:id/items/reorder",
+      "client": "menus.reorderMenuItems",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "12 - Menu",
+      "name": "Unfeature Item",
+      "method": "POST",
+      "path": "/restaurants/:id/menus/:id/categories/:id/items/:id/unfeature",
+      "key": "POST /restaurants/:id/menus/:id/categories/:id/items/:id/unfeature",
+      "client": "menus.unfeatureMenuItem",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "12 - Menu",
+      "name": "Upload Category Image",
+      "method": "POST",
+      "path": "/restaurants/:id/menus/:id/categories/:id/image",
+      "key": "POST /restaurants/:id/menus/:id/categories/:id/image",
+      "client": "menus.uploadMenuCategoryImage",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "12 - Menu",
+      "name": "Upload Item Image",
+      "method": "POST",
+      "path": "/restaurants/:id/menus/:id/categories/:id/items/:id/image",
+      "key": "POST /restaurants/:id/menus/:id/categories/:id/items/:id/image",
+      "client": "menus.uploadMenuItemImage",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "12 - Menu",
+      "name": "Soft-delete a Category",
+      "method": "DELETE",
+      "path": "/restaurants/:id/menus/:id/categories/:id",
+      "key": "DELETE /restaurants/:id/menus/:id/categories/:id",
+      "client": "menus.deleteMenuCategory",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "12 - Menu",
+      "name": "Soft-delete a Menu",
+      "method": "DELETE",
+      "path": "/restaurants/:id/menus/:id",
+      "key": "DELETE /restaurants/:id/menus/:id",
+      "client": "menus.deleteMenu",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "12 - Menu",
+      "name": "Soft-delete an Add-on",
+      "method": "DELETE",
+      "path": "/restaurants/:id/menus/:id/categories/:id/items/:id/add-ons/:id",
+      "key": "DELETE /restaurants/:id/menus/:id/categories/:id/items/:id/add-ons/:id",
+      "client": "menus.deleteMenuItemAddOn",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "12 - Menu",
+      "name": "Soft-delete an Item",
+      "method": "DELETE",
+      "path": "/restaurants/:id/menus/:id/categories/:id/items/:id",
+      "key": "DELETE /restaurants/:id/menus/:id/categories/:id/items/:id",
+      "client": "menus.deleteMenuItem",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "12 - Menu",
+      "name": "Soft-delete an Option",
+      "method": "DELETE",
+      "path": "/restaurants/:id/menus/:id/categories/:id/items/:id/option-groups/:id/options/:id",
+      "key": "DELETE /restaurants/:id/menus/:id/categories/:id/items/:id/option-groups/:id/options/:id",
+      "client": "menus.deleteMenuItemOption",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "12 - Menu",
+      "name": "Soft-delete an Option Group",
+      "method": "DELETE",
+      "path": "/restaurants/:id/menus/:id/categories/:id/items/:id/option-groups/:id",
+      "key": "DELETE /restaurants/:id/menus/:id/categories/:id/items/:id/option-groups/:id",
+      "client": "menus.deleteMenuItemOptionGroup",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "13 - Messaging",
+      "name": "List conversations for a restaurant (staff inbox)",
+      "method": "GET",
+      "path": "/restaurants/:id/conversations",
+      "key": "GET /restaurants/:id/conversations",
+      "client": "messaging.listRestaurantConversations",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "13 - Messaging",
+      "name": "List Messages",
+      "method": "GET",
+      "path": "/conversations/:id/messages",
+      "key": "GET /conversations/:id/messages",
+      "client": "messaging.listConversationMessages",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "13 - Messaging",
+      "name": "List the authenticated Customer",
+      "method": "GET",
+      "path": "/conversations",
+      "key": "GET /conversations",
+      "client": "messaging.listConversations",
+      "match": true,
+      "ui": "client-only"
+    },
+    {
+      "folder": "13 - Messaging",
+      "name": "Get a single conversation",
+      "method": "GET",
+      "path": "/conversations/:id",
+      "key": "GET /conversations/:id",
+      "client": "messaging.getConversation",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "13 - Messaging",
+      "name": "close Conversation",
+      "method": "POST",
+      "path": "/conversations/:id/close",
+      "key": "POST /conversations/:id/close",
+      "client": "messaging.closeConversation",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "13 - Messaging",
+      "name": "read Conversation",
+      "method": "POST",
+      "path": "/conversations/:id/read",
+      "key": "POST /conversations/:id/read",
+      "client": "messaging.markConversationRead",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "13 - Messaging",
+      "name": "Send Message",
+      "method": "POST",
+      "path": "/conversations/:id/messages",
+      "key": "POST /conversations/:id/messages",
+      "client": "messaging.sendConversationMessage",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "13 - Messaging",
+      "name": "Start a conversation",
+      "method": "POST",
+      "path": "/conversations",
+      "key": "POST /conversations",
+      "client": "messaging.startConversation",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "14 - Analytics",
+      "name": "Get Customer Insights",
+      "method": "GET",
+      "path": "/restaurants/:id/analytics/customers",
+      "key": "GET /restaurants/:id/analytics/customers",
+      "client": "analytics.getCustomerInsights",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "14 - Analytics",
+      "name": "Get Peak Hours",
+      "method": "GET",
+      "path": "/restaurants/:id/analytics/branches/:id/peak-hours",
+      "key": "GET /restaurants/:id/analytics/branches/:id/peak-hours",
+      "client": "analytics.getBranchPeakHours",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "14 - Analytics",
+      "name": "Get Reservation Trends",
+      "method": "GET",
+      "path": "/restaurants/:id/analytics/branches/:id/reservations/trends",
+      "key": "GET /restaurants/:id/analytics/branches/:id/reservations/trends",
+      "client": "analytics.getBranchReservationTrends",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "14 - Analytics",
+      "name": "Get Reservations Summary",
+      "method": "GET",
+      "path": "/restaurants/:id/analytics/reservations/summary",
+      "key": "GET /restaurants/:id/analytics/reservations/summary",
+      "client": "analytics.getReservationSummary",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "14 - Analytics",
+      "name": "Get Reservations Summary (GET)",
+      "method": "GET",
+      "path": "/organization/analytics/reservations/summary",
+      "key": "GET /organization/analytics/reservations/summary",
+      "client": "analytics.getOrganizationReservationSummary",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "14 - Analytics",
+      "name": "Get Reviews Summary",
+      "method": "GET",
+      "path": "/restaurants/:id/analytics/reviews-summary",
+      "key": "GET /restaurants/:id/analytics/reviews-summary",
+      "client": "analytics.getReviewsSummary",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "14 - Analytics",
+      "name": "Get Waitlist Analytics",
+      "method": "GET",
+      "path": "/restaurants/:id/analytics/waitlist",
+      "key": "GET /restaurants/:id/analytics/waitlist",
+      "client": "analytics.getWaitlistAnalytics",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "15 - Restaurants",
+      "name": "Create a restaurant within the caller organization",
+      "method": "POST",
+      "path": "/restaurants",
+      "key": "POST /restaurants",
+      "client": "restaurants.createRestaurant",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "15 - Restaurants",
+      "name": "List Gallery",
+      "method": "GET",
+      "path": "/restaurants/:id/gallery",
+      "key": "GET /restaurants/:id/gallery",
+      "client": "restaurants.listRestaurantGallery",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "15 - Restaurants",
+      "name": "List restaurants in the caller organization",
+      "method": "GET",
+      "path": "/restaurants",
+      "key": "GET /restaurants",
+      "client": "restaurants.listRestaurants",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "15 - Restaurants",
+      "name": "Get a restaurant by id",
+      "method": "GET",
+      "path": "/restaurants/:id",
+      "key": "GET /restaurants/:id",
+      "client": "restaurants.getRestaurant",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "15 - Restaurants",
+      "name": "Get Restaurant Cuisine Categories",
+      "method": "GET",
+      "path": "/restaurants/:id/cuisine-categories",
+      "key": "GET /restaurants/:id/cuisine-categories",
+      "client": "restaurants.getRestaurantCuisineCategories",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "15 - Restaurants",
+      "name": "Get Restaurant Occasion Categories",
+      "method": "GET",
+      "path": "/restaurants/:id/occasion-categories",
+      "key": "GET /restaurants/:id/occasion-categories",
+      "client": "restaurants.getRestaurantOccasionCategories",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "15 - Restaurants",
+      "name": "Get Restaurant Settings",
+      "method": "GET",
+      "path": "/restaurants/:id/settings",
+      "key": "GET /restaurants/:id/settings",
+      "client": "restaurants.getRestaurantSettings",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "15 - Restaurants",
+      "name": "Get Restaurant Working Hours",
+      "method": "GET",
+      "path": "/restaurants/:id/working-hours",
+      "key": "GET /restaurants/:id/working-hours",
+      "client": "restaurants.getRestaurantWorkingHours",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "15 - Restaurants",
+      "name": "Set Restaurant Cuisine Categories",
+      "method": "PATCH",
+      "path": "/restaurants/:id/cuisine-categories",
+      "key": "PATCH /restaurants/:id/cuisine-categories",
+      "client": "restaurants.setRestaurantCuisineCategories",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "15 - Restaurants",
+      "name": "Set Restaurant Occasion Categories",
+      "method": "PATCH",
+      "path": "/restaurants/:id/occasion-categories",
+      "key": "PATCH /restaurants/:id/occasion-categories",
+      "client": "restaurants.setRestaurantOccasionCategories",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "15 - Restaurants",
+      "name": "Update a restaurant (full-replace)",
+      "method": "PATCH",
+      "path": "/restaurants/:id",
+      "key": "PATCH /restaurants/:id",
+      "client": "restaurants.updateRestaurant",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "15 - Restaurants",
+      "name": "Update Restaurant Settings",
+      "method": "PATCH",
+      "path": "/restaurants/:id/settings",
+      "key": "PATCH /restaurants/:id/settings",
+      "client": "restaurants.updateRestaurantSettings",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "15 - Restaurants",
+      "name": "Update Restaurant Working Hours",
+      "method": "PATCH",
+      "path": "/restaurants/:id/working-hours",
+      "key": "PATCH /restaurants/:id/working-hours",
+      "client": "restaurants.updateRestaurantWorkingHours",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "15 - Restaurants",
+      "name": "Remove Gallery Image",
+      "method": "DELETE",
+      "path": "/restaurants/:id/gallery/:id",
+      "key": "DELETE /restaurants/:id/gallery/:id",
+      "client": "restaurants.removeRestaurantGalleryImage",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "15 - Restaurants",
+      "name": "Upload Gallery Image",
+      "method": "POST",
+      "path": "/restaurants/:id/gallery",
+      "key": "POST /restaurants/:id/gallery",
+      "client": "restaurants.addRestaurantGalleryImage",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "15 - Restaurants",
+      "name": "Soft-delete a restaurant",
+      "method": "DELETE",
+      "path": "/restaurants/:id",
+      "key": "DELETE /restaurants/:id",
+      "client": "restaurants.deleteRestaurant",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "16 - Branches",
+      "name": "Create a branch under a restaurant",
+      "method": "POST",
+      "path": "/restaurants/:id/branches",
+      "key": "POST /restaurants/:id/branches",
+      "client": "branches.createBranch",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "16 - Branches",
+      "name": "List branches of a restaurant",
+      "method": "GET",
+      "path": "/restaurants/:id/branches",
+      "key": "GET /restaurants/:id/branches",
+      "client": "branches.listBranches",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "16 - Branches",
+      "name": "Get a branch by id",
+      "method": "GET",
+      "path": "/restaurants/:id/branches/:id",
+      "key": "GET /restaurants/:id/branches/:id",
+      "client": "branches.getBranch",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "16 - Branches",
+      "name": "Get Branch Working Hours",
+      "method": "GET",
+      "path": "/restaurants/:id/branches/:id/working-hours",
+      "key": "GET /restaurants/:id/branches/:id/working-hours",
+      "client": "branches.getBranchWorkingHours",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "16 - Branches",
+      "name": "Update a branch (full-replace)",
+      "method": "PATCH",
+      "path": "/restaurants/:id/branches/:id",
+      "key": "PATCH /restaurants/:id/branches/:id",
+      "client": "branches.updateBranch",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "16 - Branches",
+      "name": "Update Branch Working Hours",
+      "method": "PATCH",
+      "path": "/restaurants/:id/branches/:id/working-hours",
+      "key": "PATCH /restaurants/:id/branches/:id/working-hours",
+      "client": "branches.updateBranchWorkingHours",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "16 - Branches",
+      "name": "Soft-delete a branch",
+      "method": "DELETE",
+      "path": "/restaurants/:id/branches/:id",
+      "key": "DELETE /restaurants/:id/branches/:id",
+      "client": "branches.deleteBranch",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "17 - Floor Plans",
+      "name": "Create a floor plan under a branch",
+      "method": "POST",
+      "path": "/restaurants/:id/branches/:id/floor-plans",
+      "key": "POST /restaurants/:id/branches/:id/floor-plans",
+      "client": "floorPlans.createFloorPlan",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "17 - Floor Plans",
+      "name": "List floor plans of a branch",
+      "method": "GET",
+      "path": "/restaurants/:id/branches/:id/floor-plans",
+      "key": "GET /restaurants/:id/branches/:id/floor-plans",
+      "client": "floorPlans.listFloorPlans",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "17 - Floor Plans",
+      "name": "List tables belonging to one floor plan",
+      "method": "GET",
+      "path": "/restaurants/:id/branches/:id/floor-plans/:id/tables",
+      "key": "GET /restaurants/:id/branches/:id/floor-plans/:id/tables",
+      "client": "tables.listTablesByFloorPlan",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "17 - Floor Plans",
+      "name": "Update Branch",
+      "method": "PATCH",
+      "path": "/restaurants/:id/branches/:id/floor-plans/:id/activate",
+      "key": "PATCH /restaurants/:id/branches/:id/floor-plans/:id/activate",
+      "client": "floorPlans.activateFloorPlan",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "18 - Tables",
+      "name": "Create a table under a branch",
+      "method": "POST",
+      "path": "/restaurants/:id/branches/:id/tables",
+      "key": "POST /restaurants/:id/branches/:id/tables",
+      "client": "tables.createTable",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "18 - Tables",
+      "name": "List tables of a branch",
+      "method": "GET",
+      "path": "/restaurants/:id/branches/:id/tables",
+      "key": "GET /restaurants/:id/branches/:id/tables",
+      "client": "tables.listTablesByBranch",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "18 - Tables",
+      "name": "Get a table by id",
+      "method": "GET",
+      "path": "/tables/:id",
+      "key": "GET /tables/:id",
+      "client": "tables.getTable",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "18 - Tables",
+      "name": "Change Table Status",
+      "method": "POST",
+      "path": "/tables/:id/status",
+      "key": "POST /tables/:id/status",
+      "client": "tables.changeTableStatus",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "18 - Tables",
+      "name": "Update a table (full-replace)",
+      "method": "PATCH",
+      "path": "/tables/:id",
+      "key": "PATCH /tables/:id",
+      "client": "tables.updateTable",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "18 - Tables",
+      "name": "merge Table",
+      "method": "POST",
+      "path": "/tables/merge",
+      "key": "POST /tables/merge",
+      "client": "tables.mergeTables",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "18 - Tables",
+      "name": "move Table",
+      "method": "POST",
+      "path": "/tables/:id/move",
+      "key": "POST /tables/:id/move",
+      "client": "tables.moveTable",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "18 - Tables",
+      "name": "split Table",
+      "method": "POST",
+      "path": "/tables/:id/split",
+      "key": "POST /tables/:id/split",
+      "client": "tables.splitTable",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "18 - Tables",
+      "name": "Soft-delete a table",
+      "method": "DELETE",
+      "path": "/tables/:id",
+      "key": "DELETE /tables/:id",
+      "client": "tables.deleteTable",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "19 - Employees",
+      "name": "Assign Employee Branch",
+      "method": "POST",
+      "path": "/restaurants/:id/employees/:id/branches",
+      "key": "POST /restaurants/:id/employees/:id/branches",
+      "client": "employees.assignEmployeeToBranch",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "19 - Employees",
+      "name": "Assign Employee Role",
+      "method": "POST",
+      "path": "/restaurants/:id/employees/:id/role",
+      "key": "POST /restaurants/:id/employees/:id/role",
+      "client": "employees.assignEmployeeRole",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "19 - Employees",
+      "name": "Remove Employee Branch",
+      "method": "DELETE",
+      "path": "/restaurants/:id/employees/:id/branches/:id",
+      "key": "DELETE /restaurants/:id/employees/:id/branches/:id",
+      "client": "employees.removeEmployeeFromBranch",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "19 - Employees",
+      "name": "Invite a new employee (Domain Action)",
+      "method": "POST",
+      "path": "/restaurants/:id/employees",
+      "key": "POST /restaurants/:id/employees",
+      "client": "employees.inviteEmployee",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "19 - Employees",
+      "name": "Soft-delete an employee",
+      "method": "DELETE",
+      "path": "/restaurants/:id/employees/:id",
+      "key": "DELETE /restaurants/:id/employees/:id",
+      "client": "employees.removeEmployee",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "21 - Organizations",
+      "name": "Get Subscription",
+      "method": "GET",
+      "path": "/organizations/subscription",
+      "key": "GET /organizations/subscription",
+      "client": "organizations.getOrganizationSubscription",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "21 - Organizations",
+      "name": "Get Subscription Usage",
+      "method": "GET",
+      "path": "/organizations/subscription/usage",
+      "key": "GET /organizations/subscription/usage",
+      "client": "organizations.getOrganizationSubscriptionUsage",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "23 - Notifications",
+      "name": "List the authenticated user",
+      "method": "GET",
+      "path": "/notifications",
+      "key": "GET /notifications",
+      "client": "notifications.listNotifications",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "23 - Notifications",
+      "name": "Get OneSignal Identity Token",
+      "method": "GET",
+      "path": "/notifications/identity-token",
+      "key": "GET /notifications/identity-token",
+      "client": "notifications.getOneSignalIdentityToken",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "23 - Notifications",
+      "name": "Get Unread Count",
+      "method": "GET",
+      "path": "/notifications/unread-count",
+      "key": "GET /notifications/unread-count",
+      "client": "notifications.getUnreadNotificationCount",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "23 - Notifications",
+      "name": "Mark All Notifications Read",
+      "method": "PATCH",
+      "path": "/notifications/read-all",
+      "key": "PATCH /notifications/read-all",
+      "client": "notifications.markAllNotificationsRead",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "23 - Notifications",
+      "name": "Mark Notification Read",
+      "method": "PATCH",
+      "path": "/notifications/:id/read",
+      "key": "PATCH /notifications/:id/read",
+      "client": "notifications.markNotificationRead",
+      "match": true,
+      "ui": "wired"
+    },
+    {
+      "folder": "25 - Health",
+      "name": "Health Check",
+      "method": "GET",
+      "path": "/health",
+      "key": "GET /health",
+      "client": "health.getHealth",
+      "match": true,
+      "ui": "client-only"
+    },
+    {
+      "folder": "25 - Health",
+      "name": "Liveness",
+      "method": "GET",
+      "path": "/health/liveness",
+      "key": "GET /health/liveness",
+      "client": "health.getLiveness",
+      "match": true,
+      "ui": "client-only"
+    },
+    {
+      "folder": "25 - Health",
+      "name": "Readiness",
+      "method": "GET",
+      "path": "/health/readiness",
+      "key": "GET /health/readiness",
+      "client": "health.getReadiness",
+      "match": true,
+      "ui": "client-only"
+    }
+  ],
+  "meta": {
+    "generatedAt": "2026-08-06T13:11:16.803Z",
+    "source": "postman/TAVLA-API.postman_collection.json",
+    "inScope": 142,
+    "matched": 138,
+    "missing": 4,
+    "uniqueKeys": 142
+  }
+}

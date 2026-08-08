@@ -109,15 +109,14 @@ See `API_INTEGRATION.md` for the full endpoint catalog and contract details.
 ThemeProvider
   LocaleProvider
     AuthProvider
-      AppQueryProvider              # TanStack Query (Phase 5+)
+      AppQueryProvider              # TanStack Query
         RestaurantScopeProvider
-          RestaurantProvider        # legacy mock operational store (temporary)
-            ToastProvider
-              SidebarProvider
-                BrowserRouter
+          ToastProvider
+            SidebarProvider
+              BrowserRouter
 ```
 
-This order is deliberate: `Theme`/`Locale` have no data dependency and must be available to everything, including the login page. `Auth` must resolve before scope. `RestaurantScopeProvider` must wrap any consumer that needs selected restaurant/branch IDs (shell, floor plan keys). Legacy `RestaurantProvider` remains for mock ops until feature phases migrate off it. Do not reorder providers without recording the reason in `DECISIONS.md`.
+This order is deliberate: `Theme`/`Locale` have no data dependency and must be available to everything, including the login page. `Auth` must resolve before scope. `RestaurantScopeProvider` must wrap any consumer that needs selected restaurant/branch IDs (shell, inventory, menu, offers, messaging). Do not reorder providers without recording the reason in `DECISIONS.md`.
 
 **Identity vs scope (do not conflate):**
 
@@ -125,20 +124,20 @@ This order is deliberate: `Theme`/`Locale` have no data dependency and must be a
 |---|---|---|
 | Auth identity | `AuthProvider` / `AuthIdentity` | Who is logged in |
 | Tenant | Backend JWT | Never sent as a client override header |
-| Selected restaurant | `RestaurantScopeProvider` | Resource scope for shell + future APIs |
+| Selected restaurant | `RestaurantScopeProvider` | Resource scope for shell + APIs |
 | Selected branch | `RestaurantScopeProvider` | Resource scope within the selected restaurant |
-| Mock ops data | `RestaurantContext` | Temporary demo reservations/tables/etc. |
 
 ---
 
 # Mock Data Policy
 
-`src/data/mockData.ts` exists to support UI development before the real API is wired. Rules:
+Product surfaces must not use mock fixtures. Removed: `src/data/mockData.ts` and legacy `RestaurantContext`.
 
-- Never import `mockData.ts` from a module under `src/api/`.
-- When a page is wired to a real endpoint, its mock data usage is removed in the same change — do not leave both paths behind a flag "just in case."
-- New pages/features should be built against the real API layer from the start; only fall back to a mock fixture if the backend endpoint genuinely does not exist yet, and note that gap in `DECISIONS.md`.
+Rules:
 
+- Never invent list/read endpoints the Postman contract does not expose (waitlist board, employee roster, staff reservation inbox). Use honest EmptyStates instead.
+- Authoritative FE contract: `postman/TAVLA-API.postman_collection.json` (+ `postman/RECONCILIATION_REPORT.md`).
+- New pages/features are built against `src/api/*` + TanStack Query from the start.
 ---
 
 # Routing

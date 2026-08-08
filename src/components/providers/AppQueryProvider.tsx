@@ -2,10 +2,12 @@ import { useState } from 'react'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { createAppQueryClient } from '@/lib/queryClient'
 import { useInventoryCacheIsolation } from '@/hooks/useInventoryQueries'
+import { useMenuCacheIsolation } from '@/hooks/useMenuQueries'
 import type { ReactNode } from 'react'
 
-function InventoryCacheGuard({ children }: { children: ReactNode }) {
+function QueryCacheGuard({ children }: { children: ReactNode }) {
   useInventoryCacheIsolation()
+  useMenuCacheIsolation()
   return children
 }
 
@@ -14,7 +16,7 @@ export function AppQueryProvider({ children }: { children: ReactNode }) {
 
   return (
     <QueryClientProvider client={client}>
-      <InventoryCacheGuard>{children}</InventoryCacheGuard>
+      <QueryCacheGuard>{children}</QueryCacheGuard>
     </QueryClientProvider>
   )
 }

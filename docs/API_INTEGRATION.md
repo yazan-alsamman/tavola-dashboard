@@ -4,7 +4,7 @@
 
 The backend (`../back`) owns the API contract. This document explains how the dashboard consumes it. If anything here disagrees with `../back/docs/API_GUIDELINES.md`, `../back/docs/AUTHENTICATION_ARCHITECTURE.md`, `../back/docs/TENANCY.md`, or `../back/TAVLA-API.postman_collection.json`, those win and this file must be corrected in the same change.
 
-The Postman collection (`../back/TAVLA-API.postman_collection.json`) and environment (`../back/TAVLA-API.postman_environment.json`) are the executable source of truth for exact request/response shapes — when in doubt, run the request in Postman against a real environment rather than guessing from this document.
+The Postman collection (`postman/TAVLA-API.postman_collection.json`) and environment (`postman/TAVLA-API.postman_environment.json`) in this repo are the executable FE contract source of truth. Prefer them over older `postman collection/` copies. When in doubt, run the request in Postman against a real environment rather than guessing from this document.
 
 ---
 
@@ -58,9 +58,22 @@ Supporting modules:
 | `src/api/notifications.ts` | list, unread-count, identity-token, mark read / read-all |
 | `src/api/waitlist.ts` | join, cancel, promote |
 | `src/api/health.ts` | health / liveness / readiness (non-envelope) |
+| `src/api/analytics.ts` | customers, reservation summary, branch trends/peak-hours, waitlist, reviews-summary, org reservation summary |
+| `src/api/organizations.ts` | subscription + usage |
+| `src/api/offers.ts` | create/list/update/publish/delete |
+| `src/api/reviews.ts` | restaurant list/get, reply, delete (staff management) |
+| `src/api/messaging.ts` | restaurant inbox, conversation CRUD, multipart send |
+| `src/api/menus.ts` | full menu tree management + public GETs for render |
 
-See `docs/API_COMPATIBILITY_REPORT.md` for the full Postman ↔ client match matrix (100% for dashboard scope).
+See `docs/API_COMPATIBILITY_REPORT.md` for the full Postman ↔ client ↔ UI matrix (regenerate with `node scripts/build-compat-matrix.mjs`).
 
+**Hard contract limits (no invented list endpoints):**
+
+| Surface | Reality | UI approach |
+|---|---|---|
+| Staff reservation inbox | `GET /reservations` is ownership-only | Ownership list + honest banner |
+| Waitlist board | No GET list | Session-tracked entries + join/promote/cancel |
+| Employee directory | No GET list | Invite + manage-by-id |
 ---
 
 # Floor Plans & Tables (Phases 5–6 — reads + mutations)

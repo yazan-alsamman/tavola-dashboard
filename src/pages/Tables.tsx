@@ -19,13 +19,19 @@ import {
 } from '@/components/ui/DataTable'
 import { useLocale } from '@/context/LocaleContext'
 import { useRestaurantScope } from '@/context/RestaurantScopeContext'
+import { useToast } from '@/context/ToastContext'
 import {
   useBranchTablesQuery,
   useFloorPlansQuery,
 } from '@/hooks/useInventoryQueries'
-import { useDeleteTableMutation } from '@/hooks/useInventoryMutations'
+import {
+  useDeleteTableMutation,
+  useMergeTablesMutation,
+  useSplitTableMutation,
+} from '@/hooks/useInventoryMutations'
 import { useCanManageInventory } from '@/hooks/usePermissions'
 import { mapInventoryMutationError } from '@/lib/inventoryMutationErrors'
+import { cn } from '@/lib/utils'
 
 function tableFlags(
   table: {
@@ -65,8 +71,13 @@ export function TablesPage() {
     null,
   )
   const [deleteError, setDeleteError] = useState<string | null>(null)
+  const [selectedIds, setSelectedIds] = useState<string[]>([])
+  const [mergeError, setMergeError] = useState<string | null>(null)
+  const { toast } = useToast()
 
   const deleteMutation = useDeleteTableMutation()
+  const mergeMutation = useMergeTablesMutation()
+  const splitMutation = useSplitTableMutation()
 
   const restaurantId = selectedRestaurantId ?? ''
   const branchId = selectedBranchId ?? ''
@@ -125,6 +136,54 @@ export function TablesPage() {
 
   const tables = tablesQuery.data ?? []
 
+  const toggleSelect = (tableId: string) => {
+    setSelectedIds((prev) =>
+      prev.includes(tableId)
+        ? prev.filter((id) => id !== tableId)
+        : [...prev, tableId],
+    )
+  }
+
+  const selectedTables = tables.filter((t) => selectedIds.includes(t.tableId))
+  const canMerge =
+    canManage &&
+    selectedTables.length >= 2 &&
+    selectedTables.every((t) => t.status === 'Available') &&
+    selectedTables.every((t) => t.floorPlanId === selectedTables[0]?.floorPlanId)
+
+  const runMerge = async () => {
+    if (!restaurantId || !branchId || !canMerge) return
+    setMergeError(null)
+    try {
+      await mergeMutation.mutateAsync({
+        body: { tableIds: selectedIds },
+        scope: { restaurantId, branchId },
+        floorPlanId: selectedTables[0]!.floorPlanId,
+      })
+      setSelectedIds([])
+      toast('success', t.tables.mergeSuccess)
+    } catch (err) {
+      setMergeError(mapInventoryMutationError(err, t.inventory.errors))
+    }
+  }
+
+  const runSplit = async (table: TableDto) => {
+    if (!restaurantId || !branchId) return
+    try {
+      await splitMutation.mutateAsync({
+        tableId: table.tableId,
+        scope: { restaurantId, branchId },
+        floorPlanId: table.floorPlanId,
+      })
+      toast('success', t.tables.splitSuccess)
+    } catch (err) {
+      toast(
+        'error',
+        mapInventoryMutationError(err, t.inventory.errors),
+      )
+    }
+  }
+
   const confirmDelete = async () => {
     if (!deleteTableTarget || !restaurantId || !branchId) return
     setDeleteError(null)
@@ -151,14 +210,24 @@ export function TablesPage() {
         }
         actions={
           canManage ? (
-            <button
-              type="button"
-              disabled={!defaultFloorPlanId}
-              onClick={() => setCreateOpen(true)}
-              className="px-4 py-2 rounded-lg text-label-md bg-primary text-on-primary disabled:opacity-50"
-            >
-              {t.tables.create}
-            </button>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                disabled={!canMerge || mergeMutation.isPending}
+                onClick={() => void runMerge()}
+                className="px-4 py-2 rounded-lg text-label-md border border-outline-variant/40 text-on-surface disabled:opacity-50"
+              >
+                {t.tables.mergeSelected}
+              </button>
+              <button
+                type="button"
+                disabled={!defaultFloorPlanId}
+                onClick={() => setCreateOpen(true)}
+                className="px-4 py-2 rounded-lg text-label-md bg-primary text-on-primary disabled:opacity-50"
+              >
+                {t.tables.create}
+              </button>
+            </div>
           ) : undefined
         }
       />
@@ -166,6 +235,9 @@ export function TablesPage() {
       <p className="text-label-sm text-on-surface-variant mb-4">
         {canManage ? t.tables.manageHint : t.inventory.employeeBlocked}
       </p>
+      {mergeError && (
+        <p className="text-label-sm text-error mb-3">{mergeError}</p>
+      )}
 
       {tables.length === 0 ? (
         <EmptyState
@@ -187,6 +259,7 @@ export function TablesPage() {
       ) : (
         <DataTable>
           <DataTableHead>
+            {canManage && <DataTableHeader>{t.tables.select}</DataTableHeader>}
             <DataTableHeader>{t.tables.number}</DataTableHeader>
             <DataTableHeader>{t.tables.capacity}</DataTableHeader>
             <DataTableHeader>{t.tables.shape}</DataTableHeader>
@@ -198,9 +271,29 @@ export function TablesPage() {
           </DataTableHead>
           <DataTableBody>
             {tables.map((table) => (
-              <DataTableRow key={table.tableId}>
+              <DataTableRow
+                key={table.tableId}
+                className={cn(
+                  selectedIds.includes(table.tableId) && 'bg-primary-container/5',
+                )}
+              >
+                {canManage && (
+                  <DataTableCell>
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.includes(table.tableId)}
+                      onChange={() => toggleSelect(table.tableId)}
+                      aria-label={t.tables.select}
+                    />
+                  </DataTableCell>
+                )}
                 <DataTableCell className="font-medium">
                   {table.tableNumber}
+                  {table.mergeGroupId ? (
+                    <span className="ms-2 text-xs text-on-surface-variant">
+                      ({t.tables.merged})
+                    </span>
+                  ) : null}
                 </DataTableCell>
                 <DataTableCell>
                   <Num>{table.capacity}</Num>
@@ -249,6 +342,16 @@ export function TablesPage() {
                       >
                         {t.inventory.changeStatus}
                       </button>
+                      {table.mergeGroupId ? (
+                        <button
+                          type="button"
+                          className="text-label-sm text-primary font-semibold"
+                          disabled={splitMutation.isPending}
+                          onClick={() => void runSplit(table)}
+                        >
+                          {t.tables.split}
+                        </button>
+                      ) : null}
                       <button
                         type="button"
                         className="text-label-sm text-error font-semibold"

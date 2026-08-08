@@ -1,12 +1,25 @@
 import { useEffect, useState } from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Card, CardTitle } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { MaterialIcon } from '@/components/ui/Icon'
 import { useLocale } from '@/context/LocaleContext'
 import { useRestaurantScope } from '@/context/RestaurantScopeContext'
 import { useToast } from '@/context/ToastContext'
+import {
+  changePassword,
+  listSessions,
+  revokeSession,
+  type AuthSessionDto,
+} from '@/api/auth'
+import {
+  useOrganizationSubscriptionQuery,
+  useOrganizationUsageQuery,
+} from '@/hooks/useOrganizationQueries'
+import { displayPayloadFields } from '@/lib/analyticsPayload'
 import {
   getRestaurant,
   getRestaurantSettings,
@@ -21,7 +34,7 @@ import {
 import { isApiError } from '@/api/errors'
 import { cn } from '@/lib/utils'
 
-const tabs = ['profile', 'hours', 'rules'] as const
+const tabs = ['profile', 'hours', 'rules', 'subscription', 'security'] as const
 const DAY_LABELS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
 const defaultSettings: RestaurantSettingsDto = {
@@ -51,13 +64,62 @@ function entriesToWeek(entries: WorkingHoursEntry[]): WorkingHoursEntry[] {
 }
 
 export function SettingsPage() {
-  const { t } = useLocale()
+  const { t, locale } = useLocale()
   const { toast } = useToast()
+  const queryClient = useQueryClient()
   const { status, selectedRestaurantId, selectedRestaurant, refreshScope } =
     useRestaurantScope()
   const [activeTab, setActiveTab] = useState<(typeof tabs)[number]>('profile')
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: '',
+  })
+
+  const subscriptionQuery = useOrganizationSubscriptionQuery(
+    activeTab === 'subscription',
+  )
+  const usageQuery = useOrganizationUsageQuery(activeTab === 'subscription')
+
+  const sessionsQuery = useQuery({
+    queryKey: ['auth', 'sessions'],
+    queryFn: () => listSessions(),
+    enabled: activeTab === 'security',
+  })
+
+  const changePasswordMutation = useMutation({
+    mutationFn: () =>
+      changePassword({
+        currentPassword: passwordForm.currentPassword,
+        newPassword: passwordForm.newPassword,
+      }),
+    onSuccess: () => {
+      setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' })
+      toast('success', t.settings.securityForm.passwordChanged)
+    },
+    onError: (err) => {
+      toast(
+        'error',
+        isApiError(err) ? err.message : t.settings.securityForm.passwordChangeFailed,
+      )
+    },
+  })
+
+  const revokeSessionMutation = useMutation({
+    mutationFn: (sessionId: string) => revokeSession(sessionId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['auth', 'sessions'] })
+      toast('success', t.settings.securityForm.sessionRevoked)
+    },
+    onError: (err) => {
+      toast(
+        'error',
+        isApiError(err) ? err.message : t.settings.securityForm.sessionRevokeFailed,
+      )
+    },
+  })
 
   const [profile, setProfile] = useState({
     name: '',
@@ -290,6 +352,121 @@ export function SettingsPage() {
         </Card>
       )}
 
+      {activeTab === 'subscription' && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-4xl">
+          <SubscriptionCard
+            title={t.settings.subscriptionPlan.planTitle}
+            loading={subscriptionQuery.isLoading}
+            error={
+              subscriptionQuery.error && isApiError(subscriptionQuery.error)
+                ? subscriptionQuery.error.message
+                : null
+            }
+            fields={displayPayloadFields(subscriptionQuery.data ?? {})}
+            emptyTitle={t.settings.subscriptionPlan.noData}
+          />
+          <SubscriptionCard
+            title={t.settings.subscriptionPlan.usageTitle}
+            loading={usageQuery.isLoading}
+            error={
+              usageQuery.error && isApiError(usageQuery.error)
+                ? usageQuery.error.message
+                : null
+            }
+            fields={displayPayloadFields(usageQuery.data ?? {})}
+            emptyTitle={t.settings.subscriptionPlan.noData}
+          />
+        </div>
+      )}
+
+      {activeTab === 'security' && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-4xl">
+          <Card>
+            <CardTitle className="mb-6">{t.settings.securityForm.changePassword}</CardTitle>
+            <form
+              className="space-y-4"
+              onSubmit={(e) => {
+                e.preventDefault()
+                if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+                  toast('error', t.settings.securityForm.passwordMismatch)
+                  return
+                }
+                changePasswordMutation.mutate()
+              }}
+            >
+              <FormField
+                label={t.settings.securityForm.currentPassword}
+                value={passwordForm.currentPassword}
+                onChange={(v) =>
+                  setPasswordForm({ ...passwordForm, currentPassword: v })
+                }
+                type="password"
+                required
+              />
+              <FormField
+                label={t.settings.securityForm.newPassword}
+                value={passwordForm.newPassword}
+                onChange={(v) =>
+                  setPasswordForm({ ...passwordForm, newPassword: v })
+                }
+                type="password"
+                required
+              />
+              <FormField
+                label={t.settings.securityForm.confirmPassword}
+                value={passwordForm.confirmPassword}
+                onChange={(v) =>
+                  setPasswordForm({ ...passwordForm, confirmPassword: v })
+                }
+                type="password"
+                required
+              />
+              <Button
+                type="submit"
+                disabled={changePasswordMutation.isPending}
+              >
+                {changePasswordMutation.isPending
+                  ? t.common.loading
+                  : t.settings.securityForm.changePassword}
+              </Button>
+            </form>
+          </Card>
+
+          <Card>
+            <CardTitle className="mb-6">{t.settings.securityForm.sessions}</CardTitle>
+            {sessionsQuery.isLoading ? (
+              <p className="text-sm text-on-surface-variant">{t.common.loading}</p>
+            ) : sessionsQuery.error ? (
+              <p className="text-sm text-error">
+                {isApiError(sessionsQuery.error)
+                  ? sessionsQuery.error.message
+                  : t.settings.securityForm.sessionsLoadFailed}
+              </p>
+            ) : (sessionsQuery.data?.sessions ?? []).length === 0 ? (
+              <EmptyState
+                icon="devices"
+                title={t.settings.securityForm.noSessions}
+                className="py-8"
+              />
+            ) : (
+              <div className="space-y-3">
+                {(sessionsQuery.data?.sessions ?? []).map((session) => (
+                  <SessionRow
+                    key={session.sessionId}
+                    session={session}
+                    locale={locale}
+                    currentLabel={t.settings.securityForm.currentSession}
+                    revokeLabel={t.settings.securityForm.revoke}
+                    revoking={revokeSessionMutation.isPending}
+                    onRevoke={() => revokeSessionMutation.mutate(session.sessionId)}
+                  />
+                ))}
+              </div>
+            )}
+          </Card>
+        </div>
+      )}
+
       {activeTab === 'rules' && (
         <Card className="max-w-2xl">
           <CardTitle className="mb-6">{t.settings.rules}</CardTitle>
@@ -357,18 +534,117 @@ export function SettingsPage() {
   )
 }
 
+function SubscriptionCard({
+  title,
+  loading,
+  error,
+  fields,
+  emptyTitle,
+}: {
+  title: string
+  loading: boolean
+  error: string | null
+  fields: Array<{ key: string; value: string }>
+  emptyTitle: string
+}) {
+  const { t } = useLocale()
+
+  return (
+    <Card>
+      <CardTitle className="mb-6">{title}</CardTitle>
+      {loading ? (
+        <p className="text-sm text-on-surface-variant">{t.common.loading}</p>
+      ) : error ? (
+        <p className="text-sm text-error">{error}</p>
+      ) : fields.length === 0 ? (
+        <EmptyState icon="credit_card" title={emptyTitle} className="py-6" />
+      ) : (
+        <dl className="space-y-3">
+          {fields.map((field) => (
+            <div key={field.key} className="flex justify-between gap-4 text-sm">
+              <dt className="text-text-secondary">{field.key}</dt>
+              <dd className="font-medium text-text-primary text-end">{field.value}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
+    </Card>
+  )
+}
+
+function SessionRow({
+  session,
+  locale,
+  currentLabel,
+  revokeLabel,
+  revoking,
+  onRevoke,
+}: {
+  session: AuthSessionDto
+  locale: string
+  currentLabel: string
+  revokeLabel: string
+  revoking: boolean
+  onRevoke: () => void
+}) {
+  const device =
+    session.deviceName ??
+    session.deviceType ??
+    session.sessionId.slice(0, 8)
+
+  const lastSeen = session.lastSeenAt
+    ? new Intl.DateTimeFormat(locale, {
+        dateStyle: 'medium',
+        timeStyle: 'short',
+      }).format(new Date(session.lastSeenAt))
+    : null
+
+  return (
+    <div className="flex items-center justify-between gap-4 p-3 rounded-lg border border-outline-variant/30">
+      <div className="flex items-center gap-3 min-w-0">
+        <div className="p-2 rounded-lg bg-surface-variant/30 text-primary shrink-0">
+          <MaterialIcon name="devices" size={18} />
+        </div>
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-on-surface truncate">{device}</p>
+          {lastSeen && (
+            <p className="text-xs text-on-surface-variant">{lastSeen}</p>
+          )}
+          {session.isCurrentSession && (
+            <span className="text-[10px] font-bold uppercase text-primary">
+              {currentLabel}
+            </span>
+          )}
+        </div>
+      </div>
+      {!session.isCurrentSession && (
+        <Button
+          variant="secondary"
+          size="sm"
+          disabled={revoking}
+          onClick={onRevoke}
+        >
+          {revokeLabel}
+        </Button>
+      )}
+    </div>
+  )
+}
+
 function FormField({
   label,
   value,
   onChange,
   multiline,
   required,
+  type,
 }: {
   label: string
   value: string
   onChange: (v: string) => void
   multiline?: boolean
   required?: boolean
+  type?: string
 }) {
   return (
     <div>
@@ -382,7 +658,12 @@ function FormField({
           className="w-full rounded-lg border border-border bg-surface text-text-primary text-sm px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary resize-none"
         />
       ) : (
-        <Input value={value} onChange={(e) => onChange(e.target.value)} required={required} />
+        <Input
+          type={type}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          required={required}
+        />
       )}
     </div>
   )

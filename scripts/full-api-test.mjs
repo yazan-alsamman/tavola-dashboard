@@ -6,7 +6,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 
-const BASE = 'http://187.127.76.76:3000/api/v1'
+const BASE = 'https://api.tavola.business/api/v1'
 const results = []
 
 function loadEnvCreds() {

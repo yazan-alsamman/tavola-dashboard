@@ -38,14 +38,16 @@ beforeEach(() => {
 
 describe('searchAvailability', () => {
   it('serializes query params and returns table availability DTOs', async () => {
+    const restaurantId = 'rrrrrrrr-rrrr-rrrr-rrrr-rrrrrrrrrrrr'
     server.use(
       http.get(`${BASE}/reservations/availability`, ({ request }) => {
         const url = new URL(request.url)
+        expect(url.searchParams.get('restaurantId')).toBe(restaurantId)
         expect(url.searchParams.get('branchId')).toBe(branchId)
+        expect(url.searchParams.get('date')).toBe('2026-08-01')
         expect(url.searchParams.get('partySize')).toBe('4')
-        expect(url.searchParams.get('reservationStartTime')).toBe(
-          '2026-08-01T18:00:00.000Z',
-        )
+        expect(url.searchParams.get('page')).toBe('1')
+        expect(url.searchParams.get('limit')).toBe('20')
         return HttpResponse.json({
           success: true,
           message: 'OK',
@@ -64,8 +66,9 @@ describe('searchAvailability', () => {
     )
 
     const tables = await searchAvailability({
+      restaurantId,
       branchId,
-      reservationStartTime: '2026-08-01T18:00:00.000Z',
+      date: '2026-08-01',
       partySize: 4,
     })
 
@@ -93,8 +96,9 @@ describe('searchAvailability', () => {
 
     try {
       await searchAvailability({
+        restaurantId: 'rrrrrrrr-rrrr-rrrr-rrrr-rrrrrrrrrrrr',
         branchId,
-        reservationStartTime: '2026-08-01T18:00:00.000Z',
+        date: '2026-08-01',
         partySize: 2,
       })
       expect.unreachable()
