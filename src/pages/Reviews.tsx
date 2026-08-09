@@ -1,6 +1,11 @@
-import { useState, type FormEvent } from 'react'
+import { useRef, useState, type FormEvent } from 'react'
 import { isApiError } from '@/api/errors'
-import type { ReviewDto } from '@/api/reviews'
+import {
+  reviewImageId,
+  reviewImageUrl,
+  type ReviewDto,
+  type ReviewImageDto,
+} from '@/api/reviews'
 import { MaterialIcon } from '@/components/ui/Icon'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Button } from '@/components/ui/Button'
@@ -21,7 +26,9 @@ import { useToast } from '@/context/ToastContext'
 import { useRestaurantReviewsQuery } from '@/hooks/useReviewQueries'
 import {
   useDeleteReviewMutation,
+  useRemoveReviewImageMutation,
   useReplyToReviewMutation,
+  useUploadReviewImageMutation,
 } from '@/hooks/useReviewMutations'
 import { useCanReplyToReviews } from '@/hooks/usePermissions'
 
@@ -29,6 +36,10 @@ const PAGE_SIZE = 20
 
 function reviewId(review: ReviewDto): string {
   return review.reviewId ?? review.id ?? ''
+}
+
+function reviewImages(review: ReviewDto): ReviewImageDto[] {
+  return Array.isArray(review.images) ? review.images : []
 }
 
 function formatInstant(iso: string | undefined, locale: string): string {
@@ -63,11 +74,17 @@ export function ReviewsPage() {
   const { toast } = useToast()
   const { selectedRestaurantId, status: scopeStatus } = useRestaurantScope()
   const canReply = useCanReplyToReviews()
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [page, setPage] = useState(1)
   const [replyTarget, setReplyTarget] = useState<ReviewDto | null>(null)
   const [replyText, setReplyText] = useState('')
   const [deleteTarget, setDeleteTarget] = useState<ReviewDto | null>(null)
+  const [uploadTarget, setUploadTarget] = useState<ReviewDto | null>(null)
+  const [removeImageTarget, setRemoveImageTarget] = useState<{
+    review: ReviewDto
+    image: ReviewImageDto
+  } | null>(null)
 
   const enabled = scopeStatus === 'ready' && Boolean(selectedRestaurantId)
   const listQuery = useRestaurantReviewsQuery(
@@ -79,6 +96,8 @@ export function ReviewsPage() {
 
   const replyMutation = useReplyToReviewMutation()
   const deleteMutation = useDeleteReviewMutation()
+  const uploadMutation = useUploadReviewImageMutation()
+  const removeImageMutation = useRemoveReviewImageMutation()
 
   const mapError = (err: unknown): string =>
     isApiError(err) ? err.message : t.reviews.errors.unknown
@@ -130,6 +149,57 @@ export function ReviewsPage() {
     }
   }
 
+  const startUpload = (review: ReviewDto) => {
+    setUploadTarget(review)
+    fileInputRef.current?.click()
+  }
+
+  const handleFileSelected = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+  ): Promise<void> => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file || !uploadTarget || !selectedRestaurantId) {
+      setUploadTarget(null)
+      return
+    }
+    const id = reviewId(uploadTarget)
+    if (!id) {
+      setUploadTarget(null)
+      return
+    }
+    try {
+      await uploadMutation.mutateAsync({
+        restaurantId: selectedRestaurantId,
+        reviewId: id,
+        file,
+      })
+      toast('success', t.reviews.imageUploadSuccess)
+    } catch (err) {
+      toast('error', mapError(err))
+    } finally {
+      setUploadTarget(null)
+    }
+  }
+
+  const confirmRemoveImage = async (): Promise<void> => {
+    if (!removeImageTarget || !selectedRestaurantId) return
+    const id = reviewId(removeImageTarget.review)
+    const imageId = reviewImageId(removeImageTarget.image)
+    if (!id || !imageId) return
+    try {
+      await removeImageMutation.mutateAsync({
+        restaurantId: selectedRestaurantId,
+        reviewId: id,
+        reviewImageId: imageId,
+      })
+      toast('success', t.reviews.imageRemoveSuccess)
+      setRemoveImageTarget(null)
+    } catch (err) {
+      toast('error', mapError(err))
+    }
+  }
+
   if (!enabled) {
     return (
       <div>
@@ -150,6 +220,14 @@ export function ReviewsPage() {
   return (
     <div>
       <PageHeader title={t.reviews.title} subtitle={t.reviews.subtitle} />
+
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        className="hidden"
+        onChange={(e) => void handleFileSelected(e)}
+      />
 
       {listQuery.isLoading && (
         <p className="text-body-md text-on-surface-variant py-12 text-center">
@@ -200,6 +278,7 @@ export function ReviewsPage() {
             <DataTableBody>
               {reviews.map((review) => {
                 const id = reviewId(review)
+                const images = reviewImages(review)
                 return (
                   <DataTableRow key={id}>
                     <DataTableCell>
@@ -213,6 +292,51 @@ export function ReviewsPage() {
                           <p className="text-body-md text-on-surface-variant italic">
                             {t.reviews.noComment}
                           </p>
+                        )}
+                        {images.length > 0 && (
+                          <div className="flex flex-wrap gap-2 pt-1">
+                            {images.map((image) => {
+                              const imgId = reviewImageId(image)
+                              const url = reviewImageUrl(image)
+                              return (
+                                <div
+                                  key={imgId || url || Math.random()}
+                                  className="relative group"
+                                >
+                                  {url ? (
+                                    <a
+                                      href={url}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="block"
+                                    >
+                                      <img
+                                        src={url}
+                                        alt=""
+                                        className="h-14 w-14 rounded-lg object-cover border border-outline-variant/30"
+                                      />
+                                    </a>
+                                  ) : (
+                                    <div className="h-14 w-14 rounded-lg bg-surface-container-low flex items-center justify-center">
+                                      <MaterialIcon name="image" size={18} />
+                                    </div>
+                                  )}
+                                  {imgId && (
+                                    <button
+                                      type="button"
+                                      className="absolute -top-1.5 -end-1.5 h-6 w-6 rounded-full bg-error text-on-error flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow"
+                                      title={t.reviews.removeImage}
+                                      onClick={() =>
+                                        setRemoveImageTarget({ review, image })
+                                      }
+                                    >
+                                      <MaterialIcon name="close" size={14} />
+                                    </button>
+                                  )}
+                                </div>
+                              )
+                            })}
+                          </div>
                         )}
                         {review.reply && (
                           <div className="rounded-lg bg-surface-container-low px-3 py-2 border-s-2 border-primary">
@@ -234,6 +358,15 @@ export function ReviewsPage() {
                     </DataTableCell>
                     <DataTableCell className="text-end">
                       <div className="flex justify-end gap-1">
+                        <button
+                          type="button"
+                          className="p-2 rounded-lg text-on-surface-variant hover:bg-surface-container-high"
+                          title={t.reviews.uploadImage}
+                          disabled={uploadMutation.isPending}
+                          onClick={() => startUpload(review)}
+                        >
+                          <MaterialIcon name="add_photo_alternate" size={18} />
+                        </button>
                         {canReply && (
                           <button
                             type="button"
@@ -335,6 +468,19 @@ export function ReviewsPage() {
         cancelLabel={t.common.cancel}
         variant="danger"
         busy={deleteMutation.isPending}
+        closeOnConfirm={false}
+      />
+
+      <ConfirmDialog
+        open={Boolean(removeImageTarget)}
+        onClose={() => setRemoveImageTarget(null)}
+        onConfirm={() => void confirmRemoveImage()}
+        title={t.reviews.removeImageTitle}
+        message={t.reviews.removeImageMessage}
+        confirmLabel={t.common.delete}
+        cancelLabel={t.common.cancel}
+        variant="danger"
+        busy={removeImageMutation.isPending}
         closeOnConfirm={false}
       />
     </div>

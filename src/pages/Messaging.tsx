@@ -3,7 +3,9 @@ import { PageHeader } from '@/components/ui/PageHeader'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { Input } from '@/components/ui/Input'
 import { MaterialIcon } from '@/components/ui/Icon'
+import { Modal } from '@/components/ui/Modal'
 import { Num } from '@/components/ui/Num'
 import { useLocale } from '@/context/LocaleContext'
 import { useRestaurantScope } from '@/context/RestaurantScopeContext'
@@ -12,6 +14,7 @@ import {
   useCloseConversationMutation,
   useMarkConversationReadMutation,
   useSendMessageMutation,
+  useStartConversationMutation,
 } from '@/hooks/useMessagingMutations'
 import {
   conversationUnreadCount,
@@ -19,7 +22,12 @@ import {
   useConversationMessages,
   useMessagingInbox,
 } from '@/hooks/useMessagingQueries'
-import type { ConversationDto, MessageDto } from '@/api/messaging'
+import {
+  messageAttachment,
+  type ConversationDto,
+  type MessageDto,
+} from '@/api/messaging'
+import { isApiError } from '@/api/errors'
 import { formatInstantInTimeZone } from '@/lib/branchDateTime'
 import { cn } from '@/lib/utils'
 
@@ -46,13 +54,22 @@ function formatMessageTime(iso: string | undefined, locale: string): string {
 export function MessagingPage() {
   const { t, locale } = useLocale()
   const { toast } = useToast()
-  const { selectedRestaurantId, status: scopeStatus } = useRestaurantScope()
+  const {
+    selectedRestaurantId,
+    selectedBranchId,
+    branches,
+    status: scopeStatus,
+  } = useRestaurantScope()
 
   const [selectedConversationId, setSelectedConversationId] = useState<
     string | null
   >(null)
   const [messageBody, setMessageBody] = useState('')
   const [attachment, setAttachment] = useState<File | null>(null)
+  const [startOpen, setStartOpen] = useState(false)
+  const [startSubject, setStartSubject] = useState('')
+  const [startBranchId, setStartBranchId] = useState('')
+  const [startReservationId, setStartReservationId] = useState('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -67,6 +84,7 @@ export function MessagingPage() {
   const markRead = useMarkConversationReadMutation()
   const closeConversation = useCloseConversationMutation()
   const sendMessage = useSendMessageMutation()
+  const startConversation = useStartConversationMutation()
 
   const conversations = inboxQuery.data?.items ?? []
   const messages = messagesQuery.data?.items ?? []
@@ -83,6 +101,11 @@ export function MessagingPage() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages.length, selectedConversationId])
+
+  useEffect(() => {
+    if (selectedBranchId) setStartBranchId(selectedBranchId)
+    else if (branches[0]) setStartBranchId(branches[0].branchId)
+  }, [selectedBranchId, branches])
 
   const handleSelectConversation = (conversationId: string): void => {
     setSelectedConversationId(conversationId)
@@ -133,6 +156,35 @@ export function MessagingPage() {
     )
   }
 
+  const handleStart = async (e: React.FormEvent): Promise<void> => {
+    e.preventDefault()
+    if (!selectedRestaurantId || !mutationScope || !startSubject.trim() || !startBranchId) {
+      return
+    }
+    try {
+      const conversation = await startConversation.mutateAsync({
+        scope: mutationScope,
+        body: {
+          restaurantId: selectedRestaurantId,
+          branchId: startBranchId,
+          subject: startSubject.trim(),
+          reservationId: startReservationId.trim() || null,
+        },
+      })
+      toast('success', t.messaging.startSuccess)
+      setStartOpen(false)
+      setStartSubject('')
+      setStartReservationId('')
+      const id = conversation.conversationId
+      if (id) handleSelectConversation(id)
+    } catch (err) {
+      toast(
+        'error',
+        isApiError(err) ? err.message : t.messaging.startError,
+      )
+    }
+  }
+
   const handleAttachmentChange = (
     event: React.ChangeEvent<HTMLInputElement>,
   ): void => {
@@ -151,10 +203,18 @@ export function MessagingPage() {
 
   return (
     <div>
-      <PageHeader title={t.messaging.title} subtitle={t.messaging.subtitle} />
+      <PageHeader
+        title={t.messaging.title}
+        subtitle={t.messaging.subtitle}
+        actions={
+          <Button onClick={() => setStartOpen(true)}>
+            <MaterialIcon name="add" size={18} className="me-1" />
+            {t.messaging.startConversation}
+          </Button>
+        }
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-[minmax(260px,320px)_1fr] gap-4 min-h-[calc(100vh-12rem)]">
-        {/* Conversation list */}
         <Card padding="none" className="flex flex-col overflow-hidden">
           <div className="px-4 py-3 border-b border-outline-variant/30">
             <p className="text-label-md font-semibold text-on-surface">
@@ -230,7 +290,6 @@ export function MessagingPage() {
           </div>
         </Card>
 
-        {/* Thread */}
         <Card padding="none" className="flex flex-col overflow-hidden">
           {!selectedConversationId ? (
             <div className="flex flex-1 items-center justify-center p-6">
@@ -299,23 +358,46 @@ export function MessagingPage() {
                     <EmptyState icon="chat" title={t.messaging.messagesEmpty} />
                   )}
 
-                {messages.map((message: MessageDto) => (
-                  <div
-                    key={message.messageId}
-                    className="rounded-lg border border-outline-variant/30 bg-surface-container-lowest px-3 py-2"
-                  >
-                    {message.body && (
-                      <p className="text-sm text-on-surface whitespace-pre-wrap">
-                        {message.body}
-                      </p>
-                    )}
-                    {message.createdAt && (
-                      <p className="text-xs text-on-surface-variant mt-1">
-                        {formatMessageTime(message.createdAt, locale)}
-                      </p>
-                    )}
-                  </div>
-                ))}
+                {messages.map((message: MessageDto) => {
+                  const file = messageAttachment(message)
+                  return (
+                    <div
+                      key={message.messageId}
+                      className="rounded-lg border border-outline-variant/30 bg-surface-container-lowest px-3 py-2"
+                    >
+                      {message.body && (
+                        <p className="text-sm text-on-surface whitespace-pre-wrap">
+                          {message.body}
+                        </p>
+                      )}
+                      {(file.url || file.name) && (
+                        <div className="mt-2">
+                          {file.url ? (
+                            <a
+                              href={file.url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
+                            >
+                              <MaterialIcon name="attach_file" size={16} />
+                              {file.name || t.messaging.attachment}
+                            </a>
+                          ) : (
+                            <span className="inline-flex items-center gap-1.5 text-sm text-on-surface-variant">
+                              <MaterialIcon name="attach_file" size={16} />
+                              {file.name}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                      {message.createdAt && (
+                        <p className="text-xs text-on-surface-variant mt-1">
+                          {formatMessageTime(message.createdAt, locale)}
+                        </p>
+                      )}
+                    </div>
+                  )
+                })}
                 <div ref={messagesEndRef} />
               </div>
 
@@ -381,6 +463,71 @@ export function MessagingPage() {
           )}
         </Card>
       </div>
+
+      <Modal
+        open={startOpen}
+        onClose={() => !startConversation.isPending && setStartOpen(false)}
+        title={t.messaging.startConversation}
+        description={t.messaging.startSubtitle}
+      >
+        <form className="space-y-4" onSubmit={(e) => void handleStart(e)}>
+          <div>
+            <label className="text-sm font-medium text-on-surface-variant mb-1.5 block">
+              {t.messaging.subject}
+            </label>
+            <Input
+              value={startSubject}
+              onChange={(e) => setStartSubject(e.target.value)}
+              required
+              disabled={startConversation.isPending}
+            />
+          </div>
+          <div>
+            <label className="text-sm font-medium text-on-surface-variant mb-1.5 block">
+              {t.messaging.branch}
+            </label>
+            <select
+              className="w-full rounded-lg border border-outline-variant/50 bg-surface-container-lowest px-3 py-2.5 text-sm"
+              value={startBranchId}
+              onChange={(e) => setStartBranchId(e.target.value)}
+              required
+              disabled={startConversation.isPending}
+            >
+              {branches.map((branch) => (
+                <option key={branch.branchId} value={branch.branchId}>
+                  {branch.city}
+                  {branch.district ? ` — ${branch.district}` : ''}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="text-sm font-medium text-on-surface-variant mb-1.5 block">
+              {t.messaging.reservationOptional}
+            </label>
+            <Input
+              value={startReservationId}
+              onChange={(e) => setStartReservationId(e.target.value)}
+              disabled={startConversation.isPending}
+              placeholder={t.messaging.reservationIdPlaceholder}
+            />
+          </div>
+          <div className="flex justify-end gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setStartOpen(false)}
+            >
+              {t.common.cancel}
+            </Button>
+            <Button type="submit" disabled={startConversation.isPending}>
+              {startConversation.isPending
+                ? t.common.loading
+                : t.messaging.startConversation}
+            </Button>
+          </div>
+        </form>
+      </Modal>
     </div>
   )
 }

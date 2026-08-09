@@ -106,6 +106,149 @@ export interface MenuListData {
   items: MenuDto[]
 }
 
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return value !== null && typeof value === 'object' && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null
+}
+
+function pickString(record: Record<string, unknown>, ...keys: string[]): string {
+  for (const key of keys) {
+    const value = record[key]
+    if (typeof value === 'string' && value.trim()) return value
+  }
+  return ''
+}
+
+function normalizeMenuStatus(raw: Record<string, unknown>): MenuStatus | undefined {
+  if (typeof raw.status === 'string' && raw.status) return raw.status
+  if (typeof raw.active === 'boolean') return raw.active ? 'Active' : 'Inactive'
+  return undefined
+}
+
+function normalizeOption(raw: unknown): MenuItemOptionDto {
+  const record = asRecord(raw) ?? {}
+  return {
+    ...record,
+    optionId: pickString(record, 'optionId', 'id'),
+    optionGroupId:
+      pickString(record, 'optionGroupId') ||
+      (typeof record.optionGroupId === 'string' ? record.optionGroupId : undefined),
+    name: pickString(record, 'name') || 'Option',
+    priceModifier:
+      typeof record.priceModifier === 'number' ? record.priceModifier : undefined,
+    active: typeof record.active === 'boolean' ? record.active : undefined,
+  }
+}
+
+function normalizeOptionGroup(raw: unknown): MenuItemOptionGroupDto {
+  const record = asRecord(raw) ?? {}
+  const options = Array.isArray(record.options)
+    ? record.options.map(normalizeOption)
+    : undefined
+  return {
+    ...record,
+    optionGroupId: pickString(record, 'optionGroupId', 'id'),
+    itemId: pickString(record, 'itemId') || undefined,
+    name: pickString(record, 'name') || 'Options',
+    required: typeof record.required === 'boolean' ? record.required : undefined,
+    minSelections:
+      typeof record.minSelections === 'number' ? record.minSelections : undefined,
+    maxSelections:
+      typeof record.maxSelections === 'number' ? record.maxSelections : undefined,
+    options,
+  }
+}
+
+function normalizeAddOn(raw: unknown): MenuItemAddOnDto {
+  const record = asRecord(raw) ?? {}
+  return {
+    ...record,
+    addOnId: pickString(record, 'addOnId', 'id'),
+    itemId: pickString(record, 'itemId') || undefined,
+    name: pickString(record, 'name') || 'Add-on',
+    price: typeof record.price === 'number' ? record.price : undefined,
+    active: typeof record.active === 'boolean' ? record.active : undefined,
+  }
+}
+
+function normalizeItem(raw: unknown): MenuItemDto {
+  const record = asRecord(raw) ?? {}
+  return {
+    ...record,
+    itemId: pickString(record, 'itemId', 'id'),
+    categoryId: pickString(record, 'categoryId') || undefined,
+    name: pickString(record, 'name') || 'Item',
+    description:
+      typeof record.description === 'string' || record.description === null
+        ? (record.description as string | null)
+        : undefined,
+    price: typeof record.price === 'number' ? record.price : undefined,
+    currency: typeof record.currency === 'string' ? record.currency : undefined,
+    isFeatured:
+      typeof record.isFeatured === 'boolean' ? record.isFeatured : undefined,
+    displayOrder:
+      typeof record.displayOrder === 'number' ? record.displayOrder : undefined,
+    imageUrl: typeof record.imageUrl === 'string' ? record.imageUrl : null,
+    optionGroups: Array.isArray(record.optionGroups)
+      ? record.optionGroups.map(normalizeOptionGroup)
+      : undefined,
+    addOns: Array.isArray(record.addOns)
+      ? record.addOns.map(normalizeAddOn)
+      : undefined,
+    availabilityWindows: Array.isArray(record.availabilityWindows)
+      ? (record.availabilityWindows as AvailabilityWindowDto[])
+      : undefined,
+  }
+}
+
+function normalizeCategory(raw: unknown): MenuCategoryDto {
+  const record = asRecord(raw) ?? {}
+  return {
+    ...record,
+    categoryId: pickString(record, 'categoryId', 'id'),
+    menuId: pickString(record, 'menuId') || undefined,
+    name: pickString(record, 'name') || 'Category',
+    description:
+      typeof record.description === 'string' || record.description === null
+        ? (record.description as string | null)
+        : undefined,
+    displayOrder:
+      typeof record.displayOrder === 'number' ? record.displayOrder : undefined,
+    imageUrl: typeof record.imageUrl === 'string' ? record.imageUrl : null,
+    items: Array.isArray(record.items)
+      ? record.items.map(normalizeItem)
+      : undefined,
+  }
+}
+
+/** Maps live API menu payloads (`id` / `active`) onto dashboard DTOs (`menuId` / `status`). */
+export function normalizeMenu(raw: unknown): MenuDto {
+  const record = asRecord(raw) ?? {}
+  return {
+    ...record,
+    menuId: pickString(record, 'menuId', 'id'),
+    restaurantId: pickString(record, 'restaurantId') || undefined,
+    name: pickString(record, 'name') || 'Menu',
+    displayOrder:
+      typeof record.displayOrder === 'number' ? record.displayOrder : undefined,
+    isDefault: typeof record.isDefault === 'boolean' ? record.isDefault : undefined,
+    status: normalizeMenuStatus(record),
+    categories: Array.isArray(record.categories)
+      ? record.categories.map(normalizeCategory)
+      : undefined,
+  }
+}
+
+function normalizeMenuList(data: unknown): MenuDto[] {
+  if (Array.isArray(data)) return data.map(normalizeMenu)
+  const record = asRecord(data)
+  if (record && Array.isArray(record.items)) {
+    return record.items.map(normalizeMenu)
+  }
+  return []
+}
+
 // ---------------------------------------------------------------------------
 // Request DTOs
 // ---------------------------------------------------------------------------
@@ -276,26 +419,16 @@ function imageUploadBody(file: File): FormData {
 // Menus
 // ---------------------------------------------------------------------------
 
-export async function createMenu(
-  restaurantId: string,
-  body: CreateMenuRequest,
-): Promise<MenuDto> {
-  return apiRequest<MenuDto>(menusBase(restaurantId), {
-    method: 'POST',
-    body: { name: body.name.trim() },
-  })
-}
-
 /** Public — lists active menus for a restaurant (unpaginated). */
 export async function listMenus(
   restaurantId: string,
   signal?: AbortSignal,
 ): Promise<MenuDto[]> {
-  const data = await apiRequest<MenuListData>(menusBase(restaurantId), {
+  const data = await apiRequest<unknown>(menusBase(restaurantId), {
     auth: false,
     signal,
   })
-  return data.items
+  return normalizeMenuList(data)
 }
 
 /** Public — full nested tree for the restaurant default menu. */
@@ -303,10 +436,11 @@ export async function getDefaultMenu(
   restaurantId: string,
   signal?: AbortSignal,
 ): Promise<MenuDto> {
-  return apiRequest<MenuDto>(`${menusBase(restaurantId)}/default`, {
+  const data = await apiRequest<unknown>(`${menusBase(restaurantId)}/default`, {
     auth: false,
     signal,
   })
+  return normalizeMenu(data)
 }
 
 /** Public — full nested tree for a specific menu. */
@@ -315,10 +449,22 @@ export async function getMenu(
   menuId: string,
   signal?: AbortSignal,
 ): Promise<MenuDto> {
-  return apiRequest<MenuDto>(menuPath(restaurantId, menuId), {
+  const data = await apiRequest<unknown>(menuPath(restaurantId, menuId), {
     auth: false,
     signal,
   })
+  return normalizeMenu(data)
+}
+
+export async function createMenu(
+  restaurantId: string,
+  body: CreateMenuRequest,
+): Promise<MenuDto> {
+  const data = await apiRequest<unknown>(menusBase(restaurantId), {
+    method: 'POST',
+    body: { name: body.name.trim() },
+  })
+  return normalizeMenu(data)
 }
 
 export async function updateMenu(
@@ -326,7 +472,7 @@ export async function updateMenu(
   menuId: string,
   body: UpdateMenuRequest,
 ): Promise<MenuDto> {
-  return apiRequest<MenuDto>(menuPath(restaurantId, menuId), {
+  const data = await apiRequest<unknown>(menuPath(restaurantId, menuId), {
     method: 'PATCH',
     body: {
       ...(body.name !== undefined ? { name: body.name.trim() } : {}),
@@ -335,33 +481,40 @@ export async function updateMenu(
         : {}),
     },
   })
+  return normalizeMenu(data)
 }
 
 export async function activateMenu(
   restaurantId: string,
   menuId: string,
 ): Promise<MenuDto> {
-  return apiRequest<MenuDto>(`${menuPath(restaurantId, menuId)}/activate`, {
-    method: 'POST',
-  })
+  const data = await apiRequest<unknown>(
+    `${menuPath(restaurantId, menuId)}/activate`,
+    { method: 'POST' },
+  )
+  return normalizeMenu(data)
 }
 
 export async function deactivateMenu(
   restaurantId: string,
   menuId: string,
 ): Promise<MenuDto> {
-  return apiRequest<MenuDto>(`${menuPath(restaurantId, menuId)}/deactivate`, {
-    method: 'POST',
-  })
+  const data = await apiRequest<unknown>(
+    `${menuPath(restaurantId, menuId)}/deactivate`,
+    { method: 'POST' },
+  )
+  return normalizeMenu(data)
 }
 
 export async function setDefaultMenu(
   restaurantId: string,
   menuId: string,
 ): Promise<MenuDto> {
-  return apiRequest<MenuDto>(`${menuPath(restaurantId, menuId)}/set-default`, {
-    method: 'POST',
-  })
+  const data = await apiRequest<unknown>(
+    `${menuPath(restaurantId, menuId)}/set-default`,
+    { method: 'POST' },
+  )
+  return normalizeMenu(data)
 }
 
 /** Soft-delete. */
@@ -383,13 +536,14 @@ export async function createMenuCategory(
   menuId: string,
   body: CreateMenuCategoryRequest,
 ): Promise<MenuCategoryDto> {
-  return apiRequest<MenuCategoryDto>(categoriesBase(restaurantId, menuId), {
+  const data = await apiRequest<unknown>(categoriesBase(restaurantId, menuId), {
     method: 'POST',
     body: {
       name: body.name.trim(),
       ...(body.description !== undefined ? { description: body.description } : {}),
     },
   })
+  return normalizeCategory(data)
 }
 
 export async function updateMenuCategory(
@@ -398,7 +552,7 @@ export async function updateMenuCategory(
   categoryId: string,
   body: UpdateMenuCategoryRequest,
 ): Promise<MenuCategoryDto> {
-  return apiRequest<MenuCategoryDto>(
+  const data = await apiRequest<unknown>(
     categoryPath(restaurantId, menuId, categoryId),
     {
       method: 'PATCH',
@@ -410,6 +564,7 @@ export async function updateMenuCategory(
       },
     },
   )
+  return normalizeCategory(data)
 }
 
 export async function reorderMenuCategories(
@@ -417,13 +572,14 @@ export async function reorderMenuCategories(
   menuId: string,
   body: ReorderRequest,
 ): Promise<MenuCategoryDto[]> {
-  return apiRequest<MenuCategoryDto[]>(
+  const data = await apiRequest<unknown>(
     `${categoriesBase(restaurantId, menuId)}/reorder`,
     {
       method: 'PATCH',
       body: { orderedIds: body.orderedIds },
     },
   )
+  return Array.isArray(data) ? data.map(normalizeCategory) : []
 }
 
 /** Soft-delete. */
@@ -443,13 +599,14 @@ export async function uploadMenuCategoryImage(
   categoryId: string,
   file: File,
 ): Promise<MenuCategoryDto> {
-  return apiRequest<MenuCategoryDto>(
+  const data = await apiRequest<unknown>(
     `${categoryPath(restaurantId, menuId, categoryId)}/image`,
     {
       method: 'POST',
       body: imageUploadBody(file),
     },
   )
+  return normalizeCategory(data)
 }
 
 export async function removeMenuCategoryImage(
@@ -457,10 +614,11 @@ export async function removeMenuCategoryImage(
   menuId: string,
   categoryId: string,
 ): Promise<MenuCategoryDto> {
-  return apiRequest<MenuCategoryDto>(
+  const data = await apiRequest<unknown>(
     `${categoryPath(restaurantId, menuId, categoryId)}/image`,
     { method: 'DELETE' },
   )
+  return normalizeCategory(data)
 }
 
 // ---------------------------------------------------------------------------
@@ -473,7 +631,7 @@ export async function createMenuItem(
   categoryId: string,
   body: CreateMenuItemRequest,
 ): Promise<MenuItemDto> {
-  return apiRequest<MenuItemDto>(
+  const data = await apiRequest<unknown>(
     itemsBase(restaurantId, menuId, categoryId),
     {
       method: 'POST',
@@ -491,6 +649,7 @@ export async function createMenuItem(
       },
     },
   )
+  return normalizeItem(data)
 }
 
 export async function updateMenuItem(
@@ -500,7 +659,7 @@ export async function updateMenuItem(
   itemId: string,
   body: UpdateMenuItemRequest,
 ): Promise<MenuItemDto> {
-  return apiRequest<MenuItemDto>(
+  const data = await apiRequest<unknown>(
     itemPath(restaurantId, menuId, categoryId, itemId),
     {
       method: 'PATCH',
@@ -523,6 +682,7 @@ export async function updateMenuItem(
       },
     },
   )
+  return normalizeItem(data)
 }
 
 export async function reorderMenuItems(
@@ -531,13 +691,14 @@ export async function reorderMenuItems(
   categoryId: string,
   body: ReorderRequest,
 ): Promise<MenuItemDto[]> {
-  return apiRequest<MenuItemDto[]>(
+  const data = await apiRequest<unknown>(
     `${itemsBase(restaurantId, menuId, categoryId)}/reorder`,
     {
       method: 'PATCH',
       body: { orderedIds: body.orderedIds },
     },
   )
+  return Array.isArray(data) ? data.map(normalizeItem) : []
 }
 
 /** Replaces the item's scheduled availability windows (whole-set). */
@@ -548,13 +709,14 @@ export async function replaceMenuItemAvailability(
   itemId: string,
   body: ReplaceAvailabilityWindowsRequest,
 ): Promise<MenuItemDto> {
-  return apiRequest<MenuItemDto>(
+  const data = await apiRequest<unknown>(
     `${itemPath(restaurantId, menuId, categoryId, itemId)}/availability`,
     {
       method: 'PATCH',
       body: { windows: body.windows },
     },
   )
+  return normalizeItem(data)
 }
 
 export async function featureMenuItem(
@@ -563,10 +725,11 @@ export async function featureMenuItem(
   categoryId: string,
   itemId: string,
 ): Promise<MenuItemDto> {
-  return apiRequest<MenuItemDto>(
+  const data = await apiRequest<unknown>(
     `${itemPath(restaurantId, menuId, categoryId, itemId)}/feature`,
     { method: 'POST' },
   )
+  return normalizeItem(data)
 }
 
 export async function unfeatureMenuItem(
@@ -575,10 +738,11 @@ export async function unfeatureMenuItem(
   categoryId: string,
   itemId: string,
 ): Promise<MenuItemDto> {
-  return apiRequest<MenuItemDto>(
+  const data = await apiRequest<unknown>(
     `${itemPath(restaurantId, menuId, categoryId, itemId)}/unfeature`,
     { method: 'POST' },
   )
+  return normalizeItem(data)
 }
 
 export async function uploadMenuItemImage(
@@ -588,13 +752,14 @@ export async function uploadMenuItemImage(
   itemId: string,
   file: File,
 ): Promise<MenuItemDto> {
-  return apiRequest<MenuItemDto>(
+  const data = await apiRequest<unknown>(
     `${itemPath(restaurantId, menuId, categoryId, itemId)}/image`,
     {
       method: 'POST',
       body: imageUploadBody(file),
     },
   )
+  return normalizeItem(data)
 }
 
 export async function removeMenuItemImage(
@@ -603,10 +768,11 @@ export async function removeMenuItemImage(
   categoryId: string,
   itemId: string,
 ): Promise<MenuItemDto> {
-  return apiRequest<MenuItemDto>(
+  const data = await apiRequest<unknown>(
     `${itemPath(restaurantId, menuId, categoryId, itemId)}/image`,
     { method: 'DELETE' },
   )
+  return normalizeItem(data)
 }
 
 /** Soft-delete. */
@@ -633,7 +799,7 @@ export async function createMenuItemOptionGroup(
   itemId: string,
   body: CreateMenuItemOptionGroupRequest,
 ): Promise<MenuItemOptionGroupDto> {
-  return apiRequest<MenuItemOptionGroupDto>(
+  const data = await apiRequest<unknown>(
     optionGroupsBase(restaurantId, menuId, categoryId, itemId),
     {
       method: 'POST',
@@ -649,6 +815,7 @@ export async function createMenuItemOptionGroup(
       },
     },
   )
+  return normalizeOptionGroup(data)
 }
 
 export async function updateMenuItemOptionGroup(
@@ -659,7 +826,7 @@ export async function updateMenuItemOptionGroup(
   optionGroupId: string,
   body: UpdateMenuItemOptionGroupRequest,
 ): Promise<MenuItemOptionGroupDto> {
-  return apiRequest<MenuItemOptionGroupDto>(
+  const data = await apiRequest<unknown>(
     optionGroupPath(restaurantId, menuId, categoryId, itemId, optionGroupId),
     {
       method: 'PATCH',
@@ -675,6 +842,7 @@ export async function updateMenuItemOptionGroup(
       },
     },
   )
+  return normalizeOptionGroup(data)
 }
 
 /** Soft-delete. */
@@ -703,7 +871,7 @@ export async function createMenuItemOption(
   optionGroupId: string,
   body: CreateMenuItemOptionRequest,
 ): Promise<MenuItemOptionDto> {
-  return apiRequest<MenuItemOptionDto>(
+  const data = await apiRequest<unknown>(
     `${optionGroupPath(restaurantId, menuId, categoryId, itemId, optionGroupId)}/options`,
     {
       method: 'POST',
@@ -715,6 +883,7 @@ export async function createMenuItemOption(
       },
     },
   )
+  return normalizeOption(data)
 }
 
 export async function updateMenuItemOption(
@@ -726,7 +895,7 @@ export async function updateMenuItemOption(
   optionId: string,
   body: UpdateMenuItemOptionRequest,
 ): Promise<MenuItemOptionDto> {
-  return apiRequest<MenuItemOptionDto>(
+  const data = await apiRequest<unknown>(
     `${optionGroupPath(restaurantId, menuId, categoryId, itemId, optionGroupId)}/options/${optionId}`,
     {
       method: 'PATCH',
@@ -739,6 +908,7 @@ export async function updateMenuItemOption(
       },
     },
   )
+  return normalizeOption(data)
 }
 
 /** Soft-delete. */
@@ -767,7 +937,7 @@ export async function createMenuItemAddOn(
   itemId: string,
   body: CreateMenuItemAddOnRequest,
 ): Promise<MenuItemAddOnDto> {
-  return apiRequest<MenuItemAddOnDto>(
+  const data = await apiRequest<unknown>(
     addOnsBase(restaurantId, menuId, categoryId, itemId),
     {
       method: 'POST',
@@ -777,6 +947,7 @@ export async function createMenuItemAddOn(
       },
     },
   )
+  return normalizeAddOn(data)
 }
 
 export async function updateMenuItemAddOn(
@@ -787,7 +958,7 @@ export async function updateMenuItemAddOn(
   addOnId: string,
   body: UpdateMenuItemAddOnRequest,
 ): Promise<MenuItemAddOnDto> {
-  return apiRequest<MenuItemAddOnDto>(
+  const data = await apiRequest<unknown>(
     `${addOnsBase(restaurantId, menuId, categoryId, itemId)}/${addOnId}`,
     {
       method: 'PATCH',
@@ -798,6 +969,7 @@ export async function updateMenuItemAddOn(
       },
     },
   )
+  return normalizeAddOn(data)
 }
 
 /** Soft-delete. */

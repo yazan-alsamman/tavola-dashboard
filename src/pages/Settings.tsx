@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Card, CardTitle } from '@/components/ui/Card'
@@ -21,20 +21,49 @@ import {
 } from '@/hooks/useOrganizationQueries'
 import { displayPayloadFields } from '@/lib/analyticsPayload'
 import {
+  addRestaurantGalleryImage,
   getRestaurant,
+  getRestaurantCuisineCategories,
+  getRestaurantOccasionCategories,
   getRestaurantSettings,
   getRestaurantWorkingHours,
+  listRestaurantGallery,
+  removeRestaurantGalleryImage,
+  setRestaurantCuisineCategories,
+  setRestaurantOccasionCategories,
   updateRestaurant,
   updateRestaurantSettings,
   updateRestaurantWorkingHours,
+  type GalleryItemDto,
   type RestaurantDto,
   type RestaurantSettingsDto,
   type WorkingHoursEntry,
 } from '@/api/restaurants'
+import {
+  listCuisineCategories,
+  listOccasionCategories,
+} from '@/api/taxonomy'
+import {
+  getCurrentUser,
+  getMyPreferences,
+  updateCurrentUser,
+  updateMyPreferences,
+  uploadMyAvatar,
+  type UserPreferences,
+} from '@/api/users'
 import { isApiError } from '@/api/errors'
 import { cn } from '@/lib/utils'
 
-const tabs = ['profile', 'hours', 'rules', 'subscription', 'security'] as const
+const tabs = [
+  'profile',
+  'gallery',
+  'categories',
+  'hours',
+  'rules',
+  'account',
+  'subscription',
+  'security',
+] as const
 const DAY_LABELS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
 const defaultSettings: RestaurantSettingsDto = {
@@ -129,8 +158,105 @@ export function SettingsPage() {
   })
   const [settings, setSettings] = useState<RestaurantSettingsDto>(defaultSettings)
   const [hours, setHours] = useState<WorkingHoursEntry[]>(entriesToWeek([]))
+  const [gallery, setGallery] = useState<GalleryItemDto[]>([])
+  const [galleryLoading, setGalleryLoading] = useState(false)
+  const [selectedCuisineIds, setSelectedCuisineIds] = useState<string[]>([])
+  const [selectedOccasionIds, setSelectedOccasionIds] = useState<string[]>([])
+  const [accountForm, setAccountForm] = useState({
+    firstName: '',
+    lastName: '',
+    countryCode: 'SY',
+    phoneNumber: '',
+    language: 'en',
+    preferredCurrency: 'USD',
+  })
+  const [preferences, setPreferences] = useState<UserPreferences>({
+    notificationOptIn: true,
+    marketingOptIn: false,
+  })
+  const galleryInputRef = useRef<HTMLInputElement>(null)
+  const avatarInputRef = useRef<HTMLInputElement>(null)
 
   const restaurantId = selectedRestaurantId
+
+  const cuisineCatalogQuery = useQuery({
+    queryKey: ['taxonomy', 'cuisine'],
+    queryFn: ({ signal }) => listCuisineCategories(signal),
+    enabled: activeTab === 'categories',
+  })
+  const occasionCatalogQuery = useQuery({
+    queryKey: ['taxonomy', 'occasion'],
+    queryFn: ({ signal }) => listOccasionCategories(signal),
+    enabled: activeTab === 'categories',
+  })
+
+  const accountQuery = useQuery({
+    queryKey: ['users', 'me', 'settings'],
+    queryFn: async () => {
+      const [profileData, prefs] = await Promise.all([
+        getCurrentUser(),
+        getMyPreferences(),
+      ])
+      return { profile: profileData, preferences: prefs }
+    },
+    enabled: activeTab === 'account',
+  })
+
+  useEffect(() => {
+    if (!accountQuery.data) return
+    const { profile: p, preferences: prefs } = accountQuery.data
+    const phone = p.phone ?? ''
+    const match = phone.match(/^(\+\d{1,4})?(.*)$/)
+    setAccountForm({
+      firstName: p.firstName ?? '',
+      lastName: p.lastName ?? '',
+      countryCode: match?.[1]?.replace('+', '') || 'SY',
+      phoneNumber: (match?.[2] ?? phone).trim(),
+      language: p.language || 'en',
+      preferredCurrency: p.preferredCurrency || 'USD',
+    })
+    setPreferences(prefs)
+  }, [accountQuery.data])
+
+  useEffect(() => {
+    if (!restaurantId || activeTab !== 'gallery') return
+    const ac = new AbortController()
+    setGalleryLoading(true)
+    void listRestaurantGallery(restaurantId)
+      .then((items) => {
+        if (!ac.signal.aborted) setGallery(items)
+      })
+      .catch((err) => {
+        if (!ac.signal.aborted) {
+          toast('error', isApiError(err) ? err.message : t.login.errors.unknown)
+        }
+      })
+      .finally(() => {
+        if (!ac.signal.aborted) setGalleryLoading(false)
+      })
+    return () => ac.abort()
+  }, [restaurantId, activeTab, t.login.errors.unknown, toast])
+
+  useEffect(() => {
+    if (!restaurantId || activeTab !== 'categories') return
+    const ac = new AbortController()
+    void (async () => {
+      try {
+        const [cuisine, occasion] = await Promise.all([
+          getRestaurantCuisineCategories(restaurantId),
+          getRestaurantOccasionCategories(restaurantId),
+        ])
+        if (ac.signal.aborted) return
+        setSelectedCuisineIds(cuisine.cuisineCategoryIds)
+        setSelectedOccasionIds(occasion.occasionCategoryIds)
+      } catch (err) {
+        if (!ac.signal.aborted) {
+          toast('error', isApiError(err) ? err.message : t.login.errors.unknown)
+        }
+      }
+    })()
+    return () => ac.abort()
+  }, [restaurantId, activeTab, t.login.errors.unknown, toast])
 
   useEffect(() => {
     if (!restaurantId || (status !== 'ready' && status !== 'empty_branches')) return
@@ -225,6 +351,101 @@ export function SettingsPage() {
     }
   }
 
+  const saveCategories = async (e: React.FormEvent): Promise<void> => {
+    e.preventDefault()
+    if (!restaurantId || saving) return
+    setSaving(true)
+    try {
+      const [cuisine, occasion] = await Promise.all([
+        setRestaurantCuisineCategories(restaurantId, selectedCuisineIds),
+        setRestaurantOccasionCategories(restaurantId, selectedOccasionIds),
+      ])
+      setSelectedCuisineIds(cuisine.cuisineCategoryIds)
+      setSelectedOccasionIds(occasion.occasionCategoryIds)
+      toast('success', t.common.save)
+    } catch (err) {
+      toast('error', isApiError(err) ? err.message : t.login.errors.unknown)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const saveAccount = async (e: React.FormEvent): Promise<void> => {
+    e.preventDefault()
+    if (saving) return
+    setSaving(true)
+    try {
+      await updateCurrentUser({
+        firstName: accountForm.firstName.trim(),
+        lastName: accountForm.lastName.trim(),
+        countryCode: accountForm.countryCode.trim(),
+        phoneNumber: accountForm.phoneNumber.trim(),
+        language: accountForm.language.trim(),
+        preferredCurrency: accountForm.preferredCurrency.trim(),
+      })
+      await updateMyPreferences(preferences)
+      await accountQuery.refetch()
+      toast('success', t.common.save)
+    } catch (err) {
+      toast('error', isApiError(err) ? err.message : t.login.errors.unknown)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleGalleryUpload = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+  ): Promise<void> => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file || !restaurantId) return
+    setSaving(true)
+    try {
+      const item = await addRestaurantGalleryImage(restaurantId, file)
+      setGallery((prev) => [...prev, item])
+      toast('success', t.settings.galleryForm.uploadSuccess)
+    } catch (err) {
+      toast('error', isApiError(err) ? err.message : t.login.errors.unknown)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleGalleryRemove = async (galleryItemId: string): Promise<void> => {
+    if (!restaurantId || saving) return
+    setSaving(true)
+    try {
+      await removeRestaurantGalleryImage(restaurantId, galleryItemId)
+      setGallery((prev) => prev.filter((g) => g.galleryItemId !== galleryItemId))
+      toast('success', t.settings.galleryForm.removeSuccess)
+    } catch (err) {
+      toast('error', isApiError(err) ? err.message : t.login.errors.unknown)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleAvatarUpload = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+  ): Promise<void> => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    setSaving(true)
+    try {
+      await uploadMyAvatar(file)
+      await accountQuery.refetch()
+      toast('success', t.settings.accountForm.avatarSuccess)
+    } catch (err) {
+      toast('error', isApiError(err) ? err.message : t.login.errors.unknown)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const toggleId = (list: string[], id: string): string[] =>
+    list.includes(id) ? list.filter((x) => x !== id) : [...list, id]
+
   if (status === 'idle' || status === 'loading' || loading) {
     return (
       <div className="flex min-h-[40vh] items-center justify-center text-on-surface-variant">
@@ -270,25 +491,25 @@ export function SettingsPage() {
           <CardTitle className="mb-6">{t.settings.profile}</CardTitle>
           <form className="space-y-4" onSubmit={(e) => void saveProfile(e)}>
             <FormField
-              label="Restaurant Name"
+              label={t.settings.profileForm.name}
               value={profile.name}
               onChange={(v) => setProfile({ ...profile, name: v })}
               required
             />
             <FormField
-              label="Description"
+              label={t.settings.profileForm.description}
               value={profile.description}
               onChange={(v) => setProfile({ ...profile, description: v })}
               multiline
             />
             <FormField
-              label="Cuisine type"
+              label={t.settings.profileForm.cuisineType}
               value={profile.cuisineType}
               onChange={(v) => setProfile({ ...profile, cuisineType: v })}
             />
             <div>
               <label className="text-sm font-medium text-text-secondary mb-1.5 block">
-                Price level (1–4)
+                {t.settings.profileForm.priceLevel}
               </label>
               <Input
                 type="number"
@@ -305,6 +526,237 @@ export function SettingsPage() {
             </Button>
           </form>
         </Card>
+      )}
+
+      {activeTab === 'gallery' && (
+        <Card className="max-w-4xl">
+          <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+            <div>
+              <CardTitle>{t.settings.gallery}</CardTitle>
+              <p className="text-sm text-on-surface-variant mt-1">
+                {t.settings.galleryForm.emptyBody}
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <a
+                href="/gallery"
+                className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-primary hover:bg-primary/10"
+              >
+                <MaterialIcon name="open_in_new" size={18} />
+                {t.menu.openGallery}
+              </a>
+              <input
+                ref={galleryInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                className="hidden"
+                onChange={(e) => void handleGalleryUpload(e)}
+              />
+              <Button
+                type="button"
+                disabled={saving}
+                onClick={() => galleryInputRef.current?.click()}
+              >
+                <MaterialIcon name="add_photo_alternate" size={18} className="me-2" />
+                {t.settings.galleryForm.upload}
+              </Button>
+            </div>
+          </div>
+          {galleryLoading ? (
+            <p className="text-sm text-on-surface-variant">{t.common.loading}</p>
+          ) : gallery.length === 0 ? (
+            <EmptyState
+              icon="photo_library"
+              title={t.settings.galleryForm.emptyTitle}
+              description={t.settings.galleryForm.emptyBody}
+              className="py-10"
+            />
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+              {gallery.map((item) => (
+                <div
+                  key={item.galleryItemId}
+                  className="relative group aspect-square rounded-xl overflow-hidden border border-outline-variant/30 bg-surface-container-low"
+                >
+                  {item.url ? (
+                    <img
+                      src={item.url}
+                      alt=""
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <div className="h-full w-full flex items-center justify-center text-on-surface-variant">
+                      <MaterialIcon name="image" size={28} />
+                    </div>
+                  )}
+                  <button
+                    type="button"
+                    className="absolute top-2 end-2 h-8 w-8 rounded-full bg-error text-on-error flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow"
+                    title={t.common.delete}
+                    disabled={saving}
+                    onClick={() => void handleGalleryRemove(item.galleryItemId)}
+                  >
+                    <MaterialIcon name="delete" size={16} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </Card>
+      )}
+
+      {activeTab === 'categories' && (
+        <Card className="max-w-3xl">
+          <CardTitle className="mb-2">{t.settings.categories}</CardTitle>
+          <p className="text-sm text-on-surface-variant mb-6">
+            {t.settings.categoriesForm.subtitle}
+          </p>
+          <form className="space-y-8" onSubmit={(e) => void saveCategories(e)}>
+            <CategoryChecklist
+              title={t.settings.categoriesForm.cuisine}
+              loading={cuisineCatalogQuery.isLoading}
+              options={(cuisineCatalogQuery.data ?? []).map((c) => ({
+                id: c.cuisineCategoryId,
+                label: c.name,
+              }))}
+              selected={selectedCuisineIds}
+              onToggle={(id) =>
+                setSelectedCuisineIds((prev) => toggleId(prev, id))
+              }
+            />
+            <CategoryChecklist
+              title={t.settings.categoriesForm.occasion}
+              loading={occasionCatalogQuery.isLoading}
+              options={(occasionCatalogQuery.data ?? []).map((c) => ({
+                id: c.occasionCategoryId,
+                label: c.name,
+              }))}
+              selected={selectedOccasionIds}
+              onToggle={(id) =>
+                setSelectedOccasionIds((prev) => toggleId(prev, id))
+              }
+            />
+            <Button type="submit" disabled={saving}>
+              {saving ? t.common.loading : t.common.save}
+            </Button>
+          </form>
+        </Card>
+      )}
+
+      {activeTab === 'account' && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-4xl">
+          <Card>
+            <CardTitle className="mb-6">{t.settings.account}</CardTitle>
+            {accountQuery.isLoading ? (
+              <p className="text-sm text-on-surface-variant">{t.common.loading}</p>
+            ) : accountQuery.isError ? (
+              <p className="text-sm text-error">
+                {isApiError(accountQuery.error)
+                  ? accountQuery.error.message
+                  : t.settings.accountForm.loadFailed}
+              </p>
+            ) : (
+              <form className="space-y-4" onSubmit={(e) => void saveAccount(e)}>
+                <FormField
+                  label={t.settings.accountForm.firstName}
+                  value={accountForm.firstName}
+                  onChange={(v) => setAccountForm({ ...accountForm, firstName: v })}
+                  required
+                />
+                <FormField
+                  label={t.settings.accountForm.lastName}
+                  value={accountForm.lastName}
+                  onChange={(v) => setAccountForm({ ...accountForm, lastName: v })}
+                  required
+                />
+                <div className="grid grid-cols-3 gap-3">
+                  <FormField
+                    label={t.settings.accountForm.countryCode}
+                    value={accountForm.countryCode}
+                    onChange={(v) =>
+                      setAccountForm({ ...accountForm, countryCode: v })
+                    }
+                    required
+                  />
+                  <div className="col-span-2">
+                    <FormField
+                      label={t.settings.accountForm.phone}
+                      value={accountForm.phoneNumber}
+                      onChange={(v) =>
+                        setAccountForm({ ...accountForm, phoneNumber: v })
+                      }
+                      required
+                    />
+                  </div>
+                </div>
+                <FormField
+                  label={t.settings.accountForm.language}
+                  value={accountForm.language}
+                  onChange={(v) => setAccountForm({ ...accountForm, language: v })}
+                  required
+                />
+                <FormField
+                  label={t.settings.accountForm.currency}
+                  value={accountForm.preferredCurrency}
+                  onChange={(v) =>
+                    setAccountForm({ ...accountForm, preferredCurrency: v })
+                  }
+                  required
+                />
+                <label className="flex items-center gap-2 text-sm text-on-surface">
+                  <input
+                    type="checkbox"
+                    checked={preferences.notificationOptIn}
+                    onChange={(e) =>
+                      setPreferences({
+                        ...preferences,
+                        notificationOptIn: e.target.checked,
+                      })
+                    }
+                  />
+                  {t.settings.accountForm.notificationOptIn}
+                </label>
+                <label className="flex items-center gap-2 text-sm text-on-surface">
+                  <input
+                    type="checkbox"
+                    checked={preferences.marketingOptIn}
+                    onChange={(e) =>
+                      setPreferences({
+                        ...preferences,
+                        marketingOptIn: e.target.checked,
+                      })
+                    }
+                  />
+                  {t.settings.accountForm.marketingOptIn}
+                </label>
+                <Button type="submit" disabled={saving}>
+                  {saving ? t.common.loading : t.common.save}
+                </Button>
+              </form>
+            )}
+          </Card>
+          <Card>
+            <CardTitle className="mb-6">{t.settings.accountForm.avatar}</CardTitle>
+            <p className="text-sm text-on-surface-variant mb-4">
+              {t.settings.accountForm.avatarHint}
+            </p>
+            <input
+              ref={avatarInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              className="hidden"
+              onChange={(e) => void handleAvatarUpload(e)}
+            />
+            <Button
+              type="button"
+              disabled={saving}
+              onClick={() => avatarInputRef.current?.click()}
+            >
+              <MaterialIcon name="account_circle" size={18} className="me-2" />
+              {t.settings.accountForm.uploadAvatar}
+            </Button>
+          </Card>
+        </div>
       )}
 
       {activeTab === 'hours' && (
@@ -529,6 +981,53 @@ export function SettingsPage() {
             </Button>
           </form>
         </Card>
+      )}
+    </div>
+  )
+}
+
+function CategoryChecklist({
+  title,
+  loading,
+  options,
+  selected,
+  onToggle,
+}: {
+  title: string
+  loading: boolean
+  options: Array<{ id: string; label: string }>
+  selected: string[]
+  onToggle: (id: string) => void
+}) {
+  const { t } = useLocale()
+  return (
+    <div>
+      <h3 className="text-sm font-semibold text-on-surface mb-3">{title}</h3>
+      {loading ? (
+        <p className="text-sm text-on-surface-variant">{t.common.loading}</p>
+      ) : options.length === 0 ? (
+        <p className="text-sm text-on-surface-variant">{t.settings.categoriesForm.empty}</p>
+      ) : (
+        <div className="flex flex-wrap gap-2">
+          {options.map((option) => {
+            const active = selected.includes(option.id)
+            return (
+              <button
+                key={option.id}
+                type="button"
+                onClick={() => onToggle(option.id)}
+                className={cn(
+                  'px-3 py-1.5 rounded-lg text-sm border transition-colors',
+                  active
+                    ? 'bg-primary text-white border-primary'
+                    : 'bg-surface text-on-surface border-outline-variant/40 hover:border-primary/40',
+                )}
+              >
+                {option.label}
+              </button>
+            )
+          })}
+        </div>
       )}
     </div>
   )

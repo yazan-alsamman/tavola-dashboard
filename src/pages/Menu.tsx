@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
+import { Link } from 'react-router-dom'
 import { isApiError } from '@/api/errors'
 import type {
   MenuCategoryDto,
@@ -54,8 +55,11 @@ import {
   useUploadMenuItemImageMutation,
   useUpdateMenuItemAddOnMutation,
   useUpdateMenuItemMutation,
+  useUpdateMenuItemOptionGroupMutation,
   useUpdateMenuItemOptionMutation,
   useUpdateMenuMutation,
+  useUpdateMenuCategoryMutation,
+  useReplaceMenuItemAvailabilityMutation,
 } from '@/hooks/useMenuMutations'
 import { useSelectedMenu } from '@/hooks/useMenuQueries'
 import { useCanManageMenu } from '@/hooks/usePermissions'
@@ -121,6 +125,8 @@ function ItemEditModal({
   const createAddOn = useCreateMenuItemAddOnMutation()
   const updateAddOn = useUpdateMenuItemAddOnMutation()
   const deleteAddOn = useDeleteMenuItemAddOnMutation()
+  const updateOptionGroup = useUpdateMenuItemOptionGroupMutation()
+  const replaceAvailability = useReplaceMenuItemAvailabilityMutation()
 
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
@@ -131,6 +137,14 @@ function ItemEditModal({
   const [newAddOnPrice, setNewAddOnPrice] = useState('')
   const [newOptionName, setNewOptionName] = useState('')
   const [newOptionPrice, setNewOptionPrice] = useState('')
+  const [editGroupId, setEditGroupId] = useState<string | null>(null)
+  const [editGroupName, setEditGroupName] = useState('')
+  const [editGroupRequired, setEditGroupRequired] = useState(false)
+  const [editGroupMin, setEditGroupMin] = useState('0')
+  const [editGroupMax, setEditGroupMax] = useState('1')
+  const [windows, setWindows] = useState<
+    Array<{ dayOfWeek: number; startTime: string; endTime: string }>
+  >([])
   const itemImageInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -144,6 +158,14 @@ function ItemEditModal({
     setNewAddOnPrice('')
     setNewOptionName('')
     setNewOptionPrice('')
+    setEditGroupId(null)
+    setWindows(
+      (item.availabilityWindows ?? []).map((w) => ({
+        dayOfWeek: Number(w.dayOfWeek ?? 0),
+        startTime: String(w.startTime ?? '09:00'),
+        endTime: String(w.endTime ?? '22:00'),
+      })),
+    )
   }, [item])
 
   if (!item) return null
@@ -168,7 +190,9 @@ function ItemEditModal({
     deleteOption.isPending ||
     createAddOn.isPending ||
     updateAddOn.isPending ||
-    deleteAddOn.isPending
+    deleteAddOn.isPending ||
+    updateOptionGroup.isPending ||
+    replaceAvailability.isPending
 
   const handleSave = async (e: FormEvent): Promise<void> => {
     e.preventDefault()
@@ -253,6 +277,47 @@ function ItemEditModal({
       setNewOptionName('')
       setNewOptionPrice('')
       toast('success', t.menu.options.createSuccess)
+    } catch (err) {
+      toast('error', mapMenuError(err, t))
+    }
+  }
+
+  const startEditGroup = (group: MenuItemOptionGroupDto) => {
+    setEditGroupId(group.optionGroupId)
+    setEditGroupName(group.name)
+    setEditGroupRequired(Boolean(group.required))
+    setEditGroupMin(String(group.minSelections ?? 0))
+    setEditGroupMax(String(group.maxSelections ?? 1))
+  }
+
+  const handleSaveGroup = async (): Promise<void> => {
+    if (!canManage || !editGroupId || !editGroupName.trim() || busy) return
+    try {
+      await updateOptionGroup.mutateAsync({
+        ...itemScope,
+        optionGroupId: editGroupId,
+        body: {
+          name: editGroupName.trim(),
+          required: editGroupRequired,
+          minSelections: Number(editGroupMin) || 0,
+          maxSelections: Number(editGroupMax) || 1,
+        },
+      })
+      setEditGroupId(null)
+      toast('success', t.menu.optionGroups.updateSuccess)
+    } catch (err) {
+      toast('error', mapMenuError(err, t))
+    }
+  }
+
+  const handleSaveAvailability = async (): Promise<void> => {
+    if (!canManage || busy) return
+    try {
+      await replaceAvailability.mutateAsync({
+        ...itemScope,
+        body: { windows },
+      })
+      toast('success', t.menu.availability.saveSuccess)
     } catch (err) {
       toast('error', mapMenuError(err, t))
     }
@@ -375,6 +440,114 @@ function ItemEditModal({
         </div>
 
         <div className="border-t border-outline-variant/30 pt-4 space-y-3">
+          <div className="flex items-center justify-between gap-2">
+            <h4 className="text-label-md font-semibold text-on-surface">
+              {t.menu.availability.title}
+            </h4>
+            {canManage && (
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={busy}
+                  onClick={() =>
+                    setWindows((prev) => [
+                      ...prev,
+                      { dayOfWeek: 0, startTime: '09:00', endTime: '22:00' },
+                    ])
+                  }
+                >
+                  {t.menu.availability.addWindow}
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  disabled={busy}
+                  onClick={() => void handleSaveAvailability()}
+                >
+                  {t.menu.availability.save}
+                </Button>
+              </div>
+            )}
+          </div>
+          {windows.length === 0 ? (
+            <p className="text-body-sm text-on-surface-variant">
+              {t.menu.availability.empty}
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {windows.map((window, index) => (
+                <div key={index} className="flex flex-wrap items-center gap-2">
+                  <select
+                    className="rounded-lg border border-outline-variant/50 bg-surface-container-lowest px-2 py-2 text-sm"
+                    value={window.dayOfWeek}
+                    disabled={!canManage || busy}
+                    onChange={(e) => {
+                      const next = [...windows]
+                      next[index] = {
+                        ...window,
+                        dayOfWeek: Number(e.target.value),
+                      }
+                      setWindows(next)
+                    }}
+                  >
+                    {[
+                      'Sun',
+                      'Mon',
+                      'Tue',
+                      'Wed',
+                      'Thu',
+                      'Fri',
+                      'Sat',
+                    ].map((label, day) => (
+                      <option key={day} value={day}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                  <Input
+                    type="time"
+                    value={window.startTime}
+                    className="w-28"
+                    disabled={!canManage || busy}
+                    onChange={(e) => {
+                      const next = [...windows]
+                      next[index] = { ...window, startTime: e.target.value }
+                      setWindows(next)
+                    }}
+                  />
+                  <Input
+                    type="time"
+                    value={window.endTime}
+                    className="w-28"
+                    disabled={!canManage || busy}
+                    onChange={(e) => {
+                      const next = [...windows]
+                      next[index] = { ...window, endTime: e.target.value }
+                      setWindows(next)
+                    }}
+                  />
+                  {canManage && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      disabled={busy}
+                      onClick={() =>
+                        setWindows((prev) => prev.filter((_, i) => i !== index))
+                      }
+                    >
+                      {t.common.delete}
+                    </Button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="border-t border-outline-variant/30 pt-4 space-y-3">
           <h4 className="text-label-md font-semibold text-on-surface">
             {t.menu.optionGroups.title}
           </h4>
@@ -395,6 +568,18 @@ function ItemEditModal({
               }
               canManage={canManage}
               busy={busy}
+              editing={editGroupId === group.optionGroupId}
+              editName={editGroupName}
+              editRequired={editGroupRequired}
+              editMin={editGroupMin}
+              editMax={editGroupMax}
+              onEditNameChange={setEditGroupName}
+              onEditRequiredChange={setEditGroupRequired}
+              onEditMinChange={setEditGroupMin}
+              onEditMaxChange={setEditGroupMax}
+              onStartEdit={() => startEditGroup(group)}
+              onCancelEdit={() => setEditGroupId(null)}
+              onSaveEdit={() => void handleSaveGroup()}
               newOptionName={newOptionName}
               newOptionPrice={newOptionPrice}
               onNewOptionNameChange={setNewOptionName}
@@ -543,6 +728,18 @@ function OptionGroupSection({
   onToggle,
   canManage,
   busy,
+  editing,
+  editName,
+  editRequired,
+  editMin,
+  editMax,
+  onEditNameChange,
+  onEditRequiredChange,
+  onEditMinChange,
+  onEditMaxChange,
+  onStartEdit,
+  onCancelEdit,
+  onSaveEdit,
   newOptionName,
   newOptionPrice,
   onNewOptionNameChange,
@@ -558,6 +755,18 @@ function OptionGroupSection({
   onToggle: () => void
   canManage: boolean
   busy: boolean
+  editing: boolean
+  editName: string
+  editRequired: boolean
+  editMin: string
+  editMax: string
+  onEditNameChange: (v: string) => void
+  onEditRequiredChange: (v: boolean) => void
+  onEditMinChange: (v: string) => void
+  onEditMaxChange: (v: string) => void
+  onStartEdit: () => void
+  onCancelEdit: () => void
+  onSaveEdit: () => void
   newOptionName: string
   newOptionPrice: string
   onNewOptionNameChange: (v: string) => void
@@ -593,6 +802,76 @@ function OptionGroupSection({
       </button>
       {expanded && (
         <div className="border-t border-outline-variant/20 px-3 py-2 space-y-2">
+          {canManage && (
+            <div className="pb-2">
+              {editing ? (
+                <div className="space-y-2 rounded-lg bg-surface-container-lowest p-3 border border-outline-variant/20">
+                  <Input
+                    value={editName}
+                    onChange={(e) => onEditNameChange(e.target.value)}
+                    disabled={busy}
+                    placeholder={t.menu.optionGroups.namePlaceholder}
+                  />
+                  <label className="flex items-center gap-2 text-sm text-on-surface">
+                    <input
+                      type="checkbox"
+                      checked={editRequired}
+                      disabled={busy}
+                      onChange={(e) => onEditRequiredChange(e.target.checked)}
+                    />
+                    {t.menu.optionGroups.required}
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Input
+                      type="number"
+                      min="0"
+                      value={editMin}
+                      disabled={busy}
+                      onChange={(e) => onEditMinChange(e.target.value)}
+                      placeholder={t.menu.optionGroups.minSelections}
+                    />
+                    <Input
+                      type="number"
+                      min="0"
+                      value={editMax}
+                      disabled={busy}
+                      onChange={(e) => onEditMaxChange(e.target.value)}
+                      placeholder={t.menu.optionGroups.maxSelections}
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      disabled={busy || !editName.trim()}
+                      onClick={onSaveEdit}
+                    >
+                      {t.common.save}
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      disabled={busy}
+                      onClick={onCancelEdit}
+                    >
+                      {t.common.cancel}
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={busy}
+                  onClick={onStartEdit}
+                >
+                  {t.menu.optionGroups.edit}
+                </Button>
+              )}
+            </div>
+          )}
           {options.map((option) => (
             <div
               key={option.optionId}
@@ -749,6 +1028,7 @@ export function MenuPage() {
   const setDefaultMenu = useSetDefaultMenuMutation()
   const deleteMenu = useDeleteMenuMutation()
   const createCategory = useCreateMenuCategoryMutation()
+  const updateCategory = useUpdateMenuCategoryMutation()
   const reorderCategories = useReorderMenuCategoriesMutation()
   const deleteCategory = useDeleteMenuCategoryMutation()
   const uploadCategoryImage = useUploadMenuCategoryImageMutation()
@@ -771,6 +1051,10 @@ export function MenuPage() {
   const [deleteMenuTarget, setDeleteMenuTarget] = useState<MenuDto | null>(null)
   const [deleteCategoryTarget, setDeleteCategoryTarget] =
     useState<MenuCategoryDto | null>(null)
+  const [editCategoryTarget, setEditCategoryTarget] =
+    useState<MenuCategoryDto | null>(null)
+  const [editCategoryName, setEditCategoryName] = useState('')
+  const [editCategoryDescription, setEditCategoryDescription] = useState('')
   const [deleteItemTarget, setDeleteItemTarget] = useState<MenuItemDto | null>(
     null,
   )
@@ -821,6 +1105,7 @@ export function MenuPage() {
     setDefaultMenu.isPending ||
     deleteMenu.isPending ||
     createCategory.isPending ||
+    updateCategory.isPending ||
     reorderCategories.isPending ||
     deleteCategory.isPending ||
     uploadCategoryImage.isPending ||
@@ -925,12 +1210,21 @@ export function MenuPage() {
             : t.menu.subtitle
         }
         actions={
-          canManage ? (
-            <Button onClick={() => setCreateMenuOpen(true)}>
-              <MaterialIcon name="add" size={18} />
-              {t.menu.createMenu}
-            </Button>
-          ) : undefined
+          <div className="flex flex-wrap items-center gap-2">
+            <Link
+              to="/gallery"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-outline-variant/50 text-label-md font-medium text-on-surface hover:bg-surface-container-high transition-colors"
+            >
+              <MaterialIcon name="photo_library" size={18} />
+              {t.menu.openGallery}
+            </Link>
+            {canManage ? (
+              <Button onClick={() => setCreateMenuOpen(true)}>
+                <MaterialIcon name="add" size={18} />
+                {t.menu.createMenu}
+              </Button>
+            ) : null}
+          </div>
         }
       />
 
@@ -940,6 +1234,32 @@ export function MenuPage() {
         </p>
       )}
 
+      {menus.length === 0 && (
+        <EmptyState
+          icon="restaurant_menu"
+          title={t.menu.getStartedTitle}
+          description={t.menu.getStartedBody}
+          action={
+            canManage ? (
+              <div className="flex flex-wrap justify-center gap-3">
+                <Button onClick={() => setCreateMenuOpen(true)}>
+                  <MaterialIcon name="add" size={18} className="me-1" />
+                  {t.menu.createMenu}
+                </Button>
+                <Link
+                  to="/gallery"
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-outline-variant/50 text-label-md font-medium text-on-surface hover:bg-surface-container-high"
+                >
+                  <MaterialIcon name="photo_library" size={18} />
+                  {t.menu.openGallery}
+                </Link>
+              </div>
+            ) : undefined
+          }
+        />
+      )}
+
+      {menus.length > 0 && (
       <div className="grid gap-4 xl:grid-cols-3">
         {/* Menus */}
         <Card padding="none" className="overflow-hidden">
@@ -1114,14 +1434,29 @@ export function MenuPage() {
                       className="w-full text-start px-3 py-2"
                       onClick={() => setSelectedCategoryId(category.categoryId)}
                     >
-                      <span className="text-body-md font-medium text-on-surface">
-                        {category.name}
-                      </span>
-                      {category.description && (
-                        <p className="text-body-sm text-on-surface-variant truncate">
-                          {category.description}
-                        </p>
-                      )}
+                      <div className="flex items-center gap-3">
+                        {category.imageUrl ? (
+                          <img
+                            src={category.imageUrl}
+                            alt=""
+                            className="h-9 w-9 rounded-lg object-cover border border-outline-variant/30 shrink-0"
+                          />
+                        ) : (
+                          <div className="h-9 w-9 rounded-lg bg-surface-container-low border border-outline-variant/20 flex items-center justify-center shrink-0 text-on-surface-variant">
+                            <MaterialIcon name="image" size={16} />
+                          </div>
+                        )}
+                        <div className="min-w-0">
+                          <span className="text-body-md font-medium text-on-surface block truncate">
+                            {category.name}
+                          </span>
+                          {category.description && (
+                            <p className="text-body-sm text-on-surface-variant truncate">
+                              {category.description}
+                            </p>
+                          )}
+                        </div>
+                      </div>
                     </button>
                     {active && canManage && (
                       <div className="flex flex-wrap gap-1 px-3 pb-2">
@@ -1199,6 +1534,18 @@ export function MenuPage() {
                           size="sm"
                           variant="ghost"
                           disabled={anyMutationPending}
+                          onClick={() => {
+                            setEditCategoryTarget(category)
+                            setEditCategoryName(category.name)
+                            setEditCategoryDescription(category.description ?? '')
+                          }}
+                        >
+                          {t.common.edit}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          disabled={anyMutationPending}
                           onClick={() => setDeleteCategoryTarget(category)}
                         >
                           {t.common.delete}
@@ -1247,15 +1594,31 @@ export function MenuPage() {
                 {items.map((item, index) => (
                   <DataTableRow key={item.itemId}>
                     <DataTableCell>
-                      <div className="flex items-center gap-2">
-                        {item.isFeatured && (
-                          <MaterialIcon
-                            name="star"
-                            size={16}
-                            className="text-warning shrink-0"
+                      <div className="flex items-center gap-3 min-w-0">
+                        {item.imageUrl ? (
+                          <img
+                            src={item.imageUrl}
+                            alt=""
+                            className="h-10 w-10 rounded-lg object-cover border border-outline-variant/30 shrink-0"
                           />
+                        ) : (
+                          <div
+                            className="h-10 w-10 rounded-lg bg-surface-container-low border border-outline-variant/20 flex items-center justify-center shrink-0 text-on-surface-variant"
+                            title={t.menu.dishPhoto}
+                          >
+                            <MaterialIcon name="image" size={18} />
+                          </div>
                         )}
-                        <span>{item.name}</span>
+                        <div className="flex items-center gap-2 min-w-0">
+                          {item.isFeatured && (
+                            <MaterialIcon
+                              name="star"
+                              size={16}
+                              className="text-warning shrink-0"
+                            />
+                          )}
+                          <span className="truncate">{item.name}</span>
+                        </div>
                       </div>
                     </DataTableCell>
                     <DataTableCell>
@@ -1312,6 +1675,7 @@ export function MenuPage() {
           )}
         </Card>
       </div>
+      )}
 
       {/* Create menu */}
       <Modal
@@ -1453,6 +1817,71 @@ export function MenuPage() {
               {t.common.cancel}
             </Button>
             <Button type="submit" disabled={createCategory.isPending}>
+              {t.common.save}
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Edit category */}
+      <Modal
+        open={editCategoryTarget !== null}
+        onClose={() => !updateCategory.isPending && setEditCategoryTarget(null)}
+        title={t.menu.categories.edit}
+        size="sm"
+      >
+        <form
+          onSubmit={(e) => {
+            e.preventDefault()
+            if (
+              !editCategoryTarget ||
+              !editCategoryName.trim() ||
+              !menuId ||
+              updateCategory.isPending
+            ) {
+              return
+            }
+            void updateCategory
+              .mutateAsync({
+                restaurantId,
+                menuId,
+                categoryId: editCategoryTarget.categoryId,
+                body: {
+                  name: editCategoryName.trim(),
+                  description: editCategoryDescription.trim() || null,
+                },
+              })
+              .then(() => {
+                toast('success', t.menu.categories.updateSuccess)
+                setEditCategoryTarget(null)
+              })
+              .catch((err) => toast('error', mapMenuError(err, t)))
+          }}
+          className="space-y-4"
+        >
+          <Input
+            value={editCategoryName}
+            onChange={(e) => setEditCategoryName(e.target.value)}
+            placeholder={t.menu.categories.namePlaceholder}
+            required
+            disabled={updateCategory.isPending}
+          />
+          <Input
+            value={editCategoryDescription}
+            onChange={(e) => setEditCategoryDescription(e.target.value)}
+            placeholder={t.menu.categories.descriptionPlaceholder}
+            disabled={updateCategory.isPending}
+          />
+          <div className="flex justify-end gap-2">
+            <Button
+              type="button"
+              variant="ghost"
+              disabled={updateCategory.isPending}
+              onClick={() => setEditCategoryTarget(null)}
+            >
+              {t.common.cancel}
+            </Button>
+            <Button type="submit" disabled={updateCategory.isPending}>
               {t.common.save}
             </Button>
           </div>

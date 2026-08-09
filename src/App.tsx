@@ -8,6 +8,7 @@ import { ToastProvider } from '@/context/ToastContext'
 import { AppQueryProvider } from '@/components/providers/AppQueryProvider'
 import { ProtectedRoute, PublicRoute } from '@/components/auth/ProtectedRoute'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
+import { OneSignalIdentityBootstrap } from '@/components/providers/OneSignalIdentityBootstrap'
 import { LoginPage } from '@/pages/Login'
 import { DashboardPage } from '@/pages/Dashboard'
 import { ReservationsPage } from '@/pages/Reservations'
@@ -23,6 +24,7 @@ import { BranchesPage } from '@/pages/Branches'
 import { SettingsPage } from '@/pages/Settings'
 import { StaffPage } from '@/pages/Staff'
 import { MenuPage } from '@/pages/Menu'
+import { GalleryPage } from '@/pages/Gallery'
 import { OffersPage } from '@/pages/Offers'
 import { ReviewsPage } from '@/pages/Reviews'
 
@@ -32,6 +34,7 @@ export default function App() {
       <LocaleProvider>
         <AuthProvider>
           <AppQueryProvider>
+            <OneSignalIdentityBootstrap />
             <RestaurantScopeProvider>
               <ToastProvider>
                 <SidebarProvider>
@@ -48,6 +51,7 @@ export default function App() {
                           <Route path="floor-plan" element={<FloorPlanPage />} />
                           <Route path="tables" element={<TablesPage />} />
                           <Route path="menu" element={<MenuPage />} />
+                          <Route path="gallery" element={<GalleryPage />} />
                           <Route path="waitlist" element={<WaitlistPage />} />
                           <Route path="walk-in" element={<WalkInPage />} />
                           <Route path="offers" element={<OffersPage />} />

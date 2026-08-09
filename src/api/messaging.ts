@@ -19,7 +19,31 @@ export interface MessageDto {
   body?: string | null
   senderId?: string
   createdAt?: string
+  attachmentUrl?: string | null
+  attachmentName?: string | null
+  attachment?: {
+    url?: string | null
+    name?: string | null
+    fileName?: string | null
+  } | null
   [key: string]: unknown
+}
+
+export function messageAttachment(message: MessageDto): {
+  url: string | null
+  name: string | null
+} {
+  const nested = message.attachment
+  const url =
+    (typeof message.attachmentUrl === 'string' && message.attachmentUrl) ||
+    (nested && typeof nested.url === 'string' && nested.url) ||
+    null
+  const name =
+    (typeof message.attachmentName === 'string' && message.attachmentName) ||
+    (nested && typeof nested.name === 'string' && nested.name) ||
+    (nested && typeof nested.fileName === 'string' && nested.fileName) ||
+    null
+  return { url, name }
 }
 
 /** Cursor-paginated list payload (messaging staff inbox / messages). */

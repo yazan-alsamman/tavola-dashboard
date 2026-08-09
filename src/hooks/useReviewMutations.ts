@@ -1,7 +1,9 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   deleteReview,
+  removeReviewImage,
   replyToReview,
+  uploadReviewImage,
   type ReplyToReviewRequest,
 } from '@/api/reviews'
 import { analyticsKeys, reviewKeys } from '@/lib/queryKeys'
@@ -48,6 +50,39 @@ export function useDeleteReviewMutation() {
     onSuccess: async (_data, vars) => {
       await invalidateReviews(queryClient, vars)
       queryClient.removeQueries({
+        queryKey: reviewKeys.detail(vars.reviewId),
+      })
+    },
+  })
+}
+
+export function useUploadReviewImageMutation() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (
+      input: ReviewMutationScope & { reviewId: string; file: File },
+    ) => uploadReviewImage(input.reviewId, input.file),
+    onSuccess: async (_data, vars) => {
+      await invalidateReviews(queryClient, vars)
+      await queryClient.invalidateQueries({
+        queryKey: reviewKeys.detail(vars.reviewId),
+      })
+    },
+  })
+}
+
+export function useRemoveReviewImageMutation() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (
+      input: ReviewMutationScope & {
+        reviewId: string
+        reviewImageId: string
+      },
+    ) => removeReviewImage(input.reviewId, input.reviewImageId),
+    onSuccess: async (_data, vars) => {
+      await invalidateReviews(queryClient, vars)
+      await queryClient.invalidateQueries({
         queryKey: reviewKeys.detail(vars.reviewId),
       })
     },

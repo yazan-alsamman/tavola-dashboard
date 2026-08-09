@@ -20,6 +20,7 @@ const opsNav: { key: NavKey; path: string; icon: string }[] = [
 
 const mgmtNav: { key: NavKey; path: string; icon: string }[] = [
   { key: 'menu', path: '/menu', icon: 'restaurant_menu' },
+  { key: 'gallery', path: '/gallery', icon: 'photo_library' },
   { key: 'offers', path: '/offers', icon: 'local_offer' },
   { key: 'reviews', path: '/reviews', icon: 'rate_review' },
   { key: 'tables', path: '/tables', icon: 'restaurant' },

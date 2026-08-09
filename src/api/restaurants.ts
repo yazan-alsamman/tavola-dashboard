@@ -175,34 +175,109 @@ export async function removeRestaurantGalleryImage(
 
 export async function getRestaurantCuisineCategories(
   restaurantId: string,
-): Promise<unknown> {
-  return apiRequest(`/restaurants/${restaurantId}/cuisine-categories`)
+): Promise<CuisineCategoryAssignment> {
+  const data = await apiRequest<unknown>(
+    `/restaurants/${restaurantId}/cuisine-categories`,
+  )
+  return normalizeCuisineAssignment(data)
 }
 
 export async function setRestaurantCuisineCategories(
   restaurantId: string,
   cuisineCategoryIds: string[],
-): Promise<unknown> {
-  return apiRequest(`/restaurants/${restaurantId}/cuisine-categories`, {
-    method: 'PATCH',
-    body: { cuisineCategoryIds },
-  })
+): Promise<CuisineCategoryAssignment> {
+  const data = await apiRequest<unknown>(
+    `/restaurants/${restaurantId}/cuisine-categories`,
+    {
+      method: 'PATCH',
+      body: { cuisineCategoryIds },
+    },
+  )
+  return normalizeCuisineAssignment(data)
 }
 
 export async function getRestaurantOccasionCategories(
   restaurantId: string,
-): Promise<unknown> {
-  return apiRequest(`/restaurants/${restaurantId}/occasion-categories`)
+): Promise<OccasionCategoryAssignment> {
+  const data = await apiRequest<unknown>(
+    `/restaurants/${restaurantId}/occasion-categories`,
+  )
+  return normalizeOccasionAssignment(data)
 }
 
 export async function setRestaurantOccasionCategories(
   restaurantId: string,
   occasionCategoryIds: string[],
-): Promise<unknown> {
-  return apiRequest(`/restaurants/${restaurantId}/occasion-categories`, {
-    method: 'PATCH',
-    body: { occasionCategoryIds },
-  })
+): Promise<OccasionCategoryAssignment> {
+  const data = await apiRequest<unknown>(
+    `/restaurants/${restaurantId}/occasion-categories`,
+    {
+      method: 'PATCH',
+      body: { occasionCategoryIds },
+    },
+  )
+  return normalizeOccasionAssignment(data)
+}
+
+export interface CuisineCategoryAssignment {
+  cuisineCategoryIds: string[]
+}
+
+export interface OccasionCategoryAssignment {
+  occasionCategoryIds: string[]
+}
+
+function collectIds(
+  data: unknown,
+  idKeys: string[],
+  arrayKeys: string[],
+): string[] {
+  if (Array.isArray(data)) {
+    return data
+      .map((item) => {
+        if (typeof item === 'string') return item
+        if (item && typeof item === 'object') {
+          const record = item as Record<string, unknown>
+          for (const key of idKeys) {
+            const value = record[key]
+            if (typeof value === 'string' && value) return value
+          }
+        }
+        return ''
+      })
+      .filter(Boolean)
+  }
+  if (data && typeof data === 'object') {
+    const record = data as Record<string, unknown>
+    for (const key of arrayKeys) {
+      const value = record[key]
+      if (Array.isArray(value)) return collectIds(value, idKeys, arrayKeys)
+    }
+    if (Array.isArray(record.items)) {
+      return collectIds(record.items, idKeys, arrayKeys)
+    }
+  }
+  return []
+}
+
+function normalizeCuisineAssignment(data: unknown): CuisineCategoryAssignment {
+  return {
+    cuisineCategoryIds: collectIds(
+      data,
+      ['cuisineCategoryId', 'id'],
+      ['cuisineCategoryIds', 'categories'],
+    ),
+  }
+}
+
+function normalizeOccasionAssignment(data: unknown): OccasionCategoryAssignment {
+  return {
+    occasionCategoryIds: collectIds(
+      data,
+      ['occasionCategoryId', 'id'],
+      ['occasionCategoryIds', 'categories'],
+    ),
+  }
 }
 
 /**
