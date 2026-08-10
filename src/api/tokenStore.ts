@@ -1,10 +1,9 @@
 /**
- * Auth token bridge between the future AuthProvider and the API client.
+ * Auth token bridge between AuthProvider and the API client.
  *
- * Access token: in-memory only (never localStorage).
- * Refresh token: sessionStorage so a same-tab reload can restore the session.
- *
- * AuthContext remains fake for Phase 1; Phase 2 wires AuthProvider to this store.
+ * Access token: in-memory only (never persisted).
+ * Refresh token: localStorage so the session survives tab close and can
+ * call logout-all when hitting AUTH_TOO_MANY_SESSIONS.
  */
 
 const REFRESH_TOKEN_STORAGE_KEY = 'tavla-refresh-token'
@@ -16,7 +15,18 @@ const sessionInvalidatedListeners = new Set<SessionInvalidatedListener>()
 
 function readRefreshTokenFromStorage(): string | null {
   try {
-    return sessionStorage.getItem(REFRESH_TOKEN_STORAGE_KEY)
+    const fromLocal = localStorage.getItem(REFRESH_TOKEN_STORAGE_KEY)
+    if (fromLocal) return fromLocal
+
+    // One-time migration from the previous sessionStorage location.
+    const fromSession = sessionStorage.getItem(REFRESH_TOKEN_STORAGE_KEY)
+    if (fromSession) {
+      localStorage.setItem(REFRESH_TOKEN_STORAGE_KEY, fromSession)
+      sessionStorage.removeItem(REFRESH_TOKEN_STORAGE_KEY)
+      return fromSession
+    }
+
+    return null
   } catch {
     return null
   }
@@ -25,12 +35,14 @@ function readRefreshTokenFromStorage(): string | null {
 function writeRefreshTokenToStorage(token: string | null): void {
   try {
     if (token === null) {
+      localStorage.removeItem(REFRESH_TOKEN_STORAGE_KEY)
       sessionStorage.removeItem(REFRESH_TOKEN_STORAGE_KEY)
     } else {
-      sessionStorage.setItem(REFRESH_TOKEN_STORAGE_KEY, token)
+      localStorage.setItem(REFRESH_TOKEN_STORAGE_KEY, token)
+      sessionStorage.removeItem(REFRESH_TOKEN_STORAGE_KEY)
     }
   } catch {
-    // sessionStorage may be unavailable (private mode / SSR); ignore.
+    // Storage may be unavailable (private mode / SSR); ignore.
   }
 }
 
@@ -63,7 +75,7 @@ export const tokenStore = {
 
   /**
    * Subscribe to forced session invalidation (failed refresh / unrecoverable 401).
-   * AuthProvider will use this in Phase 2 to clear UI auth state and redirect.
+   * AuthProvider clears UI auth state on this signal.
    */
   onSessionInvalidated(listener: SessionInvalidatedListener): () => void {
     sessionInvalidatedListeners.add(listener)

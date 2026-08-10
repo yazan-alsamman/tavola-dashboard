@@ -264,16 +264,14 @@ export function ReviewsPage() {
         <>
           <DataTable className="mb-4">
             <DataTableHead>
-              <tr>
-                <DataTableHeader>{t.reviews.columns.rating}</DataTableHeader>
-                <DataTableHeader>{t.reviews.columns.comment}</DataTableHeader>
-                <DataTableHeader className="hidden md:table-cell">
-                  {t.reviews.columns.date}
-                </DataTableHeader>
-                <DataTableHeader className="text-end">
-                  {t.common.actions}
-                </DataTableHeader>
-              </tr>
+              <DataTableHeader>{t.reviews.columns.rating}</DataTableHeader>
+              <DataTableHeader>{t.reviews.columns.comment}</DataTableHeader>
+              <DataTableHeader className="hidden md:table-cell">
+                {t.reviews.columns.date}
+              </DataTableHeader>
+              <DataTableHeader className="text-end">
+                {t.common.actions}
+              </DataTableHeader>
             </DataTableHead>
             <DataTableBody>
               {reviews.map((review) => {

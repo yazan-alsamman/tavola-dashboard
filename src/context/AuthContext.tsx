@@ -28,8 +28,12 @@ interface AuthContextValue {
   isAuthenticated: boolean
   /** True while resolving a persisted refresh-token session on startup. */
   isLoading: boolean
+  /** True when a stored refresh token can power logout-all recovery. */
+  canClearSessions: boolean
   login: (email: string, password: string) => Promise<void>
   logout: () => Promise<void>
+  /** Revoke every device session, then clear local auth state. */
+  logoutAll: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
@@ -101,10 +105,18 @@ async function loginClearingStaleSessions(
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthIdentity | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [canClearSessions, setCanClearSessions] = useState(
+    () => Boolean(tokenStore.getRefreshToken()),
+  )
 
   const clearLocalSession = useCallback((): void => {
     tokenStore.clear()
     setUser(null)
+    setCanClearSessions(false)
+  }, [])
+
+  const syncCanClearSessions = useCallback((): void => {
+    setCanClearSessions(Boolean(tokenStore.getRefreshToken()))
   }, [])
 
   useEffect(() => {
@@ -115,9 +127,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!refreshToken) {
         if (!cancelled) {
           setUser(null)
+          setCanClearSessions(false)
           setIsLoading(false)
         }
         return
+      }
+
+      if (!cancelled) {
+        setCanClearSessions(true)
       }
 
       const refreshed = await refreshSession()
@@ -126,6 +143,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!refreshed) {
         tokenStore.clear()
         setUser(null)
+        setCanClearSessions(false)
         setIsLoading(false)
         return
       }
@@ -140,13 +158,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (!identity.userId) {
           tokenStore.clear()
           setUser(null)
+          setCanClearSessions(false)
         } else {
           setUser(identity)
+          setCanClearSessions(true)
         }
       } catch {
         if (!cancelled) {
           tokenStore.clear()
           setUser(null)
+          setCanClearSessions(false)
         }
       } finally {
         if (!cancelled) {
@@ -165,31 +186,50 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     return tokenStore.onSessionInvalidated(() => {
       setUser(null)
+      setCanClearSessions(Boolean(tokenStore.getRefreshToken()))
     })
   }, [])
 
   const login = useCallback(async (email: string, password: string): Promise<void> => {
-    const data = await loginClearingStaleSessions(email, password)
-
-    tokenStore.setTokens({
-      accessToken: data.accessToken,
-      refreshToken: data.refreshToken,
-    })
-
+    syncCanClearSessions()
     try {
-      const profile = await fetchProfileBestEffort()
-      const claims = parseAccessTokenClaims(data.accessToken)
-      setUser(buildIdentityFromLogin(data, profile, claims))
-    } catch {
-      tokenStore.clear()
-      setUser(null)
-      throw new Error('Failed to establish authenticated identity after login.')
+      const data = await loginClearingStaleSessions(email, password)
+
+      tokenStore.setTokens({
+        accessToken: data.accessToken,
+        refreshToken: data.refreshToken,
+      })
+      setCanClearSessions(true)
+
+      try {
+        const profile = await fetchProfileBestEffort()
+        const claims = parseAccessTokenClaims(data.accessToken)
+        setUser(buildIdentityFromLogin(data, profile, claims))
+      } catch {
+        tokenStore.clear()
+        setUser(null)
+        setCanClearSessions(false)
+        throw new Error('Failed to establish authenticated identity after login.')
+      }
+    } catch (err) {
+      syncCanClearSessions()
+      throw err
     }
-  }, [])
+  }, [syncCanClearSessions])
 
   const logout = useCallback(async (): Promise<void> => {
     try {
       await logoutRequest()
+    } catch {
+      // Always clear local auth state even if the network call fails.
+    } finally {
+      clearLocalSession()
+    }
+  }, [clearLocalSession])
+
+  const logoutAll = useCallback(async (): Promise<void> => {
+    try {
+      await logoutAllRequest()
     } catch {
       // Always clear local auth state even if the network call fails.
     } finally {
@@ -202,10 +242,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user,
       isAuthenticated: user !== null,
       isLoading,
+      canClearSessions,
       login,
       logout,
+      logoutAll,
     }),
-    [user, isLoading, login, logout],
+    [user, isLoading, canClearSessions, login, logout, logoutAll],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

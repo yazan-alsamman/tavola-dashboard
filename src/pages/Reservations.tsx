@@ -200,15 +200,13 @@ export function ReservationsPage() {
           ) : (
             <DataTable>
               <DataTableHead>
-                <tr>
-                  <DataTableHeader>{t.reservations.date}</DataTableHeader>
-                  <DataTableHeader>{t.reservations.guests}</DataTableHeader>
-                  <DataTableHeader>{t.reservations.table}</DataTableHeader>
-                  <DataTableHeader>{t.reservations.status}</DataTableHeader>
-                  <DataTableHeader className="hidden md:table-cell">
-                    {t.reservations.id}
-                  </DataTableHeader>
-                </tr>
+                <DataTableHeader>{t.reservations.date}</DataTableHeader>
+                <DataTableHeader>{t.reservations.guests}</DataTableHeader>
+                <DataTableHeader>{t.reservations.table}</DataTableHeader>
+                <DataTableHeader>{t.reservations.status}</DataTableHeader>
+                <DataTableHeader className="hidden md:table-cell">
+                  {t.reservations.id}
+                </DataTableHeader>
               </DataTableHead>
               <DataTableBody>
                 {filteredItems.map((reservation) => (

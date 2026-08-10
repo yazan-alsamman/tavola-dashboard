@@ -13,6 +13,7 @@ import { LoginPage } from '@/pages/Login'
 import { DashboardPage } from '@/pages/Dashboard'
 import { ReservationsPage } from '@/pages/Reservations'
 import { ReservationDetailPage } from '@/pages/ReservationDetail'
+import { CalendarPage } from '@/pages/Calendar'
 import { FloorPlanPage } from '@/pages/FloorPlan'
 import { TablesPage } from '@/pages/Tables'
 import { WaitlistPage } from '@/pages/Waitlist'
@@ -48,6 +49,7 @@ export default function App() {
                           <Route index element={<DashboardPage />} />
                           <Route path="reservations" element={<ReservationsPage />} />
                           <Route path="reservations/:id" element={<ReservationDetailPage />} />
+                          <Route path="calendar" element={<CalendarPage />} />
                           <Route path="floor-plan" element={<FloorPlanPage />} />
                           <Route path="tables" element={<TablesPage />} />
                           <Route path="menu" element={<MenuPage />} />

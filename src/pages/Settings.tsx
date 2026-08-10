@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useNavigate } from 'react-router-dom'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Card, CardTitle } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { MaterialIcon } from '@/components/ui/Icon'
+import { useAuth } from '@/context/AuthContext'
 import { useLocale } from '@/context/LocaleContext'
 import { useRestaurantScope } from '@/context/RestaurantScopeContext'
 import { useToast } from '@/context/ToastContext'
@@ -95,6 +97,8 @@ function entriesToWeek(entries: WorkingHoursEntry[]): WorkingHoursEntry[] {
 export function SettingsPage() {
   const { t, locale } = useLocale()
   const { toast } = useToast()
+  const navigate = useNavigate()
+  const { logoutAll } = useAuth()
   const queryClient = useQueryClient()
   const { status, selectedRestaurantId, selectedRestaurant, refreshScope } =
     useRestaurantScope()
@@ -146,6 +150,20 @@ export function SettingsPage() {
       toast(
         'error',
         isApiError(err) ? err.message : t.settings.securityForm.sessionRevokeFailed,
+      )
+    },
+  })
+
+  const logoutAllMutation = useMutation({
+    mutationFn: () => logoutAll(),
+    onSuccess: () => {
+      toast('success', t.settings.securityForm.logoutAllSuccess)
+      navigate('/login', { replace: true })
+    },
+    onError: (err) => {
+      toast(
+        'error',
+        isApiError(err) ? err.message : t.settings.securityForm.logoutAllFailed,
       )
     },
   })
@@ -885,7 +903,21 @@ export function SettingsPage() {
           </Card>
 
           <Card>
-            <CardTitle className="mb-6">{t.settings.securityForm.sessions}</CardTitle>
+            <CardTitle className="mb-2">{t.settings.securityForm.sessions}</CardTitle>
+            <p className="text-sm text-on-surface-variant mb-6">
+              {t.settings.securityForm.logoutAllHint}
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              className="mb-6"
+              disabled={logoutAllMutation.isPending}
+              onClick={() => logoutAllMutation.mutate()}
+            >
+              {logoutAllMutation.isPending
+                ? t.common.loading
+                : t.settings.securityForm.logoutAll}
+            </Button>
             {sessionsQuery.isLoading ? (
               <p className="text-sm text-on-surface-variant">{t.common.loading}</p>
             ) : sessionsQuery.error ? (

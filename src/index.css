@@ -64,12 +64,12 @@
   --color-surface-tertiary: #efeded;
   --color-success: #00897b;
   --color-success-light: #e0f2f1;
-  --color-warning: #ffb300;
+  --color-warning: #f9a825;
   --color-warning-light: #fff8e1;
   --color-danger: #e53935;
   --color-danger-light: #ffebee;
-  --color-info: #5e35b1;
-  --color-info-light: #ecdeee;
+  --color-info: #1565c0;
+  --color-info-light: #e3f2fd;
 
   --shadow-card: 0 1px 3px 0 rgb(70 21 153 / 0.04);
   --shadow-elevated: 0 4px 20px rgb(0 0 0 / 0.04);
@@ -124,8 +124,8 @@
   --color-warning-light: #3d3018;
   --color-danger: #ef5350;
   --color-danger-light: #3d1a1a;
-  --color-info: #b39ddb;
-  --color-info-light: #2d2438;
+  --color-info: #64b5f6;
+  --color-info-light: #1a2a3d;
   --shadow-card: 0 1px 3px 0 rgb(0 0 0 / 0.2);
   --shadow-elevated: 0 4px 20px rgb(0 0 0 / 0.25);
   --shadow-modal: 0 20px 25px -5px rgb(0 0 0 / 0.35);
@@ -199,9 +199,13 @@
   .bg-tertiary-container { background-color: var(--color-tertiary-container); }
   .bg-error { background-color: var(--color-error); }
   .bg-error-container { background-color: var(--color-error-container); }
+  .bg-success { background-color: var(--color-success); }
   .bg-success-light { background-color: var(--color-success-light); }
+  .bg-warning { background-color: var(--color-warning); }
   .bg-warning-light { background-color: var(--color-warning-light); }
+  .bg-danger { background-color: var(--color-danger); }
   .bg-danger-light { background-color: var(--color-danger-light); }
+  .bg-info { background-color: var(--color-info); }
   .bg-info-light { background-color: var(--color-info-light); }
 
   .text-text-primary { color: var(--color-text-primary); }
@@ -222,12 +226,18 @@
   .text-success { color: var(--color-success); }
   .text-warning { color: var(--color-warning); }
   .text-danger { color: var(--color-danger); }
+  .text-info { color: var(--color-info); }
   .text-secondary { color: var(--color-secondary); }
 
   .border-border { border-color: var(--color-border); }
   .border-border-strong { border-color: var(--color-border-strong); }
   .border-outline-variant { border-color: var(--color-outline-variant); }
   .border-primary { border-color: var(--color-primary); }
+  .border-success { border-color: var(--color-success); }
+  .border-warning { border-color: var(--color-warning); }
+  .border-danger { border-color: var(--color-danger); }
+  .border-error { border-color: var(--color-error); }
+  .border-info { border-color: var(--color-info); }
 
   .shadow-card { box-shadow: var(--shadow-card); }
   .shadow-elevated { box-shadow: var(--shadow-elevated); }

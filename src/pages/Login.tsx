@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { forgotPassword, resetPassword } from '@/api/auth'
 import { isApiError } from '@/api/errors'
+import { tokenStore } from '@/api/tokenStore'
 import { useAuth } from '@/context/AuthContext'
 import { useLocale } from '@/context/LocaleContext'
 import { MaterialIcon } from '@/components/ui/Icon'
@@ -60,6 +61,7 @@ export function LoginPage() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [showClearSessionsCta, setShowClearSessionsCta] = useState(false)
 
   const title = useMemo(() => {
     if (view === 'forgot') return t.login.forgot.title
@@ -88,12 +90,36 @@ export function LoginPage() {
     if (submitting) return
     setError('')
     setSuccess('')
+    setShowClearSessionsCta(false)
     setSubmitting(true)
     try {
       await login(email.trim(), password)
       navigate('/', { replace: true })
     } catch (err) {
       setError(mapLoginError(err, t))
+      if (isApiError(err) && err.code === 'AUTH_TOO_MANY_SESSIONS') {
+        setShowClearSessionsCta(Boolean(tokenStore.getRefreshToken()))
+      }
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const handleClearSessionsAndRetry = async (): Promise<void> => {
+    if (submitting || !email.trim() || !password) return
+    setError('')
+    setSuccess('')
+    setSubmitting(true)
+    try {
+      await login(email.trim(), password)
+      navigate('/', { replace: true })
+    } catch (err) {
+      setError(mapLoginError(err, t))
+      setShowClearSessionsCta(
+        isApiError(err) &&
+          err.code === 'AUTH_TOO_MANY_SESSIONS' &&
+          Boolean(tokenStore.getRefreshToken()),
+      )
     } finally {
       setSubmitting(false)
     }
@@ -202,6 +228,16 @@ export function LoginPage() {
                 <p className="text-body-sm text-error" role="alert">
                   {error}
                 </p>
+              )}
+              {showClearSessionsCta && (
+                <button
+                  type="button"
+                  className="w-full text-label-sm font-semibold text-primary hover:underline disabled:opacity-60"
+                  disabled={submitting}
+                  onClick={() => void handleClearSessionsAndRetry()}
+                >
+                  {t.login.clearSessionsAndRetry}
+                </button>
               )}
               <SubmitButton
                 submitting={submitting}

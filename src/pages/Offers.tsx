@@ -311,19 +311,17 @@ export function OffersPage() {
         <>
           <DataTable className="mb-4">
             <DataTableHead>
-              <tr>
-                <DataTableHeader>{t.offers.columns.title}</DataTableHeader>
-                <DataTableHeader>{t.offers.columns.discount}</DataTableHeader>
-                <DataTableHeader className="hidden md:table-cell">
-                  {t.offers.columns.period}
+              <DataTableHeader>{t.offers.columns.title}</DataTableHeader>
+              <DataTableHeader>{t.offers.columns.discount}</DataTableHeader>
+              <DataTableHeader className="hidden md:table-cell">
+                {t.offers.columns.period}
+              </DataTableHeader>
+              <DataTableHeader>{t.offers.columns.status}</DataTableHeader>
+              {canManage && (
+                <DataTableHeader className="text-end">
+                  {t.common.actions}
                 </DataTableHeader>
-                <DataTableHeader>{t.offers.columns.status}</DataTableHeader>
-                {canManage && (
-                  <DataTableHeader className="text-end">
-                    {t.common.actions}
-                  </DataTableHeader>
-                )}
-              </tr>
+              )}
             </DataTableHead>
             <DataTableBody>
               {offers.map((offer) => {

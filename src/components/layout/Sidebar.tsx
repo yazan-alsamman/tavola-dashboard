@@ -13,6 +13,7 @@ type NavKey = keyof typeof import('@/i18n/en').en.nav
 const opsNav: { key: NavKey; path: string; icon: string }[] = [
   { key: 'dashboard', path: '/', icon: 'dashboard' },
   { key: 'reservations', path: '/reservations', icon: 'event' },
+  { key: 'calendar', path: '/calendar', icon: 'calendar_today' },
   { key: 'floorPlan', path: '/floor-plan', icon: 'layers' },
   { key: 'waitlist', path: '/waitlist', icon: 'hourglass_empty' },
   { key: 'walkIn', path: '/walk-in', icon: 'directions_walk' },

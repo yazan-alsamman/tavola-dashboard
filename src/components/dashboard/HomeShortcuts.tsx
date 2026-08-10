@@ -11,40 +11,56 @@ const shortcutConfig = [
     key: 'pendingRequests' as const,
     path: '/notifications',
     icon: 'notifications',
-    color: 'from-amber-500 to-orange-600',
+    accent: 'warning' as const,
   },
   {
     key: 'confirmPending' as const,
     path: '/reservations',
     icon: 'check_circle',
-    color: 'from-primary to-mauve-700',
+    accent: 'info' as const,
     hash: 'pending',
   },
   {
     key: 'nextReservations' as const,
     path: '/reservations',
     icon: 'schedule',
-    color: 'from-sky-500 to-blue-600',
+    accent: 'success' as const,
   },
   {
     key: 'seatWalkIn' as const,
     path: '/walk-in',
     icon: 'person_add',
-    color: 'from-emerald-500 to-green-600',
+    accent: 'success' as const,
   },
   {
     key: 'floorPlan' as const,
     path: '/floor-plan',
     icon: 'map',
-    color: 'from-violet-500 to-purple-600',
+    accent: 'primary' as const,
   },
   {
     key: 'waitlist' as const,
     path: '/waitlist',
     icon: 'format_list_numbered',
-    color: 'from-rose-500 to-pink-600',
+    accent: 'danger' as const,
   },
 ]
+
+const accentIcon: Record<string, string> = {
+  warning: 'bg-warning-light text-warning',
+  info: 'bg-info-light text-info',
+  success: 'bg-success-light text-success',
+  danger: 'bg-danger-light text-danger',
+  primary: 'bg-primary-light text-primary',
+}
+
+const accentWash: Record<string, string> = {
+  warning: 'bg-warning-light/50',
+  info: 'bg-info-light/50',
+  success: 'bg-success-light/50',
+  danger: 'bg-danger-light/40',
+  primary: 'bg-primary-light/60',
+}
 
 export function HomeShortcuts() {
   const { t } = useLocale()
@@ -75,7 +91,7 @@ export function HomeShortcuts() {
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
-        {shortcutConfig.map(({ key, path, icon, color, hash }) => {
+        {shortcutConfig.map(({ key, path, icon, accent, hash }) => {
           const badge = badges[key] ?? 0
           const title = t.shortcuts[key]
           const descKey = `${key}Desc` as keyof typeof t.shortcuts
@@ -92,12 +108,12 @@ export function HomeShortcuts() {
                 'overflow-hidden',
               )}
             >
-              <div className={cn('absolute inset-0 opacity-[0.07] bg-gradient-to-br', color)} />
+              <div className={cn('absolute inset-0 opacity-80', accentWash[accent])} />
               <div className="relative flex items-start justify-between">
                 <div
                   className={cn(
-                    'w-11 h-11 rounded-xl flex items-center justify-center text-white shadow-card bg-gradient-to-br',
-                    color,
+                    'w-11 h-11 rounded-xl flex items-center justify-center shadow-card',
+                    accentIcon[accent],
                   )}
                 >
                   <MaterialIcon name={icon} size={20} />

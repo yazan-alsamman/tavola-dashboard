@@ -5,6 +5,20 @@ export const reservationKeys = {
   lists: () => [...reservationKeys.all, 'list'] as const,
   list: (page: number, pageSize: number) =>
     [...reservationKeys.lists(), page, pageSize] as const,
+  calendarDay: (date: string, restaurantId: string | null) =>
+    [...reservationKeys.all, 'calendar', date, restaurantId ?? ''] as const,
+  calendarRange: (
+    from: string,
+    to: string,
+    restaurantId: string | null,
+  ) =>
+    [
+      ...reservationKeys.all,
+      'calendar-range',
+      from,
+      to,
+      restaurantId ?? '',
+    ] as const,
   detail: (id: string) => [...reservationKeys.all, 'detail', id] as const,
   availability: (
     restaurantId: string,

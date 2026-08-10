@@ -15,15 +15,22 @@ export function DataTable({ children, className }: DataTableProps) {
 
 export function DataTableHead({ children }: { children: React.ReactNode }) {
   return (
-    <thead>
-      <tr className="bg-surface-container border-b border-outline-variant/30">{children}</tr>
+    <thead className="w-full">
+      <tr className="w-full bg-surface-container border-b border-outline-variant/30">
+        {children}
+      </tr>
     </thead>
   )
 }
 
 export function DataTableHeader({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
-    <th className={cn('px-5 py-2.5 text-start text-label-md text-on-surface-variant whitespace-nowrap', className)}>
+    <th
+      className={cn(
+        'px-5 py-2.5 text-start text-label-md font-semibold text-on-surface-variant whitespace-nowrap align-middle',
+        className,
+      )}
+    >
       {children}
     </th>
   )
