@@ -1025,7 +1025,7 @@ export const ar: TranslationKeys = {
   },
   landing: {
     nav: {
-      brand: 'تافلا',
+      brand: 'تافولا',
       signIn: 'تسجيل الدخول',
       dashboard: 'الذهاب إلى لوحة التحكم',
       toggleTheme: 'تبديل المظهر',
@@ -1052,7 +1052,7 @@ export const ar: TranslationKeys = {
     cta: {
       eyebrow: 'هكذا يبدو اختيار طاولتك',
       title: 'جاهز لإدارة الخدمة بطريقة مختلفة؟',
-      body: 'انضم إلى المطاعم التي تستخدم تافلا لإدارة كل حجز وطاولة وضيف — في مكان واحد.',
+      body: 'انضم إلى المطاعم التي تستخدم تافولا لإدارة كل حجز وطاولة وضيف — في مكان واحد.',
       button: 'ابدأ الآن',
     },
     selectedTable: 'طاولة {number}',

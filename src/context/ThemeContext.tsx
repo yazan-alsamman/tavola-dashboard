@@ -12,9 +12,9 @@ const ThemeContext = createContext<ThemeContextType | null>(null)
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<Theme>(() => {
-    const stored = localStorage.getItem('tavla-theme') as Theme | null
-    if (stored) return stored
-    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+    const stored = localStorage.getItem('tavla-theme')
+    if (stored === 'light' || stored === 'dark') return stored
+    return 'light'
   })
 
   useEffect(() => {

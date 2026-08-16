@@ -1024,7 +1024,7 @@ export const en = {
   },
   landing: {
     nav: {
-      brand: 'Tavla',
+      brand: 'Tavola',
       signIn: 'Sign In',
       dashboard: 'Go to Dashboard',
       toggleTheme: 'Toggle theme',
@@ -1051,7 +1051,7 @@ export const en = {
     cta: {
       eyebrow: 'This Is What Choosing Looks Like',
       title: 'Ready to run service differently?',
-      body: 'Join restaurants using Tavla to manage every reservation, table, and guest — in one place.',
+      body: 'Join restaurants using Tavola to manage every reservation, table, and guest — in one place.',
       button: 'Get Started',
     },
     selectedTable: 'Table {number}',

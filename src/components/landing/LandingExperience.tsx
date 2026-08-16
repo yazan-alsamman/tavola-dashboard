@@ -1,4 +1,4 @@
-import { createRef, useMemo, useRef, useState } from 'react'
+import { createRef, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useGSAP } from '@gsap/react'
 import gsap from 'gsap'
@@ -24,7 +24,16 @@ function Nav() {
 
   return (
     <header data-entrance="nav" className="relative z-20 flex items-center justify-between px-6 py-6 md:px-10">
-      <span className="text-headline-md font-bold text-primary">{t.landing.nav.brand}</span>
+      <Link to="/" className="flex items-center gap-2.5">
+        <img
+          src="/logo.png"
+          alt={t.landing.nav.brand}
+          width={40}
+          height={40}
+          className="h-10 w-10 object-contain"
+        />
+        <span className="text-headline-md font-bold text-primary">{t.landing.nav.brand}</span>
+      </Link>
       <div className="flex items-center gap-1">
         <button
           onClick={toggleLocale}
@@ -53,9 +62,13 @@ function Nav() {
 
 export function LandingExperience() {
   const { t } = useLocale()
-  const { theme } = useTheme()
+  const { theme, setTheme } = useTheme()
   const { isAuthenticated } = useAuth()
   const navigate = useNavigate()
+
+  useEffect(() => {
+    setTheme('light')
+  }, [setTheme])
 
   const prefersReducedMotion = useReducedMotion()
   const webglSupported = useWebGLSupport()
