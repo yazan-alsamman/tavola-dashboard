@@ -13,10 +13,10 @@ export function DashboardLayout() {
   const location = useLocation()
 
   const mobileNav = [
-    { path: '/', icon: 'login', label: t.ops.arrivingSoon },
-    { path: '/floor-plan', icon: 'grid_view', label: t.floorPlan.title },
-    { path: '/waitlist', icon: 'timer', label: t.waitlist.title },
-    { path: '/reservations', icon: 'menu', label: t.reservations.title },
+    { path: '/app', icon: 'login', label: t.ops.arrivingSoon },
+    { path: '/app/floor-plan', icon: 'grid_view', label: t.floorPlan.title },
+    { path: '/app/waitlist', icon: 'timer', label: t.waitlist.title },
+    { path: '/app/reservations', icon: 'menu', label: t.reservations.title },
   ]
 
   return (

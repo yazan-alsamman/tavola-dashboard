@@ -212,7 +212,7 @@ export function DashboardPage() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Link to="/walk-in">
+          <Link to="/app/walk-in">
             <Button variant="secondary" size="md">
               <MaterialIcon name="add" size={18} /> {t.walkIn.title}
             </Button>
@@ -292,7 +292,7 @@ export function DashboardPage() {
                 {t.ops.arrivingSoon}
               </h3>
               <Link
-                to="/reservations"
+                to="/app/reservations"
                 className="text-info text-label-md font-semibold hover:underline"
               >
                 {t.common.viewAll}
@@ -363,7 +363,7 @@ export function DashboardPage() {
                 {t.ops.needsAction}
               </h3>
               <Link
-                to="/notifications"
+                to="/app/notifications"
                 className="text-warning text-label-md font-semibold hover:underline"
               >
                 {t.common.viewAll}
@@ -381,7 +381,7 @@ export function DashboardPage() {
                 <>
                   {unreadCount > 0 && (
                     <Link
-                      to="/notifications"
+                      to="/app/notifications"
                       className="p-4 rounded-lg border border-danger/20 bg-danger-light/40 shadow-sm flex items-center justify-between gap-4 hover:border-danger/40 transition-all"
                     >
                       <div className="flex items-center gap-4">
@@ -403,7 +403,7 @@ export function DashboardPage() {
                   {pending.slice(0, 3).map((r) => (
                     <Link
                       key={r.reservationId}
-                      to={`/reservations/${r.reservationId}`}
+                      to={`/app/reservations/${r.reservationId}`}
                       className="p-4 rounded-lg border border-warning/25 bg-warning-light/30 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4 hover:border-warning/45 transition-all"
                     >
                       <div className="flex items-center gap-4">
@@ -449,7 +449,7 @@ export function DashboardPage() {
                 <MaterialIcon name="grid_view" className="text-success" />
                 {t.floorPlan.title}
               </h3>
-              <Link to="/floor-plan" className="text-success text-label-md font-semibold hover:underline">
+              <Link to="/app/floor-plan" className="text-success text-label-md font-semibold hover:underline">
                 {t.common.view}
               </Link>
             </div>
@@ -467,7 +467,7 @@ export function DashboardPage() {
                 <MaterialIcon name="bar_chart" className="text-primary" />
                 {t.reports.title}
               </h3>
-              <Link to="/reports" className="text-primary text-label-md hover:underline">
+              <Link to="/app/reports" className="text-primary text-label-md hover:underline">
                 {t.common.view}
               </Link>
             </div>
@@ -496,14 +496,14 @@ export function DashboardPage() {
           <div className="bg-surface-container-lowest rounded-xl shadow-sm border border-outline-variant/30 p-5">
             <div className="flex flex-wrap gap-3">
               <Link
-                to="/waitlist"
+                to="/app/waitlist"
                 className="text-label-md text-warning font-semibold inline-flex items-center gap-1"
               >
                 <MaterialIcon name="timer" size={16} />
                 {t.waitlist.title}
               </Link>
               <Link
-                to="/offers"
+                to="/app/offers"
                 className="text-label-md text-success font-semibold inline-flex items-center gap-1"
               >
                 <MaterialIcon name="local_offer" size={16} />

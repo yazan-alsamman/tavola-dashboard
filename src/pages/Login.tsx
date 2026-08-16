@@ -94,7 +94,7 @@ export function LoginPage() {
     setSubmitting(true)
     try {
       await login(email.trim(), password)
-      navigate('/', { replace: true })
+      navigate('/app', { replace: true })
     } catch (err) {
       setError(mapLoginError(err, t))
       if (isApiError(err) && err.code === 'AUTH_TOO_MANY_SESSIONS') {
@@ -112,7 +112,7 @@ export function LoginPage() {
     setSubmitting(true)
     try {
       await login(email.trim(), password)
-      navigate('/', { replace: true })
+      navigate('/app', { replace: true })
     } catch (err) {
       setError(mapLoginError(err, t))
       setShowClearSessionsCta(

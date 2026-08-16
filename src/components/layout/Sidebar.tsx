@@ -11,29 +11,29 @@ import { useUnreadNotificationCount } from '@/hooks/useNotificationQueries'
 type NavKey = keyof typeof import('@/i18n/en').en.nav
 
 const opsNav: { key: NavKey; path: string; icon: string }[] = [
-  { key: 'dashboard', path: '/', icon: 'dashboard' },
-  { key: 'reservations', path: '/reservations', icon: 'event' },
-  { key: 'calendar', path: '/calendar', icon: 'calendar_today' },
-  { key: 'floorPlan', path: '/floor-plan', icon: 'layers' },
-  { key: 'waitlist', path: '/waitlist', icon: 'hourglass_empty' },
-  { key: 'walkIn', path: '/walk-in', icon: 'directions_walk' },
+  { key: 'dashboard', path: '/app', icon: 'dashboard' },
+  { key: 'reservations', path: '/app/reservations', icon: 'event' },
+  { key: 'calendar', path: '/app/calendar', icon: 'calendar_today' },
+  { key: 'floorPlan', path: '/app/floor-plan', icon: 'layers' },
+  { key: 'waitlist', path: '/app/waitlist', icon: 'hourglass_empty' },
+  { key: 'walkIn', path: '/app/walk-in', icon: 'directions_walk' },
 ]
 
 const mgmtNav: { key: NavKey; path: string; icon: string }[] = [
-  { key: 'menu', path: '/menu', icon: 'restaurant_menu' },
-  { key: 'gallery', path: '/gallery', icon: 'photo_library' },
-  { key: 'offers', path: '/offers', icon: 'local_offer' },
-  { key: 'reviews', path: '/reviews', icon: 'rate_review' },
-  { key: 'tables', path: '/tables', icon: 'restaurant' },
-  { key: 'messaging', path: '/messaging', icon: 'inbox' },
-  { key: 'notifications', path: '/notifications', icon: 'notifications' },
+  { key: 'menu', path: '/app/menu', icon: 'restaurant_menu' },
+  { key: 'gallery', path: '/app/gallery', icon: 'photo_library' },
+  { key: 'offers', path: '/app/offers', icon: 'local_offer' },
+  { key: 'reviews', path: '/app/reviews', icon: 'rate_review' },
+  { key: 'tables', path: '/app/tables', icon: 'restaurant' },
+  { key: 'messaging', path: '/app/messaging', icon: 'inbox' },
+  { key: 'notifications', path: '/app/notifications', icon: 'notifications' },
 ]
 
 const adminNav: { key: NavKey; path: string; icon: string }[] = [
-  { key: 'staff', path: '/staff', icon: 'badge' },
-  { key: 'reports', path: '/reports', icon: 'analytics' },
-  { key: 'branches', path: '/branches', icon: 'store' },
-  { key: 'settings', path: '/settings', icon: 'settings' },
+  { key: 'staff', path: '/app/staff', icon: 'badge' },
+  { key: 'reports', path: '/app/reports', icon: 'analytics' },
+  { key: 'branches', path: '/app/branches', icon: 'store' },
+  { key: 'settings', path: '/app/settings', icon: 'settings' },
 ]
 
 export function Sidebar() {
@@ -57,7 +57,7 @@ export function Sidebar() {
           <NavLink
             key={key}
             to={path}
-            end={path === '/'}
+            end={path === '/app'}
             onClick={close}
             className={({ isActive }) =>
               cn(

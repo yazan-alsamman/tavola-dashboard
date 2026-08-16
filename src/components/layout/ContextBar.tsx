@@ -31,7 +31,7 @@ export function ContextBar() {
     <div className="flex items-center gap-0 px-3 py-2 bg-surface border border-outline-variant/30 rounded-lg text-meta overflow-x-auto">
       {unreadCount > 0 && (
         <Link
-          to="/notifications"
+          to="/app/notifications"
           className="flex items-center gap-1.5 px-3 py-1 rounded-md bg-warning-light text-warning font-semibold shrink-0 me-3 hover:bg-warning/20 transition-colors"
         >
           <MaterialIcon name="notifications" size={16} filled className="shrink-0" />

@@ -252,7 +252,7 @@ export function ReservationDetailPage() {
         <h1 className="text-headline-md text-on-surface mb-2">
           {t.reservations.detail.notFoundTitle}
         </h1>
-        <Link to="/reservations" className="text-primary font-semibold">
+        <Link to="/app/reservations" className="text-primary font-semibold">
           {t.nav.reservations}
         </Link>
       </div>
@@ -272,7 +272,7 @@ export function ReservationDetailPage() {
     return (
       <div className="max-w-2xl mx-auto py-8 px-4">
         <Link
-          to="/reservations"
+          to="/app/reservations"
           className="inline-flex items-center gap-2 text-label-md text-on-surface-variant hover:text-primary mb-6"
         >
           <MaterialIcon name="arrow_back" size={16} />
@@ -321,7 +321,7 @@ export function ReservationDetailPage() {
     <div className="max-w-2xl mx-auto py-8 px-4 space-y-6">
       <div>
         <Link
-          to="/reservations"
+          to="/app/reservations"
           className="inline-flex items-center gap-2 text-label-md text-on-surface-variant hover:text-primary mb-4"
         >
           <MaterialIcon name="arrow_back" size={16} />

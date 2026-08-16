@@ -27,6 +27,7 @@ src/
 │   ├── auth/       # ProtectedRoute / PublicRoute
 │   ├── dashboard/  # dashboard-page-specific composite components
 │   ├── floor/      # floor plan canvas/spatial components
+│   ├── landing/    # public landing page: R3F scene, GSAP entrance/scroll timelines, sections
 │   ├── layout/      # Sidebar, Header, DashboardLayout, ContextBar, etc.
 │   └── ui/         # generic, reusable, presentational primitives
 ├── context/        # Theme, Locale, Sidebar, Auth, RestaurantScope, Restaurant (legacy mock), Toast
@@ -142,7 +143,13 @@ Rules:
 
 # Routing
 
-Routes are declared centrally in `App.tsx` (React Router v7, `Routes`/`Route`). `ProtectedRoute` gates the authenticated app shell (`DashboardLayout` + nested routes); `PublicRoute` gates `/login` and redirects an already-authenticated user to `/`. Any new top-level page must be added as a route here and to the sidebar navigation (`components/layout/Sidebar.tsx`) — do not create pages that are unreachable from navigation without a documented reason.
+Routes are declared centrally in `App.tsx` (React Router v7, `Routes`/`Route`).
+
+- `/` — public `LandingPage` (route-level lazy-loaded; not behind either guard, reachable authenticated or not).
+- `/login` — gated by `PublicRoute`, which redirects an already-authenticated user to `/app`.
+- `/app/*` — the authenticated app shell. `ProtectedRoute` gates it and redirects an unauthenticated user to `/login`. `DashboardLayout` + all nested feature routes (`/app/reservations`, `/app/calendar`, `/app/floor-plan`, etc.) live under this prefix.
+
+Any new **authenticated** page must be added as a nested route under `/app` here and to the sidebar navigation (`components/layout/Sidebar.tsx`) — do not create pages that are unreachable from navigation without a documented reason. The public `/` landing page is the one documented exception (ADR-009): it is a pre-auth marketing surface, not an app screen, so it is intentionally absent from `Sidebar`.
 
 ---
 

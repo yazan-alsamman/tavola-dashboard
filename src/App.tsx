@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { ThemeProvider } from '@/context/ThemeContext'
 import { LocaleProvider } from '@/context/LocaleContext'
@@ -29,6 +30,10 @@ import { GalleryPage } from '@/pages/Gallery'
 import { OffersPage } from '@/pages/Offers'
 import { ReviewsPage } from '@/pages/Reviews'
 
+// Lazy-loaded: Three.js/R3F/Drei/GSAP only need to ship to visitors of the public landing page,
+// never to authenticated dashboard routes.
+const LandingPage = lazy(() => import('@/pages/Landing').then((m) => ({ default: m.LandingPage })))
+
 export default function App() {
   return (
     <ThemeProvider>
@@ -41,11 +46,19 @@ export default function App() {
                 <SidebarProvider>
                   <BrowserRouter>
                     <Routes>
+                      <Route
+                        path="/"
+                        element={
+                          <Suspense fallback={<div className="min-h-screen bg-background" />}>
+                            <LandingPage />
+                          </Suspense>
+                        }
+                      />
                       <Route element={<PublicRoute />}>
                         <Route path="/login" element={<LoginPage />} />
                       </Route>
                       <Route element={<ProtectedRoute />}>
-                        <Route element={<DashboardLayout />}>
+                        <Route path="/app" element={<DashboardLayout />}>
                           <Route index element={<DashboardPage />} />
                           <Route path="reservations" element={<ReservationsPage />} />
                           <Route path="reservations/:id" element={<ReservationDetailPage />} />

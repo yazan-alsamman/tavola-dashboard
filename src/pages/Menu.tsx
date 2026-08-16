@@ -1212,7 +1212,7 @@ export function MenuPage() {
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <Link
-              to="/gallery"
+              to="/app/gallery"
               className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-outline-variant/50 text-label-md font-medium text-on-surface hover:bg-surface-container-high transition-colors"
             >
               <MaterialIcon name="photo_library" size={18} />
@@ -1247,7 +1247,7 @@ export function MenuPage() {
                   {t.menu.createMenu}
                 </Button>
                 <Link
-                  to="/gallery"
+                  to="/app/gallery"
                   className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-outline-variant/50 text-label-md font-medium text-on-surface hover:bg-surface-container-high"
                 >
                   <MaterialIcon name="photo_library" size={18} />

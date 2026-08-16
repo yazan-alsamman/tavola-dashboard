@@ -213,7 +213,7 @@ export function ReservationsPage() {
                   <DataTableRow
                     key={reservation.reservationId}
                     onClick={() =>
-                      navigate(`/reservations/${reservation.reservationId}`)
+                      navigate(`/app/reservations/${reservation.reservationId}`)
                     }
                   >
                     <DataTableCell>

@@ -271,7 +271,7 @@ export function CalendarPage() {
   }
 
   const openReservation = (id: string) => {
-    navigate(`/reservations/${id}`)
+    navigate(`/app/reservations/${id}`)
   }
 
   const openDay = (day: string) => {

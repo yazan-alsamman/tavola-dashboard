@@ -110,7 +110,7 @@ export function NotificationPopover() {
             })}
           </div>
           <Link
-            to="/notifications"
+            to="/app/notifications"
             onClick={() => setOpen(false)}
             className="block text-center text-body-md text-primary font-medium py-3 border-t border-outline-variant/30 hover:bg-surface-container-high transition-colors"
           >

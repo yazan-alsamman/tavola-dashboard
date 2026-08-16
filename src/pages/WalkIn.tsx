@@ -133,7 +133,7 @@ export function WalkInPage() {
       setLastCreated(reservation)
       toast('success', t.walkIn.successTitle, t.walkIn.successBody)
       idempotencyKeyRef.current = null
-      navigate(`/reservations/${reservation.reservationId}`)
+      navigate(`/app/reservations/${reservation.reservationId}`)
     } catch (err) {
       setFormError(mapWalkInError(err, t))
     } finally {

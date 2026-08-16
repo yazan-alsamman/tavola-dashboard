@@ -557,7 +557,7 @@ export function SettingsPage() {
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <a
-                href="/gallery"
+                href="/app/gallery"
                 className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-primary hover:bg-primary/10"
               >
                 <MaterialIcon name="open_in_new" size={18} />

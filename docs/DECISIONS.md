@@ -21,6 +21,45 @@ Consequences:
 
 ---
 
+## ADR-010 — Landing Page 3D Vocabulary Is The Product's Own Table Model
+Date: 2026-08-16
+Status: Accepted
+
+Context:
+The first landing page pass (ADR-009) used an abstract 3D vocabulary (glass panes, capsules, rings, floating cards) that was visually pleasant but generic — it didn't communicate that Tavla is specifically a *table-selection* reservation product. A follow-up brief asked for the 3D scene to be built directly from the product's real domain model (tables, shapes, statuses, floor plans) rather than invented geometry, with scrolling acting as a camera journey through "choose your table."
+
+Decision:
+1. **Domain-grounded data, not invented shapes.** `src/components/landing/restaurant.ts` defines 9 tables (5 on mobile) using the *real* `TableShapeDto` (`'Round' | 'Rectangle'`) and `TableStatusDto` (`'Available' | 'Occupied' | 'Cleaning' | 'Disabled'`) enums from `src/api/tables.ts`, with capacities and a status color language that mirrors `components/floor/FloorPlanReadView.tsx`'s existing status-fill convention. One table (`B2`, Rectangle, capacity 4, Available) is the `selected` table the whole scroll story centers on.
+2. **Two-layer per-table transform.** Each table renders as an `outer` group (GSAP-owned: scroll-scrubbed scatter→grid position/rotation) wrapping an `inner` group (R3F-owned: idle float/breathe/rotate + selection emphasis, read each frame in `useFrame`). This is deliberate: GSAP and `useFrame` never write to the same transform, so they can't fight.
+3. **One master scroll timeline** (`useScrollTimeline.ts`) drives three things simultaneously: the camera's 4-shot list (`CAMERA_KEYFRAMES` — wide establishing → moving in → near-overhead floor plan → close reservation shot, applied via `CameraRig`'s damped `useFrame` follow), every table's scatter→grid array-tween, and a normalized `storyProgressRef.value` (0→1) that each `TableUnit` reads locally to derive its own selection glow / dimming / availability-reveal — coordinated without GSAP having to own every material.
+4. **Chairs are instanced.** `ChairInstances.tsx` recomposes every chair's world matrix each frame from its table's `innerRef.matrixWorld` into two `InstancedMesh` draw calls (seat, back) instead of one mesh pair per chair — kept desktop's ~99 potential draw calls down to ~29.
+5. The selected table's info (`Table B2 · Seats up to 4 · Available`) surfaces both as a `Html`-in-Canvas floating card attached to the table *and* as real translated copy in the CTA section (`t.landing.selectedTable` / `t.landing.seatsFor` interpolated with the actual table data) — the 3D and DOM layers show the same fact, not disconnected content.
+6. The CTA button still reads "Get Started" / navigates to `/login` — it does not claim to reserve that specific table, since this app has no public/anonymous booking flow (reservations are staff-created via `src/api/reservations.ts`). The table card is illustrative of the concept, not a live booking action.
+
+Consequences:
+`src/components/landing/SceneObjects.tsx` and `useIdleMotion.ts` from ADR-009 are superseded and removed. Any future change to the real `TableStatusDto`/`TableShapeDto` enums (see `docs/API_INTEGRATION.md`) should be reflected in `restaurant.ts`'s `STATUS_COLOR` / shape handling so the landing page doesn't drift from the actual product model.
+
+---
+
+## ADR-009 — Public 3D Landing Page At `/`, Dashboard Moved To `/app`
+Date: 2026-08-16
+Status: Accepted
+
+Context:
+The dashboard previously had no public/marketing surface — `/` was the protected Dashboard index and `/login` was the only unauthenticated route. A cinematic, art-directed 3D/motion landing experience was requested as a new public entry point. Mounting it at `/` required relocating the authenticated shell so the two don't collide, since `PublicRoute`/`ProtectedRoute` redirect targets and every in-app absolute link (`Sidebar`, `QuickActionsBar`, `HomeShortcuts`, `Dashboard`, `ReservationDetail`, `Menu`, `Calendar`, `GlobalSearch`, notification links, mobile nav) assumed the dashboard index lived at `/`.
+
+Decision:
+1. `/` is now the public `LandingPage` (`src/pages/Landing.tsx` → `src/components/landing/LandingExperience.tsx`), reachable unauthenticated or authenticated, and is intentionally **not** listed in `Sidebar` navigation (it is a pre-auth marketing surface, not an app screen) — the documented exception to the "every top-level page must be in Sidebar nav" rule in `ARCHITECTURE.md`.
+2. The authenticated shell (`DashboardLayout` + all nested routes) moved from index-at-`/` to `path="/app"`; every previously-absolute in-app path (`/reservations`, `/calendar`, `/floor-plan`, `/tables`, `/waitlist`, `/walk-in`, `/menu`, `/gallery`, `/offers`, `/reviews`, `/notifications`, `/messaging`, `/reports`, `/branches`, `/settings`, `/staff`) is now `/app/<same>`. `ProtectedRoute` redirects unauthenticated users to `/login`; `PublicRoute` redirects authenticated users to `/app` (was `/`).
+3. `LandingPage` is route-level lazy-loaded (`React.lazy` + `Suspense` in `App.tsx`) so its dependencies (Three.js, `@react-three/fiber`, `@react-three/drei`, `gsap`, `@gsap/react`) ship only to visitors of `/`, never to the authenticated dashboard bundle. This kept the main app chunk at its pre-3D gzip size instead of adding ~300KB to every dashboard route.
+4. The 3D layer is fully procedural (Drei `<Environment>` with hand-placed `<Lightformer>`s, no external HDR/CDN fetch) per the asset-strategy preference for generated over external assets, and mutates Three.js object refs directly from `useFrame` (idle motion) and GSAP/ScrollTrigger (scroll-driven group transform) rather than routing through React state, per `STATE_MANAGEMENT.md`'s render-loop rules.
+5. `prefers-reduced-motion` and WebGL-unavailability both degrade gracefully: reduced motion disables idle drift/pointer-parallax/scroll-scrub (content is shown fully assembled, no motion); no-WebGL renders a static gradient fallback (`Fallback3D`) — the page is never gated on 3D support.
+
+Consequences:
+Any future top-level route addition must consider whether it belongs under `/app` (authenticated shell) or as a public route beside `/` and `/login`. `docs/ARCHITECTURE.md`'s routing section is updated accordingly. Bundle: main app chunk ≈302KB gzip (down from ≈606KB pre-split when 3D deps were eagerly bundled); `Landing` chunk ≈303KB gzip, loaded only on `/`.
+
+---
+
 ## ADR-008 — Floor/Table Mutations With Captured-Scope Invalidation
 Date: 2026-07-20
 Status: Accepted

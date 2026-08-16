@@ -1022,6 +1022,44 @@ export const en = {
       unknown: 'Something went wrong. Please try again.',
     },
   },
+  landing: {
+    nav: {
+      brand: 'Tavla',
+      signIn: 'Sign In',
+      dashboard: 'Go to Dashboard',
+      toggleTheme: 'Toggle theme',
+    },
+    hero: {
+      eyebrow: 'Table selection, reimagined',
+      titleLine1: "Don't just reserve a table.",
+      titleLine2: 'Choose your place.',
+      subtitle: 'See every table, every seat, before you book — then reserve the exact spot you want.',
+      primaryCta: 'Get Started',
+      secondaryCta: 'Sign In',
+      scrollHint: 'Scroll',
+    },
+    choose: {
+      eyebrow: 'Every Table, Visible',
+      title: 'See exactly where you’ll sit.',
+      body: 'Round tables, long tables, quiet corners — explore the real floor before you commit to a seat.',
+    },
+    floor: {
+      eyebrow: 'The Floor Plan',
+      title: 'Availability, at a glance.',
+      body: 'Available tables stand out. Occupied ones step back. You always know exactly what’s open.',
+    },
+    cta: {
+      eyebrow: 'This Is What Choosing Looks Like',
+      title: 'Ready to run service differently?',
+      body: 'Join restaurants using Tavla to manage every reservation, table, and guest — in one place.',
+      button: 'Get Started',
+    },
+    selectedTable: 'Table {number}',
+    seatsFor: 'Seats up to {count}',
+    footer: {
+      rights: 'All rights reserved.',
+    },
+  },
 } as const
 
 type DeepStringRecord<T> = {

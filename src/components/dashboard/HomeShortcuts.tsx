@@ -9,38 +9,38 @@ import { useMyReservationsQuery } from '@/hooks/useReservationQueries'
 const shortcutConfig = [
   {
     key: 'pendingRequests' as const,
-    path: '/notifications',
+    path: '/app/notifications',
     icon: 'notifications',
     accent: 'warning' as const,
   },
   {
     key: 'confirmPending' as const,
-    path: '/reservations',
+    path: '/app/reservations',
     icon: 'check_circle',
     accent: 'info' as const,
     hash: 'pending',
   },
   {
     key: 'nextReservations' as const,
-    path: '/reservations',
+    path: '/app/reservations',
     icon: 'schedule',
     accent: 'success' as const,
   },
   {
     key: 'seatWalkIn' as const,
-    path: '/walk-in',
+    path: '/app/walk-in',
     icon: 'person_add',
     accent: 'success' as const,
   },
   {
     key: 'floorPlan' as const,
-    path: '/floor-plan',
+    path: '/app/floor-plan',
     icon: 'map',
     accent: 'primary' as const,
   },
   {
     key: 'waitlist' as const,
-    path: '/waitlist',
+    path: '/app/waitlist',
     icon: 'format_list_numbered',
     accent: 'danger' as const,
   },
@@ -141,17 +141,17 @@ export function HomeShortcuts() {
       </div>
 
       <div className="mt-4 flex flex-wrap gap-3 p-4 rounded-xl bg-surface border border-outline-variant/30">
-        <Link to="/floor-plan" className="text-xs text-primary font-medium">
+        <Link to="/app/floor-plan" className="text-xs text-primary font-medium">
           {t.shortcuts.floorPlan}
         </Link>
         <span className="text-outline-variant">|</span>
-        <Link to="/reports" className="text-xs text-primary font-medium">
+        <Link to="/app/reports" className="text-xs text-primary font-medium">
           {t.reports.title}
         </Link>
         {unreadCount > 0 && (
           <>
             <span className="text-outline-variant">|</span>
-            <Link to="/notifications" className="text-xs text-warning font-medium">
+            <Link to="/app/notifications" className="text-xs text-warning font-medium">
               <Num>{unreadCount}</Num> {t.dashboard.unreadNotifications}
             </Link>
           </>

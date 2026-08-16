@@ -6,11 +6,11 @@ import { cn } from '@/lib/utils'
 import { Num } from '@/components/ui/Num'
 
 const actions = [
-  { key: 'walkIn' as const, path: '/walk-in', icon: 'person_add', color: 'bg-primary text-white' },
-  { key: 'waitlist' as const, path: '/waitlist', icon: 'schedule', color: 'bg-warning text-white' },
-  { key: 'floorPlan' as const, path: '/floor-plan', icon: 'map', color: 'bg-success text-white' },
-  { key: 'reservations' as const, path: '/reservations', icon: 'calendar_month', color: 'bg-info text-white' },
-  { key: 'notifications' as const, path: '/notifications', icon: 'notifications', color: 'bg-danger text-white' },
+  { key: 'walkIn' as const, path: '/app/walk-in', icon: 'person_add', color: 'bg-primary text-white' },
+  { key: 'waitlist' as const, path: '/app/waitlist', icon: 'schedule', color: 'bg-warning text-white' },
+  { key: 'floorPlan' as const, path: '/app/floor-plan', icon: 'map', color: 'bg-success text-white' },
+  { key: 'reservations' as const, path: '/app/reservations', icon: 'calendar_month', color: 'bg-info text-white' },
+  { key: 'notifications' as const, path: '/app/notifications', icon: 'notifications', color: 'bg-danger text-white' },
 ]
 
 export function QuickActionsBar() {

@@ -38,7 +38,7 @@ export function LiveServiceBar() {
         <>
           <div className="h-10 w-px bg-border hidden sm:block" />
           <Link
-            to="/notifications"
+            to="/app/notifications"
             className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-warning-light hover:bg-warning/20 transition-colors"
           >
             <span className="w-2 h-2 rounded-full bg-warning animate-pulse" />

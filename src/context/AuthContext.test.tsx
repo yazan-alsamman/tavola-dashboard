@@ -428,7 +428,7 @@ describe('route guards', () => {
               <Route element={<PublicRoute />}>
                 <Route path="/login" element={<div>login-page</div>} />
               </Route>
-              <Route path="/" element={<div>home-page</div>} />
+              <Route path="/app" element={<div>home-page</div>} />
             </Routes>
           </MemoryRouter>
         </AuthProvider>
