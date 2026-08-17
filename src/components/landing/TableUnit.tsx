@@ -1,8 +1,8 @@
-import { useMemo, useRef, type RefObject } from 'react'
+import { useMemo, useRef, useState, type RefObject } from 'react'
 import { useFrame } from '@react-three/fiber'
-import { Html } from '@react-three/drei'
+import { Html, useCursor } from '@react-three/drei'
 import { Color, DoubleSide, type Group, type Mesh, type MeshStandardMaterial } from 'three'
-import { getTableDimensions, STATUS_COLOR, type TableDef } from './restaurant'
+import { clamp01, getTableDimensions, STATUS_COLOR, STORY, type TableDef } from './restaurant'
 
 const WOOD_TONE = { light: '#c8a878', dark: '#8a6a4a' }
 const BASE_TONE = { light: '#3a3440', dark: '#161018' }
@@ -14,8 +14,11 @@ interface TableUnitProps {
   innerRef: RefObject<Group | null>
   active: boolean
   intensity: number
-  /** 0 → hero act, 1 → choose, 2 → floor plan, 3 → reserve. Written by the master scroll timeline. */
+  /** 0→1 across the whole journey. Written by the master scroll timeline. */
   storyProgressRef: RefObject<{ value: number }>
+  isSelected: boolean
+  /** Choosing a different table only takes effect once the floor plan is visible (story ≥ STORY.floorPlan). */
+  onSelect: (id: string) => void
   labelText: string
   statusLabel: string
   capacityLabel: string
@@ -34,6 +37,8 @@ export function TableUnit({
   active,
   intensity,
   storyProgressRef,
+  isSelected,
+  onSelect,
   labelText,
   statusLabel,
   capacityLabel,
@@ -41,12 +46,16 @@ export function TableUnit({
   const topRef = useRef<Mesh>(null)
   const topMatRef = useRef<MeshStandardMaterial>(null)
   const ringRef = useRef<Mesh>(null)
-  const labelGroupRef = useRef<Group>(null)
+  const labelDivRef = useRef<HTMLDivElement>(null)
 
   const elapsed = useRef(0)
   const activatedAt = useRef<number | null>(null)
   const pointer = useRef({ x: 0, y: 0 })
   const dims = useMemo(() => getTableDimensions(def.shape), [def.shape])
+
+  const [hovered, setHovered] = useState(false)
+  const selectable = def.status === 'Available'
+  useCursor(hovered && selectable)
 
   const woodColor = useMemo(() => new Color(theme === 'dark' ? WOOD_TONE.dark : WOOD_TONE.light), [theme])
   const baseColor = useMemo(() => new Color(theme === 'dark' ? BASE_TONE.dark : BASE_TONE.light), [theme])
@@ -79,34 +88,36 @@ export function TableUnit({
 
     const floatY = Math.sin(time * floatSpeed + phase) * 0.05 * intensity
     const breathe = 1 + Math.sin(time * breatheSpeed + phase) * 0.015 * intensity
+    const hoverLift = hovered && selectable ? 0.08 : 0
 
-    // "Choose" (story 0.15–0.45): the selected table rises and settles; others hold still.
-    const chooseProgress = clamp01((story - 0.15) / 0.3)
-    const selectionLift = def.selected ? chooseProgress * 0.16 : 0
-    const selectionScale = def.selected ? 1 + chooseProgress * 0.1 : 1
+    // "Choose" (approachHero → riseBegin): the selected table rises and settles; others hold still.
+    const chooseProgress = clamp01((story - STORY.approachHero) / (STORY.riseBegin - STORY.approachHero))
+    const selectionLift = isSelected ? chooseProgress * 0.16 : 0
+    const selectionScale = isSelected ? 1 + chooseProgress * 0.1 : 1
 
     inner.position.set(
       pointer.current.x * 0.04 * intensity,
-      floatY + selectionLift,
+      floatY + selectionLift + hoverLift,
       pointer.current.y * 0.02 * intensity,
     )
-    inner.rotation.y += 0.03 * intensity * delta * (def.selected ? 0.4 : 1)
+    inner.rotation.y += 0.03 * intensity * delta * (isSelected ? 0.4 : 1)
     inner.scale.setScalar(breathe * selectionScale * eased)
 
-    // "Recede" (story 0.2–0.5): non-selected tables mute slightly so the chosen one stands out —
-    // kept subtle so every table stays clearly readable, never blurred or washed out.
-    const recede = def.selected ? 0 : clamp01((story - 0.2) / 0.3)
+    // Non-selected tables mute slightly during "Choose" so the chosen one stands out — kept
+    // subtle so every table stays clearly readable, never blurred or washed out.
+    const recede = isSelected ? 0 : chooseProgress
     if (topMatRef.current) {
       topMatRef.current.color.copy(woodColor).lerp(dimmedTop, recede * 0.3)
       topMatRef.current.opacity = 1 - recede * 0.12
     }
 
-    // "The Floor" (story 0.5–0.8): available tables glow to communicate availability at a glance.
-    const availabilityReveal = def.status === 'Available' ? clamp01((story - 0.5) / 0.3) : 0
+    // "The Floor" (riseBegin → floorPlan): available tables glow to communicate availability at a glance.
+    const availabilityReveal = def.status === 'Available' ? clamp01((story - STORY.riseBegin) / (STORY.floorPlan - STORY.riseBegin)) : 0
     const baseGlow = STATUS_COLOR[def.status].glow
-    const ringStrength = def.selected
+    const hoverGlow = hovered && selectable ? 0.3 : 0
+    const ringStrength = isSelected
       ? 0.4 + chooseProgress * 0.9
-      : baseGlow * (0.35 + availabilityReveal * 0.65) * (1 - recede * 0.5)
+      : baseGlow * (0.35 + availabilityReveal * 0.65) * (1 - recede * 0.5) + hoverGlow
     if (ringRef.current) {
       const mat = ringRef.current.material as MeshStandardMaterial
       mat.emissiveIntensity = ringStrength
@@ -114,11 +125,28 @@ export function TableUnit({
     }
 
     // The floating info card only makes sense once the camera has settled near the chosen table.
-    if (labelGroupRef.current) {
-      const cardReveal = clamp01((story - 0.62) / 0.22)
-      labelGroupRef.current.visible = cardReveal > 0.02
+    // Driven directly on the DOM node (not Object3D.visible) because drei's <Html> portal doesn't
+    // reliably follow an ancestor's Three.js visibility — leaving it toggled only via `visible`
+    // let the card render heavily foreshortened (a thin sliver) from off-angle camera positions
+    // earlier in the journey.
+    if (labelDivRef.current) {
+      const cardReveal = clamp01((story - STORY.descend) / (STORY.reserve - STORY.descend))
+      const shown = isSelected && cardReveal > 0.02
+      labelDivRef.current.style.opacity = shown ? '1' : '0'
+      labelDivRef.current.style.visibility = shown ? 'visible' : 'hidden'
     }
   })
+
+  const handlePointerOver = () => {
+    if (selectable) setHovered(true)
+  }
+  const handlePointerOut = () => setHovered(false)
+  const handleClick = () => {
+    if (!selectable) return
+    const story = storyProgressRef.current?.value ?? 0
+    if (story < STORY.floorPlan) return
+    onSelect(def.id)
+  }
 
   return (
     <group
@@ -126,7 +154,12 @@ export function TableUnit({
       position={[def.scatterPosition.x, def.scatterPosition.y, def.scatterPosition.z]}
       rotation={[0, def.scatterRotationY, 0]}
     >
-      <group ref={innerRef}>
+      <group
+        ref={innerRef}
+        onPointerOver={handlePointerOver}
+        onPointerOut={handlePointerOut}
+        onClick={handleClick}
+      >
         {def.shape === 'Round' ? (
           <>
             <mesh ref={topRef} position={[0, 0.5, 0]} castShadow>
@@ -176,10 +209,14 @@ export function TableUnit({
           />
         </mesh>
 
-        {def.selected && (
-          <group ref={labelGroupRef} visible={false} position={[dims.width / 2 + 0.9, 0.75, 0]}>
+        {isSelected && (
+          <group position={[dims.width / 2 + 0.9, 0.75, 0]}>
             <Html transform distanceFactor={6} occlude={false} center>
-              <div className="pointer-events-none w-40 rounded-xl border border-outline-variant/30 bg-surface-container-lowest px-3 py-2.5 shadow-lg">
+              <div
+                ref={labelDivRef}
+                className="pointer-events-none w-40 rounded-xl border border-outline-variant/30 bg-surface-container-lowest px-3 py-2.5 shadow-lg opacity-0 transition-opacity duration-300"
+                style={{ visibility: 'hidden' }}
+              >
                 <p className="text-label-sm font-bold text-primary">{labelText}</p>
                 <p className="mt-0.5 text-body-sm font-semibold text-on-surface">{capacityLabel}</p>
                 <p className="mt-0.5 text-label-sm text-tertiary">{statusLabel}</p>
@@ -190,8 +227,4 @@ export function TableUnit({
       </group>
     </group>
   )
-}
-
-function clamp01(value: number): number {
-  return Math.min(1, Math.max(0, value))
 }

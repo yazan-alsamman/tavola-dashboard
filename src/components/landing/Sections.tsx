@@ -1,4 +1,4 @@
-import { useRef } from 'react'
+import { useEffect, useRef, type ReactNode } from 'react'
 import { useGSAP } from '@gsap/react'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
@@ -30,19 +30,21 @@ export function Hero({ onPrimaryCta, primaryCtaLabel, secondaryCtaHref, secondar
         }}
         aria-hidden="true"
       />
-      <p data-entrance="eyebrow" className="text-label-md uppercase tracking-[0.2em] text-primary mb-4">
-        {t.landing.hero.eyebrow}
-      </p>
-      <h1
-        data-entrance="title"
-        className="text-on-surface font-bold leading-[0.95] tracking-tight text-[clamp(2.75rem,7vw,5.5rem)]"
-      >
-        <span className="block">{t.landing.hero.titleLine1}</span>
-        <span className="block text-primary">{t.landing.hero.titleLine2}</span>
-      </h1>
-      <p data-entrance="subtitle" className="mt-6 max-w-xl text-body-lg text-on-surface-variant">
-        {t.landing.hero.subtitle}
-      </p>
+      <TextBox className="flex max-w-2xl flex-col items-center text-center">
+        <p data-entrance="eyebrow" className="text-label-md uppercase tracking-[0.2em] text-primary mb-4">
+          {t.landing.hero.eyebrow}
+        </p>
+        <h1
+          data-entrance="title"
+          className="text-on-surface font-bold leading-[0.95] tracking-tight text-[clamp(2.75rem,7vw,5.5rem)]"
+        >
+          <span className="block">{t.landing.hero.titleLine1}</span>
+          <span className="block text-primary">{t.landing.hero.titleLine2}</span>
+        </h1>
+        <p data-entrance="subtitle" className="mt-6 max-w-xl text-body-lg text-on-surface-variant">
+          {t.landing.hero.subtitle}
+        </p>
+      </TextBox>
       <div data-entrance="cta" className="mt-10 flex flex-wrap items-center justify-center gap-3">
         <Button size="lg" onClick={onPrimaryCta}>
           {primaryCtaLabel}
@@ -62,6 +64,81 @@ export function Hero({ onPrimaryCta, primaryCtaLabel, secondaryCtaHref, secondar
   )
 }
 
+interface TextBoxProps {
+  children: ReactNode
+  className?: string
+}
+
+/**
+ * Groups a beat's copy into one bordered, glassy surface instead of loose floating lines, so the
+ * text reads as a clear, self-contained unit against the 3D scene behind it. It reveals with a
+ * scroll-triggered 3D tilt (CSS `perspective` on the wrapper + GSAP `rotateX`) and responds to the
+ * pointer with a subtle `rotateX`/`rotateY` tilt, so it behaves like a physical card rather than
+ * flat text — the animation is real 3D (perspective + transform), not just a fade.
+ */
+function TextBox({ children, className }: TextBoxProps) {
+  const boxRef = useRef<HTMLDivElement>(null)
+  const prefersReducedMotion = useReducedMotion()
+
+  useGSAP(
+    () => {
+      if (prefersReducedMotion || !boxRef.current) return
+      gsap.from(boxRef.current, {
+        opacity: 0,
+        y: 40,
+        rotationX: -30,
+        duration: 0.8,
+        ease: 'power3.out',
+        scrollTrigger: {
+          trigger: boxRef.current,
+          start: 'top 78%',
+          toggleActions: 'play none none none',
+        },
+      })
+    },
+    { scope: boxRef, dependencies: [prefersReducedMotion] },
+  )
+
+  useEffect(() => {
+    const el = boxRef.current
+    if (!el || prefersReducedMotion || !window.matchMedia('(pointer: fine)').matches) return
+
+    const setRotateX = gsap.quickTo(el, 'rotationX', { duration: 0.6, ease: 'power3.out' })
+    const setRotateY = gsap.quickTo(el, 'rotationY', { duration: 0.6, ease: 'power3.out' })
+
+    const handleMove = (event: PointerEvent) => {
+      const rect = el.getBoundingClientRect()
+      setRotateY(((event.clientX - rect.left) / rect.width - 0.5) * 8)
+      setRotateX(((event.clientY - rect.top) / rect.height - 0.5) * -8)
+    }
+    const handleLeave = () => {
+      setRotateX(0)
+      setRotateY(0)
+    }
+
+    el.addEventListener('pointermove', handleMove)
+    el.addEventListener('pointerleave', handleLeave)
+    return () => {
+      el.removeEventListener('pointermove', handleMove)
+      el.removeEventListener('pointerleave', handleLeave)
+    }
+  }, [prefersReducedMotion])
+
+  return (
+    <div className="pointer-events-auto [perspective:1400px]">
+      <div
+        ref={boxRef}
+        className={cn(
+          'rounded-2xl border border-outline-variant/30 bg-surface-container/85 px-6 py-5 shadow-xl shadow-black/10 backdrop-blur-md will-change-transform',
+          className,
+        )}
+      >
+        {children}
+      </div>
+    </div>
+  )
+}
+
 function useSectionReveal(ref: React.RefObject<HTMLElement | null>) {
   const prefersReducedMotion = useReducedMotion()
 
@@ -73,13 +150,13 @@ function useSectionReveal(ref: React.RefObject<HTMLElement | null>) {
 
       gsap.from(targets, {
         opacity: 0,
-        y: 28,
-        duration: 0.7,
+        y: 20,
+        duration: 0.6,
         ease: 'power3.out',
-        stagger: 0.12,
+        stagger: 0.1,
         scrollTrigger: {
           trigger: ref.current,
-          start: 'top 75%',
+          start: 'top 70%',
           toggleActions: 'play none none none',
         },
       })
@@ -88,53 +165,85 @@ function useSectionReveal(ref: React.RefObject<HTMLElement | null>) {
   )
 }
 
-interface FeatureSectionProps {
-  eyebrow: string
-  title: string
-  body: string
-  align: 'start' | 'end'
+interface CaptionProps {
+  eyebrow?: string
+  line: string
+  align: 'start' | 'center' | 'end'
+  minHeightClassName: string
 }
 
-function FeatureSection({ eyebrow, title, body, align }: FeatureSectionProps) {
+/**
+ * A cinematic caption: one short line (optionally with an eyebrow), grouped into a bordered
+ * `TextBox` so the copy reads clearly against the 3D scene behind it. It tilts/fades in once
+ * scrolled near, then the camera (and the user) simply continue past it.
+ */
+function Caption({ eyebrow, line, align, minHeightClassName }: CaptionProps) {
   const sectionRef = useRef<HTMLElement>(null)
   useSectionReveal(sectionRef)
 
+  const wrapClass =
+    align === 'center' ? 'mx-auto text-center' : align === 'end' ? 'ms-auto text-end' : 'me-auto text-start'
+
   return (
-    <section ref={sectionRef} className="relative flex min-h-[85vh] items-center px-6 py-16 md:min-h-screen">
-      <div className={cn('mx-auto flex w-full max-w-5xl', align === 'end' ? 'justify-end' : 'justify-start')}>
-        <div
-          className={cn(
-            'flex max-w-md flex-col rounded-2xl border border-outline-variant/20 bg-surface-container-lowest shadow-elevated px-8 py-9 md:px-10 md:py-11',
-            align === 'end' ? 'items-end text-end' : 'items-start text-start',
-          )}
-        >
-          <p data-reveal className="text-label-md uppercase tracking-[0.2em] text-primary mb-4">
-            {eyebrow}
+    <section
+      ref={sectionRef}
+      className={cn('relative flex flex-col justify-center px-6 pointer-events-none', minHeightClassName)}
+    >
+      <div className={cn('w-full max-w-md', wrapClass)}>
+        <TextBox>
+          {eyebrow ? (
+            <p data-reveal className="mb-3 text-label-md uppercase tracking-[0.2em] text-primary">
+              {eyebrow}
+            </p>
+          ) : null}
+          <p
+            data-reveal
+            className="text-on-surface font-bold leading-tight tracking-tight text-[clamp(1.5rem,3.4vw,2.5rem)]"
+          >
+            {line}
           </p>
-          <h2 data-reveal className="text-on-surface font-bold leading-tight tracking-tight text-[clamp(1.75rem,3.4vw,2.5rem)]">
-            {title}
-          </h2>
-          <p data-reveal className="mt-4 text-body-lg text-on-surface-variant">
-            {body}
-          </p>
-        </div>
+        </TextBox>
       </div>
     </section>
   )
 }
 
-/** Act 2 — "Choose": tables begin aligning toward the floor plan as this section scrolls into view. */
-export function ChooseSection() {
+/** Beat: reception — a single warm line as the camera passes the desk. */
+export function ReceptionCaption() {
+  const { t } = useLocale()
+  return <Caption line={t.landing.reception.line} align="center" minHeightClassName="min-h-[85vh]" />
+}
+
+/** Beat: hall reveal → weave → approach — the longest stretch of pure camera movement. */
+export function HallCaption() {
   const { t } = useLocale()
   return (
-    <FeatureSection eyebrow={t.landing.choose.eyebrow} title={t.landing.choose.title} body={t.landing.choose.body} align="start" />
+    <Caption
+      eyebrow={t.landing.hall.eyebrow}
+      line={t.landing.hall.line}
+      align="start"
+      minHeightClassName="min-h-[190vh]"
+    />
   )
 }
 
-/** Act 3 — "The Floor": camera is near-overhead; the floor plan and availability read clearly. */
-export function FloorSection() {
+/** Beat: crane rise → overhead floor plan. */
+export function FloorplanCaption() {
   const { t } = useLocale()
-  return <FeatureSection eyebrow={t.landing.floor.eyebrow} title={t.landing.floor.title} body={t.landing.floor.body} align="end" />
+  return (
+    <Caption
+      eyebrow={t.landing.floorplan.eyebrow}
+      line={t.landing.floorplan.line}
+      align="end"
+      minHeightClassName="min-h-[120vh]"
+    />
+  )
+}
+
+/** Beat: descend — the last line before the reservation moment. */
+export function ReserveIntroCaption() {
+  const { t } = useLocale()
+  return <Caption line={t.landing.reserveIntro.line} align="center" minHeightClassName="min-h-[85vh]" />
 }
 
 interface SelectedCopy {
@@ -148,35 +257,43 @@ interface CtaSectionProps {
   selectedCopy: SelectedCopy
 }
 
-/** Act 4 — "Reserve": camera settles on the chosen table; its real data surfaces beside the CTA. */
+/** Beat: reserve — the camera settles on the chosen table; its real data surfaces beside the CTA. */
 export function CtaSection({ onPrimaryCta, selectedCopy }: CtaSectionProps) {
   const { t } = useLocale()
   const sectionRef = useRef<HTMLElement>(null)
   useSectionReveal(sectionRef)
 
   return (
-    <section ref={sectionRef} className="relative flex min-h-[75vh] flex-col items-center justify-center px-6 py-16">
-      <div className="flex max-w-lg flex-col items-center gap-5 rounded-2xl border border-outline-variant/20 bg-surface-container-lowest shadow-elevated px-8 py-11 text-center md:px-12 md:py-14">
-        <p data-reveal className="text-label-md uppercase tracking-[0.2em] text-primary">
-          {t.landing.cta.eyebrow}
-        </p>
-        <h2 data-reveal className="text-on-surface font-bold leading-tight tracking-tight text-[clamp(1.75rem,3.6vw,2.75rem)]">
-          {t.landing.cta.title}
-        </h2>
-        <p data-reveal className="text-body-lg text-on-surface-variant">
-          {t.landing.cta.body}
-        </p>
-        <div
-          data-reveal
-          className="flex items-center gap-2 rounded-full border border-outline-variant/30 bg-surface-container px-4 py-2 text-label-md"
-        >
-          <span className="font-bold text-primary">{selectedCopy.labelText}</span>
-          <span className="text-on-surface-variant">·</span>
-          <span className="text-on-surface-variant">{selectedCopy.capacityLabel}</span>
-          <span className="text-on-surface-variant">·</span>
-          <span className="font-semibold text-tertiary">{selectedCopy.statusLabel}</span>
-        </div>
-        <div data-reveal>
+    <section
+      ref={sectionRef}
+      className="relative flex min-h-[110vh] flex-col items-center justify-center px-6 text-center pointer-events-none"
+    >
+      <div className="pointer-events-auto flex flex-col items-center">
+        <TextBox className="flex max-w-lg flex-col items-center text-center">
+          <p data-reveal className="text-label-md uppercase tracking-[0.2em] text-primary">
+            {t.landing.cta.eyebrow}
+          </p>
+          <h2
+            data-reveal
+            className="mt-4 text-on-surface font-bold leading-tight tracking-tight text-[clamp(1.75rem,3.6vw,2.75rem)]"
+          >
+            {t.landing.cta.title}
+          </h2>
+          <p data-reveal className="mt-4 max-w-md text-body-lg text-on-surface-variant">
+            {t.landing.cta.body}
+          </p>
+          <div
+            data-reveal
+            className="mt-6 flex items-center gap-2 rounded-full border border-outline-variant/40 px-4 py-2 text-label-md"
+          >
+            <span className="font-bold text-primary">{selectedCopy.labelText}</span>
+            <span className="text-on-surface-variant">·</span>
+            <span className="text-on-surface-variant">{selectedCopy.capacityLabel}</span>
+            <span className="text-on-surface-variant">·</span>
+            <span className="font-semibold text-tertiary">{selectedCopy.statusLabel}</span>
+          </div>
+        </TextBox>
+        <div data-reveal className="mt-8">
           <Button size="lg" onClick={onPrimaryCta}>
             {t.landing.cta.button}
           </Button>

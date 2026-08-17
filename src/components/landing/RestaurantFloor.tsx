@@ -19,6 +19,8 @@ interface RestaurantFloorProps {
   outerRefs: RefObject<Group | null>[]
   innerRefs: RefObject<Group | null>[]
   storyProgressRef: RefObject<{ value: number }>
+  selectedTableId: string
+  onSelectTable: (id: string) => void
   selectedCopy: SelectedTableCopy
 }
 
@@ -31,6 +33,8 @@ export function RestaurantFloor({
   outerRefs,
   innerRefs,
   storyProgressRef,
+  selectedTableId,
+  onSelectTable,
   selectedCopy,
 }: RestaurantFloorProps) {
   return (
@@ -45,6 +49,8 @@ export function RestaurantFloor({
           active={active}
           intensity={intensity}
           storyProgressRef={storyProgressRef}
+          isSelected={def.id === selectedTableId}
+          onSelect={onSelectTable}
           labelText={selectedCopy.labelText}
           statusLabel={selectedCopy.statusLabel}
           capacityLabel={selectedCopy.capacityLabel}

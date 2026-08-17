@@ -1048,6 +1048,20 @@ export const en = {
       title: 'Availability, at a glance.',
       body: 'Available tables stand out. Occupied ones step back. You always know exactly what’s open.',
     },
+    reception: {
+      line: 'Start at the door. Your table is waiting inside.',
+    },
+    hall: {
+      eyebrow: 'Walk the Floor',
+      line: 'Move between tables the way your guests will — then pick the one that feels right.',
+    },
+    floorplan: {
+      eyebrow: 'See the Whole Room',
+      line: 'Availability reads at a glance. Tap a free table to make it yours.',
+    },
+    reserveIntro: {
+      line: 'One seat. One story. Ready when you are.',
+    },
     cta: {
       eyebrow: 'This Is What Choosing Looks Like',
       title: 'Ready to run service differently?',

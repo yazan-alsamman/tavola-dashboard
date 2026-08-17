@@ -9,12 +9,25 @@ import { useTheme } from '@/context/ThemeContext'
 import { MaterialIcon } from '@/components/ui/Icon'
 import { Scene } from './Scene'
 import { Fallback3D } from './Fallback3D'
-import { Hero, ChooseSection, FloorSection, CtaSection, Footer } from './Sections'
+import {
+  Hero,
+  ReceptionCaption,
+  HallCaption,
+  FloorplanCaption,
+  ReserveIntroCaption,
+  CtaSection,
+  Footer,
+} from './Sections'
 import { useReducedMotion } from './useReducedMotion'
 import { useWebGLSupport } from './useWebGLSupport'
 import { useIsMobile } from './useIsMobile'
 import { useScrollTimeline } from './useScrollTimeline'
-import { CAMERA_KEYFRAMES, DESKTOP_TABLES, MOBILE_TABLES, SELECTED_TABLE } from './restaurant'
+import {
+  buildCameraKeyframes,
+  DEFAULT_SELECTED_TABLE_ID,
+  DESKTOP_TABLES,
+  MOBILE_TABLES,
+} from './restaurant'
 import type { CameraTarget } from './CameraRig'
 
 function Nav() {
@@ -81,24 +94,43 @@ export function LandingExperience() {
   const outerRefs = useMemo(() => tables.map(() => createRef<Group | null>()), [tables])
   const innerRefs = useMemo(() => tables.map(() => createRef<Group | null>()), [tables])
 
+  const [sceneActive, setSceneActive] = useState(false)
+  const [selectedTableId, setSelectedTableId] = useState(DEFAULT_SELECTED_TABLE_ID)
+
+  const selectedTable =
+    tables.find((table) => table.id === selectedTableId) ??
+    tables.find((table) => table.id === DEFAULT_SELECTED_TABLE_ID) ??
+    tables[0]
+
+  const cameraKeyframes = useMemo(
+    () => (selectedTable ? buildCameraKeyframes(selectedTable) : buildCameraKeyframes(tables[0]!)),
+    [selectedTable, tables],
+  )
+
   const cameraTargetRef = useRef<CameraTarget>({
-    x: CAMERA_KEYFRAMES[0].position.x,
-    y: CAMERA_KEYFRAMES[0].position.y,
-    z: CAMERA_KEYFRAMES[0].position.z,
-    lx: CAMERA_KEYFRAMES[0].lookAt.x,
-    ly: CAMERA_KEYFRAMES[0].lookAt.y,
-    lz: CAMERA_KEYFRAMES[0].lookAt.z,
+    x: cameraKeyframes[0]!.position.x,
+    y: cameraKeyframes[0]!.position.y,
+    z: cameraKeyframes[0]!.position.z,
+    lx: cameraKeyframes[0]!.lookAt.x,
+    ly: cameraKeyframes[0]!.lookAt.y,
+    lz: cameraKeyframes[0]!.lookAt.z,
   })
   const storyProgressRef = useRef({ value: 0 })
-
-  const [sceneActive, setSceneActive] = useState(false)
 
   const intensity = prefersReducedMotion ? 0 : isMobile ? 0.6 : 1
 
   const selectedCopy = {
-    labelText: t.landing.selectedTable.replace('{number}', SELECTED_TABLE.tableNumber),
-    capacityLabel: t.landing.seatsFor.replace('{count}', String(SELECTED_TABLE.capacity)),
-    statusLabel: t.status[SELECTED_TABLE.status],
+    labelText: t.landing.selectedTable.replace(
+      '{number}',
+      selectedTable?.tableNumber ?? DEFAULT_SELECTED_TABLE_ID,
+    ),
+    capacityLabel: t.landing.seatsFor.replace(
+      '{count}',
+      String(selectedTable?.capacity ?? 0),
+    ),
+    statusLabel: selectedTable
+      ? t.status[selectedTable.status]
+      : t.status.Available,
   }
 
   useGSAP(
@@ -120,7 +152,7 @@ export function LandingExperience() {
 
   useScrollTimeline(
     pageRef,
-    { tables, outerRefs, cameraTargetRef, storyProgressRef },
+    { tables, cameraKeyframes, outerRefs, cameraTargetRef, storyProgressRef },
     { enabled: !prefersReducedMotion && webglSupported },
   )
 
@@ -142,6 +174,8 @@ export function LandingExperience() {
             innerRefs={innerRefs}
             cameraTargetRef={cameraTargetRef}
             storyProgressRef={storyProgressRef}
+            selectedTableId={selectedTableId}
+            onSelectTable={setSelectedTableId}
             selectedCopy={selectedCopy}
           />
         ) : (
@@ -159,8 +193,10 @@ export function LandingExperience() {
         />
       </div>
 
-      <ChooseSection />
-      <FloorSection />
+      <ReceptionCaption />
+      <HallCaption />
+      <FloorplanCaption />
+      <ReserveIntroCaption />
       <CtaSection onPrimaryCta={goToPrimaryCta} selectedCopy={selectedCopy} />
       <Footer />
     </div>

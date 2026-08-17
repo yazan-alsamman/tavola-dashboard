@@ -3,6 +3,7 @@ import { Canvas, useFrame } from '@react-three/fiber'
 import { Environment, Lightformer } from '@react-three/drei'
 import { ACESFilmicToneMapping, type DirectionalLight, type Group } from 'three'
 import { RestaurantFloor } from './RestaurantFloor'
+import { Architecture } from './Architecture'
 import { CameraRig, type CameraTarget } from './CameraRig'
 import type { TableDef } from './restaurant'
 
@@ -46,6 +47,8 @@ interface SceneProps {
   innerRefs: RefObject<Group | null>[]
   cameraTargetRef: RefObject<CameraTarget>
   storyProgressRef: RefObject<{ value: number }>
+  selectedTableId: string
+  onSelectTable: (id: string) => void
   selectedCopy: { labelText: string; statusLabel: string; capacityLabel: string }
 }
 
@@ -59,6 +62,8 @@ export function Scene({
   innerRefs,
   cameraTargetRef,
   storyProgressRef,
+  selectedTableId,
+  onSelectTable,
   selectedCopy,
 }: SceneProps) {
   const dpr = useMemo<[number, number]>(() => (isMobile ? [1, 1.5] : [1, 2]), [isMobile])
@@ -69,11 +74,11 @@ export function Scene({
       dpr={dpr}
       shadows={!isMobile}
       gl={{ antialias: true, toneMapping: ACESFilmicToneMapping, toneMappingExposure: 1.05 }}
-      camera={{ position: [0, 2.4, 12], fov: 42, near: 0.1, far: 40 }}
+      camera={{ position: [0, 2.4, 17], fov: 42, near: 0.1, far: 60 }}
       style={{ position: 'absolute', inset: 0 }}
     >
       <color attach="background" args={[backgroundColor]} />
-      <fog attach="fog" args={[backgroundColor, 10, 26]} />
+      <fog attach="fog" args={[backgroundColor, 12, 36]} />
       <ambientLight intensity={theme === 'dark' ? 0.4 : 0.55} />
       <MoodLight theme={theme} storyProgressRef={storyProgressRef} />
       <pointLight position={[-5, -1, 3]} intensity={0.35} color="#00b39f" />
@@ -96,6 +101,8 @@ export function Scene({
 
       <CameraRig targetRef={cameraTargetRef} intensity={intensity} />
 
+      <Architecture theme={theme} isMobile={isMobile} storyProgressRef={storyProgressRef} />
+
       <RestaurantFloor
         tables={tables}
         theme={theme}
@@ -105,6 +112,8 @@ export function Scene({
         outerRefs={outerRefs}
         innerRefs={innerRefs}
         storyProgressRef={storyProgressRef}
+        selectedTableId={selectedTableId}
+        onSelectTable={onSelectTable}
         selectedCopy={selectedCopy}
       />
     </Canvas>
