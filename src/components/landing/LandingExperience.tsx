@@ -36,35 +36,38 @@ function Nav() {
   const { isAuthenticated } = useAuth()
 
   return (
-    <header data-entrance="nav" className="relative z-20 flex items-center justify-between px-6 py-6 md:px-10">
-      <Link to="/" className="flex items-center gap-2.5">
+    <header
+      data-entrance="nav"
+      className="relative z-20 flex items-center justify-between px-4 py-4 sm:px-6 sm:py-6 md:px-10"
+    >
+      <Link to="/" className="flex items-center gap-2 sm:gap-2.5">
         <img
           src="/logo.png"
           alt={t.landing.nav.brand}
           width={40}
           height={40}
-          className="h-10 w-10 object-contain"
+          className="h-8 w-8 object-contain sm:h-10 sm:w-10"
         />
-        <span className="text-headline-md font-bold text-primary">{t.landing.nav.brand}</span>
+        <span className="text-body-lg font-bold text-primary sm:text-headline-md">{t.landing.nav.brand}</span>
       </Link>
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-0.5 sm:gap-1">
         <button
           onClick={toggleLocale}
-          className="p-2 rounded-full text-on-surface-variant hover:bg-surface-variant/50 transition-colors"
+          className="p-1.5 rounded-full text-on-surface-variant hover:bg-surface-variant/50 transition-colors sm:p-2"
           aria-label={t.header.language}
         >
           <MaterialIcon name="language" size={20} />
         </button>
         <button
           onClick={toggleTheme}
-          className="p-2 rounded-full text-on-surface-variant hover:bg-surface-variant/50 transition-colors"
+          className="p-1.5 rounded-full text-on-surface-variant hover:bg-surface-variant/50 transition-colors sm:p-2"
           aria-label={t.landing.nav.toggleTheme}
         >
           <MaterialIcon name={theme === 'light' ? 'dark_mode' : 'light_mode'} size={20} />
         </button>
         <Link
           to={isAuthenticated ? '/app' : '/login'}
-          className="ms-2 inline-flex h-10 items-center justify-center rounded-lg px-4 text-body-md font-semibold text-on-surface hover:text-primary transition-colors"
+          className="ms-1 inline-flex h-10 items-center justify-center rounded-lg px-3 text-body-md font-semibold text-on-surface hover:text-primary transition-colors sm:ms-2 sm:px-4"
         >
           {isAuthenticated ? t.landing.nav.dashboard : t.landing.nav.signIn}
         </Link>

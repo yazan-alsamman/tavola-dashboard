@@ -74,7 +74,7 @@ export function Scene({
       dpr={dpr}
       shadows={!isMobile}
       gl={{ antialias: true, toneMapping: ACESFilmicToneMapping, toneMappingExposure: 1.05 }}
-      camera={{ position: [0, 2.4, 17], fov: 42, near: 0.1, far: 60 }}
+      camera={{ position: [0, 2.4, 17], fov: isMobile ? 55 : 42, near: 0.1, far: 60 }}
       style={{ position: 'absolute', inset: 0 }}
     >
       <color attach="background" args={[backgroundColor]} />

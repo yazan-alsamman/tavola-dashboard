@@ -21,7 +21,7 @@ export function Hero({ onPrimaryCta, primaryCtaLabel, secondaryCtaHref, secondar
   const { t } = useLocale()
 
   return (
-    <section className="relative flex min-h-screen flex-col items-center justify-center px-6 text-center">
+    <section className="relative flex min-h-screen flex-col items-center justify-center px-4 text-center sm:px-6">
       <div
         className="pointer-events-none absolute inset-0 -z-[1]"
         style={{
@@ -36,7 +36,7 @@ export function Hero({ onPrimaryCta, primaryCtaLabel, secondaryCtaHref, secondar
         </p>
         <h1
           data-entrance="title"
-          className="text-on-surface font-bold leading-[0.95] tracking-tight text-[clamp(2.75rem,7vw,5.5rem)]"
+          className="text-on-surface font-bold leading-[0.95] tracking-tight text-[clamp(2.25rem,9vw,5.5rem)]"
         >
           <span className="block">{t.landing.hero.titleLine1}</span>
           <span className="block text-primary">{t.landing.hero.titleLine2}</span>
@@ -129,7 +129,7 @@ function TextBox({ children, className }: TextBoxProps) {
       <div
         ref={boxRef}
         className={cn(
-          'rounded-2xl border border-outline-variant/30 bg-surface-container/85 px-6 py-5 shadow-xl shadow-black/10 backdrop-blur-md will-change-transform',
+          'w-full max-w-full rounded-2xl border border-outline-variant/30 bg-surface-container/85 px-5 py-4 shadow-xl shadow-black/10 backdrop-blur-md will-change-transform sm:px-6 sm:py-5',
           className,
         )}
       >
@@ -187,7 +187,7 @@ function Caption({ eyebrow, line, align, minHeightClassName }: CaptionProps) {
   return (
     <section
       ref={sectionRef}
-      className={cn('relative flex flex-col justify-center px-6 pointer-events-none', minHeightClassName)}
+      className={cn('relative flex flex-col justify-center px-4 sm:px-6 pointer-events-none', minHeightClassName)}
     >
       <div className={cn('w-full max-w-md', wrapClass)}>
         <TextBox>
@@ -266,7 +266,7 @@ export function CtaSection({ onPrimaryCta, selectedCopy }: CtaSectionProps) {
   return (
     <section
       ref={sectionRef}
-      className="relative flex min-h-[110vh] flex-col items-center justify-center px-6 text-center pointer-events-none"
+      className="relative flex min-h-[110vh] flex-col items-center justify-center px-4 text-center pointer-events-none sm:px-6"
     >
       <div className="pointer-events-auto flex flex-col items-center">
         <TextBox className="flex max-w-lg flex-col items-center text-center">
@@ -284,7 +284,7 @@ export function CtaSection({ onPrimaryCta, selectedCopy }: CtaSectionProps) {
           </p>
           <div
             data-reveal
-            className="mt-6 flex items-center gap-2 rounded-full border border-outline-variant/40 px-4 py-2 text-label-md"
+            className="mt-6 flex max-w-full flex-wrap items-center justify-center gap-x-2 gap-y-1 rounded-2xl border border-outline-variant/40 px-4 py-2 text-label-md"
           >
             <span className="font-bold text-primary">{selectedCopy.labelText}</span>
             <span className="text-on-surface-variant">·</span>
@@ -306,7 +306,7 @@ export function CtaSection({ onPrimaryCta, selectedCopy }: CtaSectionProps) {
 export function Footer() {
   const { t } = useLocale()
   return (
-    <footer className="relative border-t border-outline-variant/20 bg-background px-6 py-8 text-center">
+    <footer className="relative border-t border-outline-variant/20 bg-background px-4 py-8 text-center sm:px-6">
       <p className="text-body-sm text-on-surface-variant">
         {t.landing.nav.brand} · © {new Date().getFullYear()} · {t.landing.footer.rights}
       </p>
