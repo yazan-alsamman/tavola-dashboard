@@ -1,4 +1,4 @@
-import { apiRequest } from './client'
+import { apiRequest, getApiBaseUrl } from './client'
 import { tokenStore } from './tokenStore'
 import type {
   ActorType,
@@ -89,6 +89,34 @@ export async function logout(): Promise<void> {
   await apiRequest<undefined>('/auth/logout', {
     method: 'POST',
   })
+}
+
+/**
+ * Best-effort logout for tab/window close (`keepalive` fetch).
+ * Clears local tokens immediately so a reopen does not restore the session.
+ */
+export function logoutKeepalive(): void {
+  const accessToken = tokenStore.getAccessToken()
+  tokenStore.clear()
+  if (!accessToken || typeof fetch === 'undefined') return
+
+  try {
+    const base = getApiBaseUrl().replace(/\/+$/, '')
+    const absoluteBase = /^https?:\/\//i.test(base)
+      ? base
+      : `${typeof window !== 'undefined' ? window.location.origin : 'http://127.0.0.1'}${base}`
+    const url = `${absoluteBase}/auth/logout`
+    void fetch(url, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        Accept: 'application/json',
+      },
+      keepalive: true,
+    })
+  } catch {
+    // Unload path — ignore network failures.
+  }
 }
 
 /**

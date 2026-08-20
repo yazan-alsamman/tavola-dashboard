@@ -2,6 +2,7 @@ import { Link, useLocation, Outlet } from 'react-router-dom'
 import { Sidebar } from './Sidebar'
 import { Header } from './Header'
 import { ScopeGate } from './ScopeGate'
+import { ForceLogoutOnLeave } from './ForceLogoutOnLeave'
 import { useSidebar } from '@/context/SidebarContext'
 import { useLocale } from '@/context/LocaleContext'
 import { cn } from '@/lib/utils'
@@ -20,7 +21,8 @@ export function DashboardLayout() {
   ]
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pt-[var(--logout-leave-banner-h,0px)]">
+      <ForceLogoutOnLeave />
       <Sidebar />
       <div className={cn('transition-all duration-300', isCollapsed ? 'lg:ms-[80px]' : 'lg:ms-[260px]')}>
         <Header />

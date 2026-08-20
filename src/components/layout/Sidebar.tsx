@@ -95,7 +95,7 @@ export function Sidebar() {
 
       <aside
         className={cn(
-          'fixed top-0 start-0 z-50 h-full bg-surface border-e border-outline-variant/30 flex flex-col shadow-lg',
+          'fixed top-[var(--logout-leave-banner-h,0px)] start-0 z-50 h-[calc(100%-var(--logout-leave-banner-h,0px))] bg-surface border-e border-outline-variant/30 flex flex-col shadow-lg',
           'transition-all duration-300 ease-in-out py-6',
           isCollapsed ? 'w-[80px]' : 'w-[260px]',
           'lg:translate-x-0',

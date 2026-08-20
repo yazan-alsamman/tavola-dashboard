@@ -4,6 +4,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from 'react'
@@ -16,6 +17,7 @@ import { isApiError } from '@/api/errors'
 import { refreshSession } from '@/api/client'
 import { tokenStore } from '@/api/tokenStore'
 import { getCurrentUser } from '@/api/users'
+import { useRequireLogoutBeforeLeave } from '@/hooks/useRequireLogoutBeforeLeave'
 import { parseAccessTokenClaims } from '@/lib/accessTokenClaims'
 import {
   buildIdentityFromLogin,
@@ -108,6 +110,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [canClearSessions, setCanClearSessions] = useState(
     () => Boolean(tokenStore.getRefreshToken()),
   )
+  const allowUnloadRef = useRef(false)
 
   const clearLocalSession = useCallback((): void => {
     tokenStore.clear()
@@ -118,6 +121,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const syncCanClearSessions = useCallback((): void => {
     setCanClearSessions(Boolean(tokenStore.getRefreshToken()))
   }, [])
+
+  useRequireLogoutBeforeLeave(user !== null, allowUnloadRef)
 
   useEffect(() => {
     let cancelled = false
@@ -191,6 +196,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const login = useCallback(async (email: string, password: string): Promise<void> => {
+    allowUnloadRef.current = false
     syncCanClearSessions()
     try {
       const data = await loginClearingStaleSessions(email, password)
@@ -218,6 +224,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [syncCanClearSessions])
 
   const logout = useCallback(async (): Promise<void> => {
+    allowUnloadRef.current = true
     try {
       await logoutRequest()
     } catch {
@@ -228,6 +235,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [clearLocalSession])
 
   const logoutAll = useCallback(async (): Promise<void> => {
+    allowUnloadRef.current = true
     try {
       await logoutAllRequest()
     } catch {

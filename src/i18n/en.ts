@@ -872,6 +872,15 @@ export const en = {
   },
   auth: {
     resolvingSession: 'Restoring your session…',
+    logoutBeforeLeaveTitle: 'You must sign out before closing this tab',
+    logoutBeforeLeaveBody:
+      'Closing while signed in is not allowed. Sign out first — then you can close freely. If you leave anyway, your session will end automatically.',
+    logoutBeforeLeaveAction: 'Sign out now',
+    forceLogoutTitle: 'Sign out required',
+    forceLogoutBody:
+      'You tried to close this tab while still signed in. Sign out to leave safely, or stay and keep working.',
+    forceLogoutConfirm: 'Sign out and leave',
+    forceLogoutStay: 'Keep working',
   },
   scope: {
     loading: 'Loading restaurant scope…',

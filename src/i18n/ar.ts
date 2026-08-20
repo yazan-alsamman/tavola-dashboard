@@ -873,6 +873,15 @@ export const ar: TranslationKeys = {
   },
   auth: {
     resolvingSession: 'جارٍ استعادة جلستك…',
+    logoutBeforeLeaveTitle: 'يجب تسجيل الخروج قبل إغلاق هذه العلامة',
+    logoutBeforeLeaveBody:
+      'لا يُسمح بالإغلاق وأنت مسجّل الدخول. سجّل الخروج أولاً ثم أغلق بحرية. إن غادرت على أي حال فستنتهي جلستك تلقائياً.',
+    logoutBeforeLeaveAction: 'تسجيل الخروج الآن',
+    forceLogoutTitle: 'تسجيل الخروج مطلوب',
+    forceLogoutBody:
+      'حاولت إغلاق العلامة وأنت ما زلت مسجّل الدخول. سجّل الخروج للمغادرة بأمان، أو ابقَ لمتابعة العمل.',
+    forceLogoutConfirm: 'تسجيل الخروج والمغادرة',
+    forceLogoutStay: 'متابعة العمل',
   },
   scope: {
     loading: 'جارٍ تحميل نطاق المطعم…',
