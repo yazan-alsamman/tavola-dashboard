@@ -1,5 +1,4 @@
-import { apiRequest, getApiBaseUrl } from './client'
-import { tokenStore } from './tokenStore'
+import { clearForcedLogoutPending } from '@/lib/leaveGuard'
 import type {
   ActorType,
   DeviceType,
@@ -7,6 +6,8 @@ import type {
   UserAccountStatus,
 } from '@/types/auth'
 import { isOrgRole } from '@/types/auth'
+import { apiRequest, getApiBaseUrl } from './client'
+import { tokenStore } from './tokenStore'
 
 export interface LoginRequest {
   email: string
@@ -93,11 +94,13 @@ export async function logout(): Promise<void> {
 
 /**
  * Best-effort logout for tab/window close (`keepalive` fetch).
- * Clears local tokens immediately so a reopen does not restore the session.
+ * Clears local tokens immediately so a reopen does not restore the session,
+ * and revokes the server session when the access token is still available.
  */
 export function logoutKeepalive(): void {
   const accessToken = tokenStore.getAccessToken()
   tokenStore.clear()
+  clearForcedLogoutPending()
   if (!accessToken || typeof fetch === 'undefined') return
 
   try {

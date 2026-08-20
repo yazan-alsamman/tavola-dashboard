@@ -882,9 +882,9 @@ export const en = {
     forceLogoutConfirm: 'Log out and close',
     forceLogoutStay: 'Continue working',
     logoutCloseFlowHint:
-      'To leave: close the tab → Cancel on the browser prompt → then Log out and close.',
+      'Closing the tab ends your session. Prefer Log out and close so the server confirms logout.',
     logoutAutoOnCloseHint:
-      'If you leave the tab without logging out here, your session still ends automatically.',
+      'Choosing Leave on the browser prompt logs you out and ends this session automatically.',
     signedOutCloseTitle: 'You are logged out',
     signedOutCloseBody:
       'Your session has ended. Close this tab now — the browser may require you to close it yourself.',

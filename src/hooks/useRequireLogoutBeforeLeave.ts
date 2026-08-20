@@ -1,7 +1,9 @@
 import { useEffect, useRef, type MutableRefObject } from 'react'
 import { logoutKeepalive } from '@/api/auth'
 import {
+  clearForcedLogoutPending,
   consumeLeaveAttemptPending,
+  markForcedLogoutPending,
   markLeaveAttemptPending,
   notifyLeaveAttempt,
 } from '@/lib/leaveGuard'
@@ -9,8 +11,8 @@ import {
 /**
  * Intercepts tab/window close while authenticated:
  * 1) Browser shows its leave dialog (required to pause closing — custom UI cannot run there)
- * 2) If the user stays (Cancel), we open our styled logout modal
- * 3) If they leave anyway, keepalive logout still ends the session
+ * 2) If the user stays (Cancel), we open our styled logout modal and clear the pending flag
+ * 3) If they confirm Leave, keepalive logout ends the server session and clears local tokens
  */
 export function useRequireLogoutBeforeLeave(
   isAuthenticated: boolean,
@@ -23,16 +25,29 @@ export function useRequireLogoutBeforeLeave(
     if (!isAuthenticated) return
 
     let reopenTimer: ReturnType<typeof setTimeout> | undefined
+    let sessionEnded = false
+
+    const endSessionOnLeave = (): void => {
+      if (sessionEnded) return
+      if (allowUnloadRef.current) return
+      if (!authenticatedRef.current) return
+      sessionEnded = true
+      logoutKeepalive()
+      authenticatedRef.current = false
+    }
 
     const openLogoutModalIfStayed = (): void => {
       if (allowUnloadRef.current || !authenticatedRef.current) return
       if (!consumeLeaveAttemptPending()) return
+      clearForcedLogoutPending()
       notifyLeaveAttempt()
     }
 
     const onBeforeUnload = (event: BeforeUnloadEvent): void => {
       if (allowUnloadRef.current || !authenticatedRef.current) return
       markLeaveAttemptPending()
+      // Sync flag so a confirmed Leave that skips pagehide still cannot restore on reopen.
+      markForcedLogoutPending()
       event.preventDefault()
       event.returnValue = ''
 
@@ -46,11 +61,12 @@ export function useRequireLogoutBeforeLeave(
 
     const onPageHide = (event: PageTransitionEvent): void => {
       window.clearTimeout(reopenTimer)
-      if (allowUnloadRef.current) return
       if (event.persisted) return
-      if (!authenticatedRef.current) return
-      logoutKeepalive()
-      authenticatedRef.current = false
+      endSessionOnLeave()
+    }
+
+    const onUnload = (): void => {
+      endSessionOnLeave()
     }
 
     const onFocus = (): void => {
@@ -69,6 +85,7 @@ export function useRequireLogoutBeforeLeave(
 
     window.addEventListener('beforeunload', onBeforeUnload)
     window.addEventListener('pagehide', onPageHide)
+    window.addEventListener('unload', onUnload)
     window.addEventListener('focus', onFocus)
     window.addEventListener('pageshow', onPageShow)
     document.addEventListener('visibilitychange', onVisibility)
@@ -77,6 +94,7 @@ export function useRequireLogoutBeforeLeave(
       window.clearTimeout(reopenTimer)
       window.removeEventListener('beforeunload', onBeforeUnload)
       window.removeEventListener('pagehide', onPageHide)
+      window.removeEventListener('unload', onUnload)
       window.removeEventListener('focus', onFocus)
       window.removeEventListener('pageshow', onPageShow)
       document.removeEventListener('visibilitychange', onVisibility)

@@ -23,6 +23,10 @@ import {
   buildIdentityFromLogin,
   buildIdentityFromSession,
 } from '@/lib/authIdentity'
+import {
+  clearForcedLogoutPending,
+  isForcedLogoutPending,
+} from '@/lib/leaveGuard'
 import type { AuthIdentity } from '@/types/auth'
 
 interface AuthContextValue {
@@ -114,6 +118,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const clearLocalSession = useCallback((): void => {
     tokenStore.clear()
+    clearForcedLogoutPending()
     setUser(null)
     setCanClearSessions(false)
   }, [])
@@ -128,6 +133,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let cancelled = false
 
     async function bootstrap(): Promise<void> {
+      // Leave confirmed in a previous tab close without a chance to run keepalive logout.
+      if (isForcedLogoutPending()) {
+        clearForcedLogoutPending()
+        tokenStore.clear()
+        if (!cancelled) {
+          setUser(null)
+          setCanClearSessions(false)
+          setIsLoading(false)
+        }
+        return
+      }
+
       const refreshToken = tokenStore.getRefreshToken()
       if (!refreshToken) {
         if (!cancelled) {

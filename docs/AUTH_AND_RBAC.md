@@ -38,6 +38,7 @@ Feature pages still use mock business data via legacy `RestaurantContext` until 
 3. `AuthProvider` exposes `{ user, isAuthenticated, isLoading, login, logout }`.
 4. On `401` + `AUTH_EXPIRED_TOKEN`, the API client performs one silent refresh (see `API_INTEGRATION.md`). Failed refresh / `AUTH_INVALID_TOKEN` clears tokens and notifies session-invalidated listeners; `AuthProvider` clears `user`, and route guards send the user to `/login`.
 5. `logout()` calls `POST /auth/logout` while the access token is still present, then always clears local auth state even if the network call fails.
+6. Tab/window close while signed in: `beforeunload` shows the browser leave prompt. **Cancel** opens the in-app logout dialog. **Leave** runs `logoutKeepalive()` (`POST /auth/logout` with `fetch({ keepalive: true })`), clears tokens immediately, and sets a `localStorage` pending flag so a missed unload path cannot restore the session on the next visit.
 
 ---
 
