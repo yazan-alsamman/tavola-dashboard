@@ -872,15 +872,24 @@ export const en = {
   },
   auth: {
     resolvingSession: 'Restoring your session…',
-    logoutBeforeLeaveTitle: 'You must sign out before closing this tab',
+    logoutBeforeLeaveTitle: 'Log out before closing',
     logoutBeforeLeaveBody:
-      'Closing while signed in is not allowed. Sign out first — then you can close freely. If you leave anyway, your session will end automatically.',
-    logoutBeforeLeaveAction: 'Sign out now',
-    forceLogoutTitle: 'Sign out required',
+      'Use Log out and close to free your session. Closing the tab also ends your session automatically.',
+    logoutBeforeLeaveAction: 'Log out and close',
+    forceLogoutTitle: 'Log out required',
     forceLogoutBody:
-      'You tried to close this tab while still signed in. Sign out to leave safely, or stay and keep working.',
-    forceLogoutConfirm: 'Sign out and leave',
-    forceLogoutStay: 'Keep working',
+      'You tried to close this tab while signed in. Log out to free your session — the window will close after logout.',
+    forceLogoutConfirm: 'Log out and close',
+    forceLogoutStay: 'Continue working',
+    logoutCloseFlowHint:
+      'To leave: close the tab → Cancel on the browser prompt → then Log out and close.',
+    logoutAutoOnCloseHint:
+      'If you leave the tab without logging out here, your session still ends automatically.',
+    signedOutCloseTitle: 'You are logged out',
+    signedOutCloseBody:
+      'Your session has ended. Close this tab now — the browser may require you to close it yourself.',
+    signedOutCloseAction: 'Close window',
+    signedOutGoToLogin: 'Go to login',
   },
   scope: {
     loading: 'Loading restaurant scope…',

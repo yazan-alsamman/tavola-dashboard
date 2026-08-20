@@ -1,122 +1,187 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/context/AuthContext'
 import { useLocale } from '@/context/LocaleContext'
-import { onLeaveAttempt } from '@/lib/leaveGuard'
+import {
+  clearAwaitingCloseAfterLogout,
+  isAwaitingCloseAfterLogout,
+  markAwaitingCloseAfterLogout,
+  onLeaveAttempt,
+} from '@/lib/leaveGuard'
 import { Button } from '@/components/ui/Button'
 import { MaterialIcon } from '@/components/ui/Icon'
 
 /**
- * Sticky warning + blocking modal after a close/leave attempt while signed in.
- * Closing the tab without signing out is not allowed: leave ends the session;
- * cancelling leave opens this modal and requires Sign out (or continue working).
+ * Opens the styled logout dialog only after a close/leave attempt
+ * (user cancels the browser leave dialog). Never auto-opens on page load.
  */
 export function ForceLogoutOnLeave() {
   const { t } = useLocale()
   const { logout, isAuthenticated } = useAuth()
+  const location = useLocation()
   const navigate = useNavigate()
   const [signingOut, setSigningOut] = useState(false)
-  const [forceOpen, setForceOpen] = useState(false)
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const [signedOutAwaitingClose, setSignedOutAwaitingClose] = useState(() =>
+    isAwaitingCloseAfterLogout(),
+  )
+
+  const onDashboard = location.pathname.startsWith('/app')
 
   useEffect(() => {
     if (!isAuthenticated) {
-      setForceOpen(false)
+      setConfirmOpen(false)
       return
     }
     return onLeaveAttempt(() => {
-      setForceOpen(true)
+      setConfirmOpen(true)
     })
   }, [isAuthenticated])
 
   useEffect(() => {
-    if (!isAuthenticated) return
-    document.documentElement.style.setProperty('--logout-leave-banner-h', '4.25rem')
+    if (!(isAuthenticated && onDashboard)) {
+      document.documentElement.style.removeProperty('--logout-leave-banner-h')
+      return
+    }
+    document.documentElement.style.setProperty('--logout-leave-banner-h', '2.75rem')
     return () => {
       document.documentElement.style.removeProperty('--logout-leave-banner-h')
     }
-  }, [isAuthenticated])
+  }, [isAuthenticated, onDashboard])
 
-  if (!isAuthenticated) return null
-
-  const handleLogout = async (): Promise<void> => {
+  const handleLogoutAndClose = async (): Promise<void> => {
     if (signingOut) return
     setSigningOut(true)
     try {
+      markAwaitingCloseAfterLogout()
       await logout()
-      setForceOpen(false)
-      navigate('/login', { replace: true })
+      setConfirmOpen(false)
+      setSignedOutAwaitingClose(true)
+      window.close()
     } finally {
       setSigningOut(false)
     }
   }
 
-  return (
-    <>
-      <div
-        role="status"
-        className="fixed inset-x-0 top-0 z-[60] border-b border-warning/40 bg-warning-light px-4 py-2.5 shadow-elevated"
-      >
-        <div className="mx-auto flex max-w-[1400px] flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-start gap-2 min-w-0">
-            <MaterialIcon name="warning" size={20} className="mt-0.5 shrink-0 text-warning" />
-            <div className="min-w-0">
-              <p className="text-sm font-bold text-on-surface">
-                {t.auth.logoutBeforeLeaveTitle}
-              </p>
-              <p className="text-xs text-on-surface-variant">
-                {t.auth.logoutBeforeLeaveBody}
-              </p>
+  if (signedOutAwaitingClose) {
+    return (
+      <div className="fixed inset-0 z-[80] flex items-center justify-center bg-inverse-surface/50 p-6 backdrop-blur-sm">
+        <div className="w-full max-w-md overflow-hidden rounded-2xl border border-outline-variant/20 bg-surface-container-lowest shadow-modal animate-scale-in">
+          <div className="bg-primary px-6 py-5 text-center">
+            <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-white/15 text-on-primary">
+              <MaterialIcon name="check_circle" size={32} />
+            </div>
+            <h2 className="text-xl font-bold text-on-primary">{t.auth.signedOutCloseTitle}</h2>
+          </div>
+          <div className="px-6 py-5 text-center">
+            <p className="text-body-sm text-on-surface-variant">{t.auth.signedOutCloseBody}</p>
+            <div className="mt-6 flex flex-col gap-2">
+              <Button
+                type="button"
+                variant="primary"
+                className="w-full rounded-full"
+                onClick={() => {
+                  window.close()
+                }}
+              >
+                {t.auth.signedOutCloseAction}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full rounded-full"
+                onClick={() => {
+                  clearAwaitingCloseAfterLogout()
+                  setSignedOutAwaitingClose(false)
+                  navigate('/login', { replace: true })
+                }}
+              >
+                {t.auth.signedOutGoToLogin}
+              </Button>
             </div>
           </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (!isAuthenticated || !onDashboard) return null
+
+  return (
+    <>
+      <div className="fixed inset-x-0 top-0 z-[60] border-b border-primary/15 bg-primary-light/90 px-3 py-1.5 backdrop-blur-sm">
+        <div className="mx-auto flex max-w-[1400px] items-center justify-between gap-3">
+          <p className="min-w-0 truncate text-xs text-on-surface-variant">
+            {t.auth.logoutCloseFlowHint}
+          </p>
           <Button
             type="button"
             variant="primary"
             size="sm"
-            className="shrink-0"
+            className="shrink-0 rounded-full"
             disabled={signingOut}
-            onClick={() => void handleLogout()}
+            onClick={() => setConfirmOpen(true)}
           >
-            {signingOut ? t.common.loading : t.auth.logoutBeforeLeaveAction}
+            {t.auth.logoutBeforeLeaveAction}
           </Button>
         </div>
       </div>
 
-      {forceOpen && (
+      {confirmOpen && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-inverse-surface/70 backdrop-blur-sm" aria-hidden="true" />
+          <div
+            className="absolute inset-0 bg-inverse-surface/55 backdrop-blur-[2px]"
+            aria-hidden="true"
+            onClick={() => setConfirmOpen(false)}
+          />
           <div
             role="alertdialog"
             aria-modal="true"
-            aria-labelledby="force-logout-title"
-            aria-describedby="force-logout-desc"
-            className="relative w-full max-w-md rounded-xl border border-danger/30 bg-surface-container-lowest p-6 shadow-modal"
+            aria-labelledby="logout-alert-title"
+            aria-describedby="logout-alert-desc"
+            className="relative w-full max-w-md overflow-hidden rounded-2xl border border-primary/20 bg-surface-container-lowest shadow-modal animate-scale-in"
           >
-            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-danger-light text-danger">
-              <MaterialIcon name="logout" size={24} />
+            <div className="bg-gradient-to-br from-primary to-primary-container px-6 py-6 text-center">
+              <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-white/15 text-on-primary ring-4 ring-white/10">
+                <MaterialIcon name="logout" size={30} />
+              </div>
+              <h2 id="logout-alert-title" className="text-xl font-bold text-on-primary">
+                {t.auth.forceLogoutTitle}
+              </h2>
             </div>
-            <h2 id="force-logout-title" className="text-headline-md text-on-surface font-bold">
-              {t.auth.forceLogoutTitle}
-            </h2>
-            <p id="force-logout-desc" className="mt-2 text-body-sm text-on-surface-variant">
-              {t.auth.forceLogoutBody}
-            </p>
-            <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-              <Button
-                type="button"
-                variant="outline"
-                disabled={signingOut}
-                onClick={() => setForceOpen(false)}
+
+            <div className="px-6 py-5">
+              <p
+                id="logout-alert-desc"
+                className="text-center text-body-sm leading-relaxed text-on-surface-variant"
               >
-                {t.auth.forceLogoutStay}
-              </Button>
-              <Button
-                type="button"
-                variant="primary"
-                disabled={signingOut}
-                onClick={() => void handleLogout()}
-              >
-                {signingOut ? t.common.loading : t.auth.forceLogoutConfirm}
-              </Button>
+                {t.auth.forceLogoutBody}
+              </p>
+
+              <div className="mt-6 flex flex-col gap-2.5">
+                <Button
+                  type="button"
+                  variant="primary"
+                  className="w-full rounded-full py-2.5 text-base font-semibold"
+                  disabled={signingOut}
+                  onClick={() => void handleLogoutAndClose()}
+                >
+                  {signingOut ? t.common.loading : t.auth.forceLogoutConfirm}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full rounded-full"
+                  disabled={signingOut}
+                  onClick={() => setConfirmOpen(false)}
+                >
+                  {t.auth.forceLogoutStay}
+                </Button>
+              </div>
+
+              <p className="mt-4 text-center text-[11px] leading-snug text-on-surface-variant/80">
+                {t.auth.logoutAutoOnCloseHint}
+              </p>
             </div>
           </div>
         </div>

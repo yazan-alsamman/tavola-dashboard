@@ -7,12 +7,10 @@ import {
 } from '@/lib/leaveGuard'
 
 /**
- * While authenticated:
- * - Blocks tab/window close with the browser leave dialog
- * - If the user cancels and stays, opens the in-app force-logout modal
- * - If they leave anyway, keepalive logout ends the server session
- *
- * Intentional app logout sets `allowUnloadRef` so the prompt does not fire.
+ * Intercepts tab/window close while authenticated:
+ * 1) Browser shows its leave dialog (required to pause closing — custom UI cannot run there)
+ * 2) If the user stays (Cancel), we open our styled logout modal
+ * 3) If they leave anyway, keepalive logout still ends the session
  */
 export function useRequireLogoutBeforeLeave(
   isAuthenticated: boolean,
@@ -24,40 +22,49 @@ export function useRequireLogoutBeforeLeave(
   useEffect(() => {
     if (!isAuthenticated) return
 
-    const onBeforeUnload = (event: BeforeUnloadEvent): void => {
-      if (allowUnloadRef.current || !authenticatedRef.current) return
-      markLeaveAttemptPending()
-      event.preventDefault()
-      event.returnValue = ''
-    }
+    let reopenTimer: ReturnType<typeof setTimeout> | undefined
 
-    const onPageHide = (event: PageTransitionEvent): void => {
-      if (allowUnloadRef.current) return
-      if (event.persisted) return
-      if (!authenticatedRef.current) return
-      // User confirmed leave — end the session so they cannot leave still signed in.
-      logoutKeepalive()
-      authenticatedRef.current = false
-    }
-
-    const surfaceForceModal = (): void => {
+    const openLogoutModalIfStayed = (): void => {
       if (allowUnloadRef.current || !authenticatedRef.current) return
       if (!consumeLeaveAttemptPending()) return
       notifyLeaveAttempt()
     }
 
+    const onBeforeUnload = (event: BeforeUnloadEvent): void => {
+      if (allowUnloadRef.current || !authenticatedRef.current) return
+      markLeaveAttemptPending()
+      event.preventDefault()
+      event.returnValue = ''
+
+      window.clearTimeout(reopenTimer)
+      reopenTimer = window.setTimeout(() => {
+        if (document.visibilityState === 'visible') {
+          openLogoutModalIfStayed()
+        }
+      }, 0)
+    }
+
+    const onPageHide = (event: PageTransitionEvent): void => {
+      window.clearTimeout(reopenTimer)
+      if (allowUnloadRef.current) return
+      if (event.persisted) return
+      if (!authenticatedRef.current) return
+      logoutKeepalive()
+      authenticatedRef.current = false
+    }
+
     const onFocus = (): void => {
-      surfaceForceModal()
+      openLogoutModalIfStayed()
     }
 
     const onVisibility = (): void => {
       if (document.visibilityState === 'visible') {
-        surfaceForceModal()
+        openLogoutModalIfStayed()
       }
     }
 
     const onPageShow = (): void => {
-      surfaceForceModal()
+      openLogoutModalIfStayed()
     }
 
     window.addEventListener('beforeunload', onBeforeUnload)
@@ -67,6 +74,7 @@ export function useRequireLogoutBeforeLeave(
     document.addEventListener('visibilitychange', onVisibility)
 
     return () => {
+      window.clearTimeout(reopenTimer)
       window.removeEventListener('beforeunload', onBeforeUnload)
       window.removeEventListener('pagehide', onPageHide)
       window.removeEventListener('focus', onFocus)

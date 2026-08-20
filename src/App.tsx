@@ -9,6 +9,7 @@ import { ToastProvider } from '@/context/ToastContext'
 import { AppQueryProvider } from '@/components/providers/AppQueryProvider'
 import { ProtectedRoute, PublicRoute } from '@/components/auth/ProtectedRoute'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
+import { ForceLogoutOnLeave } from '@/components/layout/ForceLogoutOnLeave'
 import { OneSignalIdentityBootstrap } from '@/components/providers/OneSignalIdentityBootstrap'
 import { LoginPage } from '@/pages/Login'
 import { DashboardPage } from '@/pages/Dashboard'
@@ -45,6 +46,7 @@ export default function App() {
               <ToastProvider>
                 <SidebarProvider>
                   <BrowserRouter>
+                    <ForceLogoutOnLeave />
                     <Routes>
                       <Route
                         path="/"
