@@ -59,11 +59,12 @@ Supporting modules:
 | `src/api/waitlist.ts` | join, cancel, promote |
 | `src/api/health.ts` | health / liveness / readiness (non-envelope) |
 | `src/api/analytics.ts` | customers, reservation summary, branch trends/peak-hours, waitlist, reviews-summary, org reservation summary |
-| `src/api/organizations.ts` | subscription + usage |
+| `src/api/organizations.ts` | subscription + usage + members/invitations/transfer + accept invitation |
 | `src/api/offers.ts` | create/list/update/publish/delete |
 | `src/api/reviews.ts` | restaurant list/get, reply, delete (staff management) |
 | `src/api/messaging.ts` | restaurant inbox, conversation CRUD, multipart send |
 | `src/api/menus.ts` | full menu tree management + public GETs for render |
+| `src/api/notifications.ts` | list, unread-count, identity-token, mark read / read-all, restaurant broadcast |
 
 See `docs/API_COMPATIBILITY_REPORT.md` for the full Postman ↔ client ↔ UI matrix (regenerate with `node scripts/build-compat-matrix.mjs`).
 
@@ -71,9 +72,10 @@ See `docs/API_COMPATIBILITY_REPORT.md` for the full Postman ↔ client ↔ UI ma
 
 | Surface | Reality | UI approach |
 |---|---|---|
-| Staff reservation inbox | `GET /reservations` is ownership-only | Ownership list + honest banner |
+| Staff reservation inbox | Branch `GET …/branches/:bid/reservations?dateFrom&dateTo` (Employee); ownership `GET /reservations` fallback | Calendar + Reservations use branch window; fallback banner if 403 |
 | Waitlist board | No GET list | Session-tracked entries + join/promote/cancel |
 | Employee directory | No GET list | Invite + manage-by-id |
+| Org team | Members + invitations live | Settings → Team (Owner/Admin) |
 ---
 
 # Floor Plans & Tables (Phases 5–6 — reads + mutations)

@@ -11,6 +11,7 @@ export const reservationKeys = {
     from: string,
     to: string,
     restaurantId: string | null,
+    branchId?: string | null,
   ) =>
     [
       ...reservationKeys.all,
@@ -18,6 +19,25 @@ export const reservationKeys = {
       from,
       to,
       restaurantId ?? '',
+      branchId ?? '',
+    ] as const,
+  branchWindow: (
+    restaurantId: string | null,
+    branchId: string | null,
+    from: string,
+    to: string,
+    page: number,
+    pageSize: number,
+  ) =>
+    [
+      ...reservationKeys.all,
+      'branch-window',
+      restaurantId ?? '',
+      branchId ?? '',
+      from,
+      to,
+      page,
+      pageSize,
     ] as const,
   detail: (id: string) => [...reservationKeys.all, 'detail', id] as const,
   availability: (
@@ -109,4 +129,8 @@ export const orgKeys = {
   all: ['organization'] as const,
   subscription: () => [...orgKeys.all, 'subscription'] as const,
   usage: () => [...orgKeys.all, 'usage'] as const,
+  members: (page: number, pageSize: number) =>
+    [...orgKeys.all, 'members', page, pageSize] as const,
+  invitations: (page: number, pageSize: number) =>
+    [...orgKeys.all, 'invitations', page, pageSize] as const,
 }

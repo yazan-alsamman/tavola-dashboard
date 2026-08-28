@@ -20,7 +20,9 @@ import {
 import {
   useOrganizationSubscriptionQuery,
   useOrganizationUsageQuery,
+  useCanManageOrganization,
 } from '@/hooks/useOrganizationQueries'
+import { SettingsTeamPanel } from '@/components/settings/SettingsTeamPanel'
 import { displayPayloadFields } from '@/lib/analyticsPayload'
 import {
   addRestaurantGalleryImage,
@@ -63,6 +65,7 @@ const tabs = [
   'hours',
   'rules',
   'account',
+  'team',
   'subscription',
   'security',
 ] as const
@@ -100,6 +103,7 @@ export function SettingsPage() {
   const navigate = useNavigate()
   const { logoutAll } = useAuth()
   const queryClient = useQueryClient()
+  const canManageOrg = useCanManageOrganization()
   const { status, selectedRestaurantId, selectedRestaurant, refreshScope } =
     useRestaurantScope()
   const [activeTab, setActiveTab] = useState<(typeof tabs)[number]>('profile')
@@ -487,7 +491,9 @@ export function SettingsPage() {
       <PageHeader title={t.settings.title} subtitle={t.settings.subtitle} />
 
       <div className="flex flex-wrap gap-2 mb-6">
-        {tabs.map((tab) => (
+        {tabs
+          .filter((tab) => (tab === 'team' || tab === 'subscription' ? canManageOrg : true))
+          .map((tab) => (
           <button
             key={tab}
             type="button"
@@ -821,6 +827,8 @@ export function SettingsPage() {
           </form>
         </Card>
       )}
+
+      {activeTab === 'team' && canManageOrg && <SettingsTeamPanel />}
 
       {activeTab === 'subscription' && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-4xl">

@@ -19,7 +19,9 @@ import {
 } from '@/components/ui/DataTable'
 import { useLocale } from '@/context/LocaleContext'
 import { useRestaurantScope } from '@/context/RestaurantScopeContext'
-import { useMyReservationsQuery } from '@/hooks/useReservationQueries'
+import { useBranchReservationsWindowQuery } from '@/hooks/useReservationQueries'
+import { shiftDateKey } from '@/lib/calendarDates'
+import { getTodayISO } from '@/lib/utils'
 
 const PAGE_SIZE = 20
 
@@ -68,7 +70,7 @@ function matchesSearch(reservation: ReservationDto, query: string): boolean {
 }
 
 /**
- * Staff reservations hub — ownership-based list + availability create.
+ * Staff reservations hub — branch date-window list with ownership fallback.
  */
 export function ReservationsPage() {
   const { t, locale } = useLocale()
@@ -84,7 +86,17 @@ export function ReservationsPage() {
   const [statusFilter, setStatusFilter] = useState<ReservationStatusDto | ''>('')
   const [searchText, setSearchText] = useState('')
 
-  const listQuery = useMyReservationsQuery(page, PAGE_SIZE)
+  const today = getTodayISO()
+  const dateFrom = shiftDateKey(today, -30)
+  const dateTo = shiftDateKey(today, 60)
+
+  const listQuery = useBranchReservationsWindowQuery(
+    dateFrom,
+    dateTo,
+    page,
+    PAGE_SIZE,
+    scopeStatus === 'ready',
+  )
 
   const filteredItems = useMemo(() => {
     const items = listQuery.data?.items ?? []
@@ -96,6 +108,7 @@ export function ReservationsPage() {
 
   const total = listQuery.data?.total ?? 0
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
+  const usingFallback = listQuery.data?.source === 'ownership-fallback'
 
   return (
     <div>
@@ -106,10 +119,14 @@ export function ReservationsPage() {
           <MaterialIcon name="info" size={22} className="text-primary shrink-0 mt-0.5" />
           <div>
             <h2 className="text-label-lg font-semibold text-on-surface">
-              {t.reservations.backendGap.title}
+              {usingFallback
+                ? t.reservations.backendGap.title
+                : t.reservations.branchInbox.title}
             </h2>
             <p className="text-body-md text-on-surface-variant mt-1">
-              {t.reservations.backendGap.body}
+              {usingFallback
+                ? t.reservations.backendGap.body
+                : t.reservations.branchInbox.body}
             </p>
             {selectedBranch && (
               <p className="text-label-sm text-on-surface-variant mt-2">

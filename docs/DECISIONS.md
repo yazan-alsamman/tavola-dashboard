@@ -210,3 +210,20 @@ Treat this as explicitly temporary bootstrap state. `ARCHITECTURE.md` specifies 
 
 Consequences:
 No feature should extend the mock/fake-auth pattern further. Each feature area's real wiring should be its own change, updating this log and `API_INTEGRATION.md`'s endpoint catalog as endpoints are confirmed against a live backend or an updated Postman collection.
+
+## ADR-009 — Wire Phase 19 Postman staff gaps (branch calendar, broadcast, org team)
+Date: 2026-08-28
+Status: Accepted
+
+Context:
+The adopted `postman/TAVLA-API.postman_collection.json` (224 requests, production `baseUrl`) added Restaurant Dashboard Calendar, restaurant notification broadcast, organization members/invitations/transfer, and public invitation accept. The dashboard still used ownership `GET /reservations` for Calendar/Reservations and had no Team/broadcast/accept-invite surfaces. Platform Admin routes remain out of scope.
+
+Decision:
+1. Add `listBranchReservations` and drive Calendar + Reservations from the branch date-window API; on Employee-only 403, fall back to ownership list with an honest banner.
+2. Add Owner/Admin broadcast on Notifications via `POST /restaurants/:id/notifications/broadcast`.
+3. Add Settings → Team for members/invitations/role/remove/transfer (Owner/Admin).
+4. Add public `/invite/:token` accept flow.
+5. Do not invent waitlist board or employee roster list endpoints (still absent from Postman).
+
+Consequences:
+Owner/Admin OrganizationMember sessions may see the ownership fallback for calendar/inbox until they also hold an Employee actor. Customer and Platform Admin collections remain intentionally unwired.

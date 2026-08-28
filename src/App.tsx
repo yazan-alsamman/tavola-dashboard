@@ -12,6 +12,7 @@ import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { ForceLogoutOnLeave } from '@/components/layout/ForceLogoutOnLeave'
 import { OneSignalIdentityBootstrap } from '@/components/providers/OneSignalIdentityBootstrap'
 import { LoginPage } from '@/pages/Login'
+import { AcceptInvitePage } from '@/pages/AcceptInvite'
 import { DashboardPage } from '@/pages/Dashboard'
 import { ReservationsPage } from '@/pages/Reservations'
 import { ReservationDetailPage } from '@/pages/ReservationDetail'
@@ -56,6 +57,7 @@ export default function App() {
                           </Suspense>
                         }
                       />
+                      <Route path="/invite/:token" element={<AcceptInvitePage />} />
                       <Route element={<PublicRoute />}>
                         <Route path="/login" element={<LoginPage />} />
                       </Route>

@@ -161,10 +161,11 @@ export function CalendarPage() {
   }, [anchorDate, view])
 
   const rangeQuery = useCalendarRangeReservationsQuery(range.from, range.to, true)
+  const calendarSource = rangeQuery.data?.source
 
   const byDay = useMemo(() => {
     const map = new Map<string, ReservationDto[]>()
-    for (const reservation of rangeQuery.data ?? []) {
+    for (const reservation of rangeQuery.data?.items ?? []) {
       const key = dayKeyOf(reservation)
       const list = map.get(key) ?? []
       list.push(reservation)
@@ -174,7 +175,7 @@ export function CalendarPage() {
       list.sort(sortByStartTime)
     }
     return map
-  }, [rangeQuery.data])
+  }, [rangeQuery.data?.items])
 
   const periodDays = useMemo(
     () => eachDateKey(range.from, range.to),
@@ -199,7 +200,7 @@ export function CalendarPage() {
       .sort((a, b) => b.count - a.count || a.day.localeCompare(b.day))
   }, [byDay, periodDays])
 
-  const totalBookings = rangeQuery.data?.length ?? 0
+  const totalBookings = rangeQuery.data?.items.length ?? 0
 
   const dayReservations = byDay.get(anchorDate) ?? []
 
@@ -348,9 +349,11 @@ export function CalendarPage() {
           </p>
         </div>
         <div className="rounded-2xl border border-outline-variant/25 bg-surface-container-low p-4">
-          <p className="text-label-sm text-on-surface-variant">{t.calendar.ownershipNoteShort}</p>
+          <p className="text-label-sm text-on-surface-variant">{t.calendar.scopeNoteShort}</p>
           <p className="mt-1 text-body-sm text-on-surface-variant line-clamp-2">
-            {t.calendar.ownershipNote}
+            {calendarSource === 'ownership-fallback'
+              ? t.calendar.ownershipFallbackNote
+              : t.calendar.branchScopeNote}
           </p>
         </div>
       </div>

@@ -209,6 +209,47 @@ export async function getMyReservation(
   return apiRequest<ReservationDto>(`/reservations/${reservationId}`, { signal })
 }
 
+/**
+ * Branch calendar / staff inbox (Postman: List Branch Reservations).
+ * Required `dateFrom`/`dateTo` (inclusive `reservationDate`, max 366 days).
+ * Actor: Employee (branch-scoped). OrganizationMember Owner/Admin may receive 403.
+ */
+export interface ListBranchReservationsParams {
+  restaurantId: string
+  branchId: string
+  dateFrom: string
+  dateTo: string
+  status?: ReservationStatusDto
+  page?: number
+  pageSize?: number
+}
+
+/** Enriched row — base reservation fields plus optional display joins. */
+export interface BranchReservationDto extends ReservationDto {
+  tableNumber?: string | null
+  customerDisplayName?: string | null
+  guestFullName?: string | null
+}
+
+export async function listBranchReservations(
+  params: ListBranchReservationsParams,
+  signal?: AbortSignal,
+): Promise<PaginatedData<BranchReservationDto>> {
+  return apiRequest<PaginatedData<BranchReservationDto>>(
+    `/restaurants/${params.restaurantId}/branches/${params.branchId}/reservations`,
+    {
+      query: {
+        dateFrom: params.dateFrom,
+        dateTo: params.dateTo,
+        page: params.page ?? 1,
+        limit: params.pageSize ?? 20,
+        ...(params.status ? { status: params.status } : {}),
+      },
+      signal,
+    },
+  )
+}
+
 /** Staff `reservations:approve` — Pending only. */
 export async function approveReservation(
   reservationId: string,
