@@ -100,7 +100,7 @@ Confirmed live OpenAPI / Postman (Owner/Admin org role):
 
 **TableStatus (response):** `Available` \| `Occupied` \| `Cleaning` \| `Disabled` \| `Reserved` \| `Merged`. Only `Available` ↔ `Occupied`/`Cleaning`/`Disabled` can be set (`ManualTableStatusDto`); `Reserved` and `Merged` are read-only and offer no transitions. `TableDto` also carries `isMergePrimary`.
 
-**Areas:** there is no partition/section API. The Floor Plan page presents each FloorPlan as a named area (Main Hall, Terrace, …) in `FloorAreaTabs`; Add area = Create FloorPlan, Move to area = Move Table. Per-area counts come from the branch table list (`countTablesByFloorPlan`).
+**Areas:** there is no partition/section API and no geometry or color on FloorPlan (re-checked live OpenAPI, 187 paths, 23 September 2026). The Floor Plan page presents each FloorPlan as a named area. **All areas** draws every plan on one page; each frame is computed from that plan’s tables and is not stored. Add area = Create FloorPlan `{ name }`. Move to area = Move Table, then Update for the drop position. Per-area counts come from the branch table list (`countTablesByFloorPlan`). A tint on the frame is display-only.
 
 **Guest floor plan:** `GET /discovery/restaurants/:restaurantId/branches/:branchId/floor-plan` returns the **active** plan only, with `shape` and the full box per table. Tables on an inactive plan are invisible to mobile guests.
 

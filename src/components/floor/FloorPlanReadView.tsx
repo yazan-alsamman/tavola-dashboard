@@ -1,4 +1,4 @@
-import { useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
+import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
 import type { TableDto } from '@/api/tables'
 import { FloorLayoutToolbar } from '@/components/floor/FloorLayoutToolbar'
 import { FloorTableGlyph } from '@/components/floor/FloorTableGlyph'
@@ -16,6 +16,7 @@ import {
   ZOOM_STEP,
   type TablePreset,
 } from '@/lib/floorGeometry'
+import { tableShapeKind } from '@/lib/tableShape'
 import { cn } from '@/lib/utils'
 
 interface FloorPlanReadViewProps {
@@ -40,6 +41,7 @@ interface FloorPlanReadViewProps {
   placeSize?: { width: number; height: number }
   onPlaceAt?: (x: number, y: number) => void
   placing?: boolean
+  onDragActiveChange?: (active: boolean) => void
 }
 
 interface DragState {
@@ -78,6 +80,7 @@ export function FloorPlanReadView({
   placeSize,
   onPlaceAt,
   placing = false,
+  onDragActiveChange,
 }: FloorPlanReadViewProps) {
   const { t } = useLocale()
   const viewportRef = useRef<HTMLDivElement>(null)
@@ -87,6 +90,10 @@ export function FloorPlanReadView({
   const [internalSnap, setInternalSnap] = useState(false)
   const dragMoved = useRef(false)
   const emptyPointer = useRef(false)
+
+  useEffect(() => {
+    onDragActiveChange?.(drag !== null)
+  }, [drag, onDragActiveChange])
 
   const snapEnabled = snapProp ?? internalSnap
   const setSnap = (next: boolean) => {
@@ -156,7 +163,10 @@ export function FloorPlanReadView({
       dragMoved.current = true
     }
     if (drag.kind === 'resize') {
-      const round = tables.find((tb) => tb.tableId === drag.tableId)?.shape === 'Round'
+      const round =
+        tableShapeKind(
+          tables.find((tb) => tb.tableId === drag.tableId)?.shape,
+        ) === 'round'
       const nextW = clampTableSize(
         snapCoord(drag.originW + dx, snapEnabled),
       )
@@ -303,13 +313,6 @@ export function FloorPlanReadView({
               }
             }}
           >
-            <div className="pointer-events-none absolute inset-x-0 top-0 flex h-8 items-center justify-center bg-surface-container-high/80 text-label-sm font-semibold tracking-wide text-on-surface-variant">
-              {t.floorPlan.kitchen}
-            </div>
-            <div className="pointer-events-none absolute inset-x-0 bottom-0 flex h-9 items-center justify-center rounded-b-lg bg-primary/10 text-label-sm font-semibold text-primary">
-              {t.floorPlan.entrance}
-            </div>
-
             {placed.map((tb) => {
               const box = liveBox(tb)
               const selected = selectedTableId === tb.tableId

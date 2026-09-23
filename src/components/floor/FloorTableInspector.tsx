@@ -1,5 +1,5 @@
 import type { TableDto, TableStatusDto } from '@/api/tables'
-import { isTablePlaced } from '@/lib/floorGeometry'
+import { isTablePlaced, resolveTableSize } from '@/lib/floorGeometry'
 import { Button } from '@/components/ui/Button'
 import { MaterialIcon } from '@/components/ui/Icon'
 import { Num } from '@/components/ui/Num'
@@ -90,6 +90,13 @@ export function FloorTableInspector({
           <Num>{table.positionX ?? 0}</Num>, <Num>{table.positionY ?? 0}</Num>
         </p>
       )}
+      <p className="mt-1 text-label-sm text-on-surface-variant">
+        {t.inventory.width} <Num>{resolveTableSize(table).width}</Num>
+        {' · '}
+        {t.inventory.height} <Num>{resolveTableSize(table).height}</Num>
+        {' · '}
+        {t.inventory.rotation} <Num>{table.rotation ?? 0}</Num>°
+      </p>
 
       <p className="mt-2 text-label-sm text-on-surface">
         <span className="text-on-surface-variant">{t.floorPlan.flagsLabel}: </span>

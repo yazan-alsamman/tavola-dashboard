@@ -361,6 +361,28 @@ export const en = {
     areaNotVisible:
       'Guests can’t see this area. The mobile app shows only one area per branch — the one marked Guests.',
     showToGuests: 'Show this area to guests',
+    allAreas: 'All areas',
+    overviewTitle: 'Restaurant layout',
+    overviewLead:
+      'Add areas first, then place tables inside each one. An area is saved as its own floor plan, and each table keeps that plan’s id.',
+    overviewThenTables: 'Then add tables inside the area you want.',
+    areaBoundsNote:
+      'The frame around an area follows its tables. The server does not store a separate area size, position, or color yet.',
+    areaColorNote:
+      'The dot color only helps you tell areas apart on this screen. It is not saved.',
+    deleteAreaUnavailable:
+      'Deleting an area is not available. The server has no way to remove a floor plan, so its tables would be left without a home.',
+    guestsHidden: 'Hidden from guests',
+    focusArea: 'Open this area',
+    duplicateArea: 'Duplicate area',
+    duplicatingArea: 'Duplicating area…',
+    duplicateAreaSuccess: 'Area duplicated',
+    emptyAreaHint: 'This area has no tables yet. Open it, then tap the map to place one.',
+    saveSaved: 'Saved',
+    saveUnsaved: 'Unsaved changes',
+    saveSaving: 'Saving…',
+    saveFailed: 'Save failed',
+    movedArea: 'Table moved to this area',
   },
   inventory: {
     createFloorPlan: 'Create floor plan',

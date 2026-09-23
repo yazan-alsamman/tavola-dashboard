@@ -6,37 +6,55 @@
 
 | Case | File | Result |
 | --- | --- | --- |
-| `Rectangle` stays rectangle | `src/lib/tableShape.test.ts` | Passed |
-| `Round` stays round | same | Passed |
-| `RECTANGLE`, `ROUND`, `circle`, `rect` are unknown, not the other shape | same | Passed |
-| Snap, unplaced layout, overlap warning | `src/lib/floorGeometry.test.ts` | Passed |
-| Canvas render | `src/components/floor/FloorPlanReadView.test.tsx` | Passed |
+| `Rectangle` stays rectangle, `Round` stays round, synonyms stay unknown | `src/lib/tableShape.test.ts` | Passed |
+| Tables are grouped by `floorPlanId`, not by coordinates | `src/lib/floorAreas.test.ts` | Passed |
+| A square rectangle keeps both sides; copy names do not collide | same | Passed |
+| All-areas view shows Main Hall and Terrace; T2 is 180×80, rotated 30°, `data-shape="rectangle"`; T1 is `data-shape="round"` | `src/components/floor/FloorAreasOverview.test.tsx` | Passed |
+| Area tabs and counts | `src/components/floor/FloorAreaTabs.test.tsx` | Passed |
+| Canvas keeps physical left/top under RTL | `src/components/floor/FloorPlanReadView.test.tsx` | Passed |
+| Snap, overlap, unplaced layout | `src/lib/floorGeometry.test.ts` | Passed earlier the same day |
 
-12 tests, 3 files, passed on 23 September 2026.
-
-Command:
+Command for this pass:
 
 ```text
-npx vitest run src/lib/tableShape.test.ts src/lib/floorGeometry.test.ts src/components/floor/FloorPlanReadView.test.tsx
+npx vitest run src/lib/floorAreas.test.ts src/lib/tableShape.test.ts src/components/floor/FloorAreasOverview.test.tsx src/components/floor/FloorAreaTabs.test.tsx src/components/floor/FloorPlanReadView.test.tsx
 ```
 
-## Scenario that cannot pass yet
+14 tests, 5 files, passed. `tsc -b` passed.
 
-Create Main Hall and Terrace, put T1 Round and T2 Rectangle in Main Hall, put T3 Round on Terrace, refresh, open mobile, and see the same areas.
+## What was exercised in the UI code
 
-**Blocked.** There is no partition API and no `partitionId` on the table. Doing this in the dashboard would not be stored, so mobile could not read it.
+| Case | Result |
+| --- | --- |
+| All areas on one page | Implemented. Each block is a floor plan returned by list floor plans |
+| Open one area | Tab switches to the existing editor (zoom, fit, grid, snap) |
+| Add area | Existing create dialog, `POST { name }`, real `floorPlanId` |
+| Draw a rectangle and save its bounds | **Not built.** Create floor plan has no geometry fields |
+| Pick a color and save it | **Not built.** No color field. Tint is display-only |
+| Delete an area that has tables | **Not built.** No delete floor plan route. The panel explains that |
+| Duplicate an area | New floor plan plus new table rows. Not an id clone |
+| Drag a table inside its area | Local until release, then `PATCH` position |
+| Drop a table on another area | `POST /move`, then `PATCH` position. Failed move does not patch |
+| Shape and box | Glyph uses `table.shape` only. Width, height, and rotation are copied on duplicate |
+| Save status | Saving / unsaved while dragging / failed with retry / saved when the screen matches the last successful response |
+| Hardcoded Kitchen / Entrance on the editor | Removed from `FloorPlanReadView` |
 
-## Shape and geometry scenario that the dashboard already supports
+## Scenario that still cannot pass
 
-Create T1 with shape `Round` and T2 with shape `Rectangle` on a floor plan, move them, refresh the dashboard.
+Create drawn sections Main Hall, Terrace, Outdoor, and VIP on **one** floor plan, assign T1–T8, refresh, and see the same rectangles and colors on mobile.
 
-Expected on the next `GET` of that floor plan’s tables: the same `shape`, `positionX`, `positionY`, `width`, `height`, `rotation`, and `tableId`. This was verified by reading the create and update payloads, not by a logged-in click against production in this pass.
+**Blocked.** There is no section resource, no `sectionId`, and the guest floor-plan route returns only the active floor plan. Doing this with local rectangles would disappear on refresh and would never reach mobile.
 
-## Mobile
+What can be saved instead, with the current API:
 
-Not executed. The app is not in `D:\Tavola`. The screenshot of Window / Dining / Service with T5 in the corner does not match a client that places tables from `positionX` and `positionY`.
+1. Create four floor plans named Main Hall, Terrace, Outdoor, and VIP.
+2. Create T1–T8 on those plans with the shapes in the brief.
+3. Refresh the dashboard. Names, `floorPlanId`, `shape`, and the box come back from the API.
+4. Move T5 with Move Table. Change its shape with Update Table. Refresh again.
+5. Mobile shows only the plan marked for guests, with that plan’s `shape` and box. It will not show the other three areas until the guest API returns them.
 
-## Remaining
+This pass did not log into production and did not create that restaurant. The mobile app is not in this workspace, so the phone screen was not opened.
 
-- Done 2026-09-23: `GET /discovery/.../floor-plan` returns `shape` and the box fields unchanged for every published branch (active plan only).
-- Add partitions on the backend before the area editor and the mobile area list.
+## Alignment
+
+Align / distribute for a multi-selection was not added. The editor selects one table. The update endpoint can move tables one by one; a multi-select tool can sit on that later without a new resource.

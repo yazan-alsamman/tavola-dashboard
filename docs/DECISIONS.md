@@ -306,3 +306,5 @@ Decision:
 
 Consequences:
 Guests see one area per branch until the backend adds partitions or returns every floor plan publicly. True sub-areas inside one map stay BACKEND REQUIRED (`TAVOLA_REMAINING_BACKEND_REQUIREMENTS.md` section 1).
+
+Update (same day): the Floor Plan page can show every floor plan together (`FloorAreasOverview`). That view is a layout of real FloorPlan records. It does not create a second coordinate system, and it does not persist a rectangle, a color, or a `sectionId`. Dropping a table on another area calls Move Table.

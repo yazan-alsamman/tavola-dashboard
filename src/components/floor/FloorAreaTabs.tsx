@@ -14,6 +14,9 @@ interface FloorAreaTabsProps {
   onSelect: (floorPlanId: string) => void
   canManage: boolean
   onAdd: () => void
+  /** When set, the first tab shows every floor plan on one canvas. */
+  allSelected?: boolean
+  onSelectAll?: () => void
 }
 
 /** One tab per backend FloorPlan. Each floor plan is a named area of the branch. */
@@ -24,6 +27,8 @@ export function FloorAreaTabs({
   onSelect,
   canManage,
   onAdd,
+  allSelected = false,
+  onSelectAll,
 }: FloorAreaTabsProps) {
   const { t, isRTL } = useLocale()
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([])
@@ -55,8 +60,26 @@ export function FloorAreaTabs({
         aria-label={t.floorPlan.areasLabel}
         className="flex min-w-0 flex-1 gap-2 overflow-x-auto pb-1"
       >
+        {onSelectAll && (
+          <button
+            type="button"
+            role="tab"
+            aria-selected={allSelected}
+            tabIndex={allSelected ? 0 : -1}
+            onClick={onSelectAll}
+            className={cn(
+              'flex min-h-11 shrink-0 items-center gap-2 rounded-xl border px-3.5 py-2 text-start transition-colors',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
+              allSelected
+                ? 'border-primary bg-primary-container text-on-primary-container shadow-sm'
+                : 'border-outline-variant/40 bg-surface-container-lowest text-on-surface hover:border-primary/40 hover:bg-surface-container-low',
+            )}
+          >
+            <span className="text-label-lg font-semibold">{t.floorPlan.allAreas}</span>
+          </button>
+        )}
         {floorPlans.map((plan, index) => {
-          const selected = plan.floorPlanId === selectedId
+          const selected = !allSelected && plan.floorPlanId === selectedId
           const count = tableCounts?.get(plan.floorPlanId) ?? 0
           return (
             <button
