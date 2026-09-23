@@ -21,7 +21,7 @@ Staff calls use the bearer token. Restaurant and branch ids come from the scope 
 | Delete table | DELETE | `/tables/:tableId` | — | 204 | Confirm dialog |
 | Move to another plan | POST | `/tables/:tableId/move` | `{ targetFloorPlanId }` | `TableDto` | Move dialog |
 | Change status | POST | `/tables/:tableId/status` | `{ status }` | `TableDto` | Status dialog |
-| Guest floor plan | GET | `/discovery/restaurants/:restaurantId/branches/:branchId/floor-plan` | — | Envelope only; body example missing | **Not called by the dashboard.** This is the public read for mobile |
+| Guest floor plan | GET | `/discovery/restaurants/:restaurantId/branches/:branchId/floor-plan` | — | `{ floorPlan: { floorPlanId, branchId, name }, tables: [ { tableId, floorPlanId, tableNumber, capacity, shape, floor, positionX, positionY, width, height, rotation, layer, indoor, vip, smoking } ] }` (live OpenAPI). Active plan only; 404 if none | **Not called by the dashboard.** This is the public read for mobile |
 
 Shape values on staff create and update are the strings `Rectangle` and `Round`. The dashboard does not send `ROUND`, `circle`, or a boolean.
 

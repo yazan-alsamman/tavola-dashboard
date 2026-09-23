@@ -79,6 +79,7 @@ const table = {
   smoking: false,
   status: 'Available' as const,
   mergeGroupId: null,
+  isMergePrimary: false,
   createdAt: '2026-01-01T00:00:00.000Z',
   updatedAt: '2026-01-01T00:00:00.000Z',
 }
@@ -490,6 +491,11 @@ describe('table mutations', () => {
     expect(allowedTableStatusTransitions('Occupied')).toEqual(['Available'])
     expect(allowedTableStatusTransitions('Cleaning')).toEqual(['Available'])
     expect(allowedTableStatusTransitions('Disabled')).toEqual(['Available'])
+  })
+
+  it('treats Reserved and Merged as read-only statuses', () => {
+    expect(allowedTableStatusTransitions('Reserved')).toEqual([])
+    expect(allowedTableStatusTransitions('Merged')).toEqual([])
   })
 
   it('maps CONFLICT on duplicate table number', async () => {

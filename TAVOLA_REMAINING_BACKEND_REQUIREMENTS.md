@@ -8,7 +8,7 @@ Only items that cannot be done safely in the dashboard without inventing a contr
 BACKEND REQUIRED
 ```
 
-Searched `postman/_endpoint_inventory.json` and `src/api`. There is no partition, section, zone, or area resource. Table has no `partitionId`. Floor plan has `floorPlanId`, `branchId`, `name`, `isActive` only.
+Searched `postman/_endpoint_inventory.json`, `src/api`, and the live OpenAPI document (187 paths, re-checked 2026-09-23). There is no partition, section, zone, or area resource. Table has no `partitionId`. Floor plan has `floorPlanId`, `branchId`, `name`, `isActive` only.
 
 Do not store areas in the dashboard or the mobile app until these routes exist.
 
@@ -60,7 +60,7 @@ BACKEND REQUIRED
 | --- | --- |
 | Purpose | Show booked vs free for a service, not the manual Occupied flag |
 | Suggested | A read that returns tableId plus availability for a date/time window |
-| Why | Status enum has no `Reserved`. The floor page must not invent it |
+| Why | `Reserved` appears in the response enum, but the API says it belongs to the reservation engine and is deferred. The floor page shows it when returned and never sets or infers it |
 
 ## Not required from the backend for the current editor
 

@@ -61,7 +61,7 @@ The glyph does not use `if not round then rectangle` for unknown strings anymore
 
 The mobile app source is not here, so the renderer that swaps the shapes was not inspected. The likely failure, given this contract, is a client that compares a different string (`ROUND` / `circle` / `width === height`) and falls through to the other drawing. That has to be confirmed in the mobile project.
 
-A second mismatch: `TableAvailabilityDto` (`GET /reservations/availability`) includes `shape` and does **not** include `positionX`, `positionY`, `width`, `height`, or `rotation`. A mobile screen that lays out the room from availability alone cannot place tables. The geometry is on the table resource and, for guests, on the public floor-plan read — whose response body is **not** in the Postman example (`response: []`). **Backend Verification Required:** publish the public floor-plan JSON, including `shape` and the box fields.
+A second mismatch: `TableAvailabilityDto` (`GET /reservations/availability`) includes `shape` and does **not** include `positionX`, `positionY`, `width`, `height`, or `rotation`. A mobile screen that lays out the room from availability alone cannot place tables. The geometry is on the table resource and, for guests, on the public floor-plan read. **Verified 2026-09-23** against the live OpenAPI and live responses: `GET /discovery/.../floor-plan` returns `shape` (`Rectangle` | `Round`) and `positionX`, `positionY`, `width`, `height`, `rotation` per table, for the **active** floor plan only. Square `Rectangle` tables and `Round` tables can share the same box, so mobile must read `shape`.
 
 ## Risks
 

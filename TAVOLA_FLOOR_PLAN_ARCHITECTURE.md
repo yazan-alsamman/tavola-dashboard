@@ -15,7 +15,7 @@ Restaurant
 
 There is no Section resource. `indoor`, `vip`, and `smoking` are flags on the table. `floor` is an optional number, not a second map.
 
-Reservations are a separate module. The floor page does not load them. Structural status is `Available | Occupied | Cleaning | Disabled`. `Reserved` is not in the contract.
+Reservations are a separate module. The floor page does not load them. Structural status can be set to `Available | Occupied | Cleaning | Disabled`. The response may also carry `Reserved` or `Merged`; the dashboard displays them read-only.
 
 ## Layers
 

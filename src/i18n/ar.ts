@@ -225,6 +225,8 @@ export const ar: TranslationKeys = {
     Occupied: 'مشغول',
     Cleaning: 'تنظيف',
     Disabled: 'معطّل',
+    Reserved: 'محجوز',
+    Merged: 'مدموج',
     available: 'متاح',
     reserved: 'محجوز',
     occupied: 'مشغول',

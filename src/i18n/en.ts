@@ -225,6 +225,8 @@ export const en = {
     Occupied: 'Occupied',
     Cleaning: 'Cleaning',
     Disabled: 'Disabled',
+    Reserved: 'Reserved',
+    Merged: 'Merged',
     available: 'Available',
     reserved: 'Reserved',
     occupied: 'Occupied',

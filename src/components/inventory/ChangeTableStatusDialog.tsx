@@ -1,8 +1,8 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import {
   allowedTableStatusTransitions,
+  type ManualTableStatusDto,
   type TableDto,
-  type TableStatusDto,
 } from '@/api/tables'
 import { Modal } from '@/components/ui/Modal'
 import { useLocale } from '@/context/LocaleContext'
@@ -26,7 +26,7 @@ export function ChangeTableStatusDialog({
 }: ChangeTableStatusDialogProps) {
   const { t } = useLocale()
   const mutation = useChangeTableStatusMutation()
-  const [status, setStatus] = useState<TableStatusDto | ''>('')
+  const [status, setStatus] = useState<ManualTableStatusDto | ''>('')
   const [error, setError] = useState<string | null>(null)
 
   const allowed = table ? allowedTableStatusTransitions(table.status) : []
@@ -74,7 +74,7 @@ export function ChangeTableStatusDialog({
           </span>
           <select
             value={status}
-            onChange={(e) => setStatus(e.target.value as TableStatusDto)}
+            onChange={(e) => setStatus(e.target.value as ManualTableStatusDto)}
             disabled={mutation.isPending || allowed.length === 0}
             className="mt-1 w-full rounded-lg bg-surface-container-low px-3 py-2"
           >

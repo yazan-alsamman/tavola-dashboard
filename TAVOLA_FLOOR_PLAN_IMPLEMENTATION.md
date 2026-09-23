@@ -34,4 +34,6 @@ Geometry save failure uses `mapInventoryMutationError` and does not write the fa
 
 ## Tests
 
-`src/lib/tableShape.test.ts`. Geometry tests remain in `src/lib/floorGeometry.test.ts`. A live Dashboard → API → mobile walk was not run here: the mobile project is not in this repo, and the public floor-plan response example is empty in Postman.
+`src/lib/tableShape.test.ts`. Geometry tests remain in `src/lib/floorGeometry.test.ts`. The API → guest stage was checked live: `GET /discovery/.../floor-plan` returns the exact `shape` strings and box values the dashboard saved. The mobile rendering stage was not run here because the mobile project is not in this repo.
+
+`TableStatusDto` now matches the response enum (`Reserved`, `Merged` added) and `TableDto` carries `isMergePrimary`. `allowedTableStatusTransitions` returns no transitions for `Reserved` and `Merged`, and the status request body is typed as `ManualTableStatusDto`.

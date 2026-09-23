@@ -275,3 +275,18 @@ Decision:
 
 Consequences:
 Platform sessions may lack refresh tokens (issuer isolation) — re-login after full reload is acceptable until a platform refresh contract is confirmed. Restaurant and platform consoles share Theme/Locale/Toast providers but not RestaurantScope.
+
+## ADR-012 — Table status matches the live response enum
+Date: 2026-09-23
+Status: Accepted
+
+Context:
+The live OpenAPI `TableResponseDto.status` enum is `Available | Occupied | Cleaning | Disabled | Reserved | Merged` and the DTO carries `isMergePrimary`. The dashboard typed only the first four, so a merged or reserved table had no colour and no label.
+
+Decision:
+1. `TableStatusDto` mirrors the full response enum; `TableDto` includes `isMergePrimary`.
+2. `ManualTableStatusDto` (first four values) types `POST /tables/:tableId/status`. `Reserved` and `Merged` offer no transitions.
+3. Partitions/areas stay unimplemented: no route or `partitionId` exists in the live OpenAPI (see `TAVOLA_REMAINING_BACKEND_REQUIREMENTS.md`).
+
+Consequences:
+The floor page and tables list display `Reserved`/`Merged` read-only. The dashboard never sets or infers them.

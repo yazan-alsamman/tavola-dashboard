@@ -42,6 +42,8 @@ const backendTableTones: Record<TableStatusDto, BadgeTone> = {
   Occupied: 'warning',
   Cleaning: 'info',
   Disabled: 'danger',
+  Reserved: 'info',
+  Merged: 'neutral',
 }
 
 interface StatusBadgeProps {

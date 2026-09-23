@@ -2,10 +2,20 @@ import { apiRequest } from './client'
 import type { PaginatedData } from './types'
 
 /**
- * Backend table status (live OpenAPI).
- * `Reserved` is NOT live — reservation-engine concept deferred to Phase 7.2.
+ * Backend table status as returned by `TableResponseDto` (live OpenAPI).
+ * `Reserved` and `Merged` are read-only: they are set by the reservation
+ * engine and merge/split, never through `POST /tables/:id/status`.
  */
-export type TableStatusDto = 'Available' | 'Occupied' | 'Cleaning' | 'Disabled'
+export type TableStatusDto =
+  | 'Available'
+  | 'Occupied'
+  | 'Cleaning'
+  | 'Disabled'
+  | 'Reserved'
+  | 'Merged'
+
+/** Statuses a staff member can set through `POST /tables/:id/status`. */
+export type ManualTableStatusDto = 'Available' | 'Occupied' | 'Cleaning' | 'Disabled'
 
 export type TableShapeDto = 'Rectangle' | 'Round'
 
@@ -29,6 +39,8 @@ export interface TableDto {
   smoking: boolean
   status: TableStatusDto
   mergeGroupId: string | null
+  /** True only for the primary table of an active merge group. */
+  isMergePrimary: boolean
   createdAt: string
   updatedAt: string
 }
@@ -81,15 +93,18 @@ export interface MoveTableRequest {
 }
 
 export interface ChangeTableStatusRequest {
-  status: TableStatusDto
+  status: ManualTableStatusDto
 }
 
 /** Allowed status transitions (backend Status Management). */
 export function allowedTableStatusTransitions(
   current: TableStatusDto,
-): TableStatusDto[] {
+): ManualTableStatusDto[] {
   if (current === 'Available') {
     return ['Occupied', 'Cleaning', 'Disabled']
+  }
+  if (current === 'Reserved' || current === 'Merged') {
+    return []
   }
   return ['Available']
 }

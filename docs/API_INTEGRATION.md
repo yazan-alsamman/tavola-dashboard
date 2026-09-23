@@ -98,7 +98,9 @@ Confirmed live OpenAPI / Postman (Owner/Admin org role):
 | Move table | `POST` | `/tables/:tableId/move` — `{ targetFloorPlanId }` same branch only |
 | Change table status | `POST` | `/tables/:tableId/status` — `{ status }`; `Available` ↔ `Occupied`/`Cleaning`/`Disabled` only |
 
-**TableStatus:** `Available` \| `Occupied` \| `Cleaning` \| `Disabled` (no live `Reserved`).
+**TableStatus (response):** `Available` \| `Occupied` \| `Cleaning` \| `Disabled` \| `Reserved` \| `Merged`. Only `Available` ↔ `Occupied`/`Cleaning`/`Disabled` can be set (`ManualTableStatusDto`); `Reserved` and `Merged` are read-only and offer no transitions. `TableDto` also carries `isMergePrimary`.
+
+**Guest floor plan:** `GET /discovery/restaurants/:restaurantId/branches/:branchId/floor-plan` returns the **active** plan only, with `shape` and the full box per table. Tables on an inactive plan are invisible to mobile guests.
 
 **Geometry:** `positionX`, `positionY`, `width`, `height`, `rotation`, `shape` (`Rectangle`\|`Round`). Persist via Update; UI uses save-on-drop (no PATCH per pointer move). Coordinate space is CSS pixels, origin top-left, physical `left`/`top` (`dir="ltr"` canvas) — never mirrored in RTL. The floor studio fills null `width`/`height`/`rotation` on create, drop, and resize so mobile clients receive a complete box. Default new-table size is 80×80 unless a preset is chosen. There is no FloorPlan PATCH or zone API.
 
@@ -424,7 +426,7 @@ The Postman collection currently only documents `Search Availability` and `Creat
 
 | Frontend (mock) | Backend (confirmed) | Source |
 |---|---|---|
-| `TableStatus`: `'available' \| 'reserved' \| 'occupied' \| 'out_of_service'` | `Available \| Occupied \| Cleaning \| Disabled` (no `Reserved` state — see `POST /tables/:tableId/status`) | `../back/docs/DATABASE_SCHEMA.md`, `API_GUIDELINES.md` |
+| `TableStatus`: `'available' \| 'reserved' \| 'occupied' \| 'out_of_service'` | `Available \| Occupied \| Cleaning \| Disabled \| Reserved \| Merged` (only the first four are settable — see `POST /tables/:tableId/status`) | `../back/docs/DATABASE_SCHEMA.md`, `API_GUIDELINES.md` |
 | `ReservationStatus`: `'pending' \| 'confirmed' \| 'checked_in' \| 'seated' \| 'completed' \| 'cancelled' \| 'no_show'` | Backend: `Pending`, `Approved`, `Rejected`, `Cancelled`, `Completed`, `NoShow`, `Expired`. Mock frontend statuses remain only for legacy demo (`RestaurantContext` / Calendar). Live API types use `ReservationStatusDto` in `src/api/reservations.ts`. | Live OpenAPI + ADR-006 |
 | `StaffRole`: `'owner' \| 'manager' \| 'receptionist' \| 'viewer'` | Organization-level roles: `Owner \| Admin \| Billing \| Staff`. Separate branch-level Employee roles include at least `Manager`, `Receptionist` per the ownership-rules table; there is no confirmed `viewer`/`Staff`-equivalent employee role in the docs read so far | `../back/docs/DOMAIN_MODEL.md` §Ownership Rules, `AUTHORIZATION_ARCHITECTURE.md` |
 

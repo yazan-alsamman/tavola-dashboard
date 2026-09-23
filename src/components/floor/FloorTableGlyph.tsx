@@ -9,6 +9,8 @@ const statusTone: Record<TableStatusDto, string> = {
   Occupied: 'border-primary bg-primary-container text-on-primary-container',
   Cleaning: 'border-warning/60 bg-warning-light text-warning',
   Disabled: 'border-error/40 bg-error/10 text-error border-dashed',
+  Reserved: 'border-info-border bg-info-subtle text-info',
+  Merged: 'border-secondary/60 bg-secondary-container text-on-secondary-container',
 }
 
 const chairTone: Record<TableStatusDto, string> = {
@@ -16,6 +18,8 @@ const chairTone: Record<TableStatusDto, string> = {
   Occupied: 'bg-primary/40 border-primary/50',
   Cleaning: 'bg-warning/40 border-warning/50',
   Disabled: 'bg-error/20 border-error/30',
+  Reserved: 'bg-info/30 border-info/40',
+  Merged: 'bg-secondary/30 border-secondary/40',
 }
 
 interface FloorTableGlyphProps {

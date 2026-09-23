@@ -38,5 +38,5 @@ Not executed. The app is not in `D:\Tavola`. The screenshot of Window / Dining /
 
 ## Remaining
 
-- Confirm the JSON of `GET /discovery/.../floor-plan` includes `shape` and the box fields unchanged.
+- Done 2026-09-23: `GET /discovery/.../floor-plan` returns `shape` and the box fields unchanged for every published branch (active plan only).
 - Add partitions on the backend before the area editor and the mobile area list.
