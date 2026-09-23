@@ -337,6 +337,30 @@ export const en = {
     statusNote:
       'This status is set by staff. It is not today’s reservations.',
     flagsLabel: 'Flags',
+    areasLabel: 'Areas',
+    addArea: 'Add area',
+    addAreaHint:
+      'Each area is its own floor plan with its own tables, such as Main Hall or Terrace. The first area of a branch is shown to guests automatically.',
+    areaName: 'Area name',
+    areaNamePlaceholder: 'e.g. Terrace',
+    areaNameRequired: 'Enter an area name.',
+    areaSuggestionsLabel: 'Suggestions',
+    areaSuggestions: [
+      'Main Hall',
+      'Terrace',
+      'Garden',
+      'Rooftop',
+      'Outdoor',
+      'VIP Room',
+      'Private Room',
+      'Bar',
+    ],
+    areaCreated: 'Area added',
+    guestVisible: 'Guests',
+    guestVisibleHint: 'Guests see this area in the mobile app.',
+    areaNotVisible:
+      'Guests can’t see this area. The mobile app shows only one area per branch — the one marked Guests.',
+    showToGuests: 'Show this area to guests',
   },
   inventory: {
     createFloorPlan: 'Create floor plan',
@@ -347,11 +371,11 @@ export const en = {
     editTable: 'Edit table',
     moveTable: 'Move table',
     moveTableHint:
-      'Reassigns this table to another floor plan in the same branch. Geometry and status are unchanged.',
-    currentFloorPlan: 'Current floor plan',
-    targetFloorPlan: 'Target floor plan',
-    moveTargetRequired: 'Choose a target floor plan.',
-    noMoveTargets: 'No other floor plans in this branch.',
+      'Moves this table to another area of the same branch, such as Terrace. Position, size, and status stay the same.',
+    currentFloorPlan: 'Current area',
+    targetFloorPlan: 'Move to area',
+    moveTargetRequired: 'Choose an area.',
+    noMoveTargets: 'No other areas in this branch. Add an area on the Floor Plan page first.',
     changeStatus: 'Change status',
     newStatus: 'New status',
     statusVsAvailability:

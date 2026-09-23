@@ -290,3 +290,19 @@ Decision:
 
 Consequences:
 The floor page and tables list display `Reserved`/`Merged` read-only. The dashboard never sets or infers them.
+
+## ADR-013 — Floor-plan areas are backend FloorPlans
+Date: 2026-09-23
+Status: Accepted
+
+Context:
+Restaurants need named areas (Main Hall, Terrace, VIP Room). The live OpenAPI (187 paths) and the latest Postman collection have no partition, section, zone, or area resource and no `partitionId` on Table. FloorPlan already has a staff-chosen `name`, tables belong to exactly one FloorPlan, and seeded branches use FloorPlan names such as "Main Hall".
+
+Decision:
+1. The Floor Plan page shows one tab per FloorPlan (`FloorAreaTabs`) with its table count and a Guests badge on the active one.
+2. Add area calls Create FloorPlan with a typed or suggested name. Move to area calls Move Table.
+3. An inactive area shows that guests can't see it, with a "Show this area to guests" action (Activate FloorPlan).
+4. No area data is stored in the browser, table names, positions, `floor`, or `layer`.
+
+Consequences:
+Guests see one area per branch until the backend adds partitions or returns every floor plan publicly. True sub-areas inside one map stay BACKEND REQUIRED (`TAVOLA_REMAINING_BACKEND_REQUIREMENTS.md` section 1).

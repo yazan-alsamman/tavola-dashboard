@@ -100,6 +100,8 @@ Confirmed live OpenAPI / Postman (Owner/Admin org role):
 
 **TableStatus (response):** `Available` \| `Occupied` \| `Cleaning` \| `Disabled` \| `Reserved` \| `Merged`. Only `Available` ↔ `Occupied`/`Cleaning`/`Disabled` can be set (`ManualTableStatusDto`); `Reserved` and `Merged` are read-only and offer no transitions. `TableDto` also carries `isMergePrimary`.
 
+**Areas:** there is no partition/section API. The Floor Plan page presents each FloorPlan as a named area (Main Hall, Terrace, …) in `FloorAreaTabs`; Add area = Create FloorPlan, Move to area = Move Table. Per-area counts come from the branch table list (`countTablesByFloorPlan`).
+
 **Guest floor plan:** `GET /discovery/restaurants/:restaurantId/branches/:branchId/floor-plan` returns the **active** plan only, with `shape` and the full box per table. Tables on an inactive plan are invisible to mobile guests.
 
 **Geometry:** `positionX`, `positionY`, `width`, `height`, `rotation`, `shape` (`Rectangle`\|`Round`). Persist via Update; UI uses save-on-drop (no PATCH per pointer move). Coordinate space is CSS pixels, origin top-left, physical `left`/`top` (`dir="ltr"` canvas) — never mirrored in RTL. The floor studio fills null `width`/`height`/`rotation` on create, drop, and resize so mobile clients receive a complete box. Default new-table size is 80×80 unless a preset is chosen. There is no FloorPlan PATCH or zone API.

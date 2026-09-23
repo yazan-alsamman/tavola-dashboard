@@ -2,7 +2,15 @@
 
 Audience: a restaurant owner or admin arranging a real room. Not a developer.
 
-**Partitions (Main Hall, Terrace, VIP, custom names, colors) are not in this UI.** The API has no partition resource and no `partitionId` on a table. Drawing those boxes only in the dashboard would not show up on mobile. The editor below is the floor plan and its tables. Areas wait on the backend contract in `TAVOLA_REMAINING_BACKEND_REQUIREMENTS.md`.
+**Areas (Main Hall, Terrace, VIP Room, custom names) are floor plans.** The API has no partition resource, so each area is its own floor plan with its own tables (ADR-013).
+
+- **Areas tabs** above the map: one tab per area, with its table count. The area guests see carries a green **Guests** badge.
+- **Add area**: name field plus suggestion chips (Main Hall, Terrace, Garden, Rooftop, Outdoor, VIP Room, Private Room, Bar). Names already used are hidden. The new area opens right away.
+- **Move to area** in the table inspector moves the table and keeps its position, size, and status.
+- **Inactive area**: a warning banner says guests can't see it, with **Show this area to guests**.
+- Keyboard: arrow keys move between tabs (reversed in Arabic), Home/End jump to the first/last.
+
+Coloured zones drawn inside one map still wait on the backend contract in `TAVOLA_REMAINING_BACKEND_REQUIREMENTS.md`.
 
 ## Mental model
 

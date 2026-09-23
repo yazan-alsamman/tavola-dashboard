@@ -23,7 +23,12 @@ Do not store areas in the dashboard or the mobile app until these routes exist.
 | Table link | `partitionId` on create and update table, returned on `TableDto` |
 | Why | Without this, mobile cannot know that T5 is on Terrace. Position must not be used to guess the area |
 
-Until this exists, the dashboard saves tables on a floor plan. `indoor`, `vip`, and `smoking` are flags, not areas.
+Until this exists, the dashboard models each area as its own floor plan (ADR-013): the Floor Plan page shows one **Areas** tab per floor plan, **Add area** creates a floor plan (`POST .../floor-plans` `{ name }`), and **Move to area** uses `POST /tables/:tableId/move`. Limits of that model, which a partition API would remove:
+
+- Guests see one area per branch, because `GET /discovery/.../floor-plan` returns only the active floor plan.
+- Areas can't be drawn as labeled zones on one shared map, recoloured, renamed, or deleted.
+
+`indoor`, `vip`, and `smoking` are flags, not areas.
 
 ## 2. Floor-plan rename and delete
 

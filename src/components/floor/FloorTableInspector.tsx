@@ -73,9 +73,10 @@ export function FloorTableInspector({
       </div>
 
       {floorPlanName && (
-        <p className="mt-2 text-label-sm text-on-surface-variant">
+        <p className="mt-2 flex items-center gap-1 text-label-sm text-on-surface-variant">
+          <MaterialIcon name="location_on" size={14} />
           {floorPlanName}
-          {floorPlanActive ? ` · ${t.floorPlan.active}` : ''}
+          {floorPlanActive ? ` · ${t.floorPlan.guestVisible}` : ''}
         </p>
       )}
 
@@ -149,7 +150,7 @@ export function FloorTableInspector({
               {t.common.edit}
             </Button>
             <Button type="button" variant="ghost" size="sm" onClick={onMove}>
-              {t.inventory.moveTable}
+              {t.inventory.targetFloorPlan}
             </Button>
             <Button type="button" variant="ghost" size="sm" onClick={onStatus}>
               {t.inventory.changeStatus}

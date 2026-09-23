@@ -5,8 +5,20 @@
  * 3. First FloorPlan in the list
  */
 import type { FloorPlanDto } from '@/api/floorPlans'
+import type { TableDto } from '@/api/tables'
 
 const STORAGE_KEY = 'tavla-selected-floor-plan-id'
+
+/** Table count per `floorPlanId`, from the branch-wide table list. */
+export function countTablesByFloorPlan(
+  tables: Pick<TableDto, 'floorPlanId'>[],
+): Map<string, number> {
+  const counts = new Map<string, number>()
+  for (const table of tables) {
+    counts.set(table.floorPlanId, (counts.get(table.floorPlanId) ?? 0) + 1)
+  }
+  return counts
+}
 
 export function selectFloorPlanId(
   floorPlans: FloorPlanDto[],

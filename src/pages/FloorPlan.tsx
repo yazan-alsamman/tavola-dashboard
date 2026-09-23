@@ -1,10 +1,11 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { isApiError } from '@/api/errors'
 import type { TableDto } from '@/api/tables'
 import { CreateFloorPlanDialog } from '@/components/inventory/CreateFloorPlanDialog'
 import { ChangeTableStatusDialog } from '@/components/inventory/ChangeTableStatusDialog'
 import { MoveTableDialog } from '@/components/inventory/MoveTableDialog'
 import { TableFormDialog } from '@/components/inventory/TableFormDialog'
+import { FloorAreaTabs } from '@/components/floor/FloorAreaTabs'
 import { FloorPlanReadView } from '@/components/floor/FloorPlanReadView'
 import { FloorTableInspector } from '@/components/floor/FloorTableInspector'
 import { EmptyState } from '@/components/ui/EmptyState'
@@ -17,6 +18,7 @@ import { useLocale } from '@/context/LocaleContext'
 import { useRestaurantScope } from '@/context/RestaurantScopeContext'
 import { useToast } from '@/context/ToastContext'
 import {
+  useBranchTablesQuery,
   useFloorPlanTablesQuery,
   useSelectedFloorPlan,
 } from '@/hooks/useInventoryQueries'
@@ -28,6 +30,7 @@ import {
 } from '@/hooks/useInventoryMutations'
 import { useCanManageInventory } from '@/hooks/usePermissions'
 import { mapInventoryMutationError } from '@/lib/inventoryMutationErrors'
+import { countTablesByFloorPlan } from '@/lib/floorPlanSelection'
 import {
   clampTableSize,
   isTablePlaced,
@@ -64,6 +67,14 @@ export function FloorPlanPage() {
   const tablesQuery = useFloorPlanTablesQuery(
     selectedFloorPlanId,
     scopeStatus === 'ready' && Boolean(selectedFloorPlanId),
+  )
+  const branchTablesQuery = useBranchTablesQuery()
+  const areaTableCounts = useMemo(
+    () =>
+      branchTablesQuery.data
+        ? countTablesByFloorPlan(branchTablesQuery.data)
+        : null,
+    [branchTablesQuery.data],
   )
 
   const activateMutation = useActivateFloorPlanMutation()
@@ -260,6 +271,13 @@ export function FloorPlanPage() {
     }
   }
 
+  const handleAreaCreated = (floorPlanId: string) => {
+    setSelectedTableId(null)
+    setPlacePreset(null)
+    selectFloorPlan(floorPlanId)
+    toast('success', t.floorPlan.areaCreated)
+  }
+
   const handleActivate = async () => {
     if (!selectedFloorPlan || !restaurantId || !branchId) return
     setActivateError(null)
@@ -308,24 +326,10 @@ export function FloorPlanPage() {
         selectedBranch ? ` · ${formatBranchLabel(selectedBranch)}` : ''
       }`}
       actions={
-        canManage ? (
-          <>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setCreateFloorOpen(true)}
-            >
-              {t.inventory.createFloorPlan}
-            </Button>
-            {selectedFloorPlanId ? (
-              <Button
-                type="button"
-                onClick={() => setCreateTableOpen(true)}
-              >
-                {t.inventory.createTable}
-              </Button>
-            ) : null}
-          </>
+        canManage && selectedFloorPlanId ? (
+          <Button type="button" onClick={() => setCreateTableOpen(true)}>
+            {t.inventory.createTable}
+          </Button>
         ) : undefined
       }
     />
@@ -386,7 +390,7 @@ export function FloorPlanPage() {
                 className="text-label-md text-primary font-semibold"
                 onClick={() => setCreateFloorOpen(true)}
               >
-                {t.inventory.createFloorPlan}
+                {t.floorPlan.addArea}
               </button>
             ) : undefined
           }
@@ -397,7 +401,8 @@ export function FloorPlanPage() {
             onClose={() => setCreateFloorOpen(false)}
             restaurantId={restaurantId}
             branchId={branchId}
-            onCreated={(id) => selectFloorPlan(id)}
+            variant="area"
+            onCreated={handleAreaCreated}
           />
         )}
       </div>
@@ -408,28 +413,22 @@ export function FloorPlanPage() {
     <div className="space-y-4">
       {header}
 
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-        <label className="flex items-center gap-2 text-label-md text-on-surface-variant">
-          <span>{t.floorPlan.floorSelector}</span>
-          <select
-            value={selectedFloorPlanId ?? ''}
-            onChange={(e) => {
-              setSelectedTableId(null)
-              setPlacePreset(null)
-              selectFloorPlan(e.target.value)
-            }}
-            className="rounded-lg bg-surface-container-low px-3 py-2 text-body-md text-on-surface outline-none focus:ring-2 focus:ring-primary/20 min-h-10"
-            aria-label={t.floorPlan.floorSelector}
-          >
-            {floorPlans.map((fp) => (
-              <option key={fp.floorPlanId} value={fp.floorPlanId}>
-                {fp.name}
-                {fp.isActive ? ` (${t.floorPlan.active})` : ''}
-              </option>
-            ))}
-          </select>
-        </label>
+      <FloorAreaTabs
+        floorPlans={floorPlans}
+        selectedId={selectedFloorPlanId}
+        tableCounts={areaTableCounts}
+        onSelect={(id) => {
+          if (id === selectedFloorPlanId) return
+          setSelectedTableId(null)
+          setPlacePreset(null)
+          setFailedSave(null)
+          selectFloorPlan(id)
+        }}
+        canManage={canManage}
+        onAdd={() => setCreateFloorOpen(true)}
+      />
 
+      <div className="flex flex-wrap items-center justify-end gap-3">
         <div className="flex flex-wrap items-center gap-3 text-label-md">
           <span className="flex items-center gap-1.5 text-on-surface-variant">
             <MaterialIcon
@@ -449,9 +448,10 @@ export function FloorPlanPage() {
       </div>
 
       {canManage && selectedFloorPlan && !selectedFloorPlan.isActive && (
-        <div className="flex flex-wrap items-center gap-3 rounded-lg border border-outline-variant/30 bg-surface-container-lowest px-4 py-3">
-          <p className="text-label-md text-on-surface-variant flex-1">
-            {t.floorPlan.viewingInactive}
+        <div className="flex flex-wrap items-center gap-3 rounded-lg border border-warning/30 bg-warning-light px-4 py-3">
+          <MaterialIcon name="visibility_off" size={18} className="text-warning" />
+          <p className="text-label-md text-on-surface flex-1 min-w-48">
+            {t.floorPlan.areaNotVisible}
           </p>
           <Button
             type="button"
@@ -462,7 +462,7 @@ export function FloorPlanPage() {
           >
             {activateMutation.isPending
               ? t.floorPlan.activating
-              : t.floorPlan.activate}
+              : t.floorPlan.showToGuests}
           </Button>
           {activateError && (
             <p className="w-full text-label-sm text-error" role="alert">
@@ -617,7 +617,9 @@ export function FloorPlanPage() {
             onClose={() => setCreateFloorOpen(false)}
             restaurantId={restaurantId}
             branchId={branchId}
-            onCreated={(id) => selectFloorPlan(id)}
+            variant="area"
+            existingNames={floorPlans.map((fp) => fp.name)}
+            onCreated={handleAreaCreated}
           />
           <TableFormDialog
             open={createTableOpen}
