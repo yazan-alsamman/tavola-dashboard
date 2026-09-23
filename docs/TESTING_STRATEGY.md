@@ -12,6 +12,7 @@ Covered today:
 - `src/api/reservations.test.ts` — availability query, create DTO + Idempotency-Key, CONFLICT/VALIDATION, branch timezone conversion
 - `src/api/floorPlans.tables.test.ts` — floor/table reads + mutations, domain-action boundaries, FORBIDDEN, floor selection
 - `src/components/floor/FloorPlanReadView.test.tsx` — RTL physical coordinate invariance; save-on-drop (no PATCH on pointer-move)
+- `src/lib/floorGeometry.test.ts` — snap, table numbering, complete geometry, unplaced packing
 - `src/hooks/useInventoryMutations.test.tsx` — captured-scope TanStack Query invalidation
 - `src/lib/accessTokenClaims.test.ts` — JWT claim parsing
 - `src/lib/scopeSelection.test.ts` — restaurant/branch selection priority

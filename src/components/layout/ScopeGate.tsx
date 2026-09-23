@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { Link, useLocation } from 'react-router-dom'
 import { useLocale } from '@/context/LocaleContext'
 import { useAuth } from '@/context/AuthContext'
 import { useRestaurantScope } from '@/context/RestaurantScopeContext'
@@ -12,6 +13,8 @@ export function ScopeGate({ children }: { children: ReactNode }) {
   const { t } = useLocale()
   const { logout } = useAuth()
   const { status, refreshScope } = useRestaurantScope()
+  const location = useLocation()
+  const onBranchesPage = location.pathname.startsWith('/app/branches')
 
   if (status === 'idle' || status === 'loading') {
     return (
@@ -25,25 +28,31 @@ export function ScopeGate({ children }: { children: ReactNode }) {
     )
   }
 
-  if (status === 'ready' || status === 'empty_branches') {
-    // empty_branches: shell can still show restaurant identity; pages see empty branch state via scope
-    if (status === 'empty_branches') {
-      return (
-        <div className="flex min-h-[50vh] flex-col items-center justify-center gap-3 text-center px-6">
-          <MaterialIcon name="store" size={36} className="text-on-surface-variant" />
-          <h2 className="text-headline-md text-on-surface">{t.scope.noBranchesTitle}</h2>
-          <p className="text-body-md text-on-surface-variant max-w-md">{t.scope.noBranchesBody}</p>
-          <button
-            type="button"
-            onClick={refreshScope}
-            className="mt-2 px-4 py-2 rounded-lg bg-primary text-on-primary text-label-md"
-          >
-            {t.scope.retry}
-          </button>
-        </div>
-      )
-    }
+  if (status === 'ready' || (status === 'empty_branches' && onBranchesPage)) {
     return <>{children}</>
+  }
+
+  if (status === 'empty_branches') {
+    return (
+      <div className="flex min-h-[50vh] flex-col items-center justify-center gap-3 text-center px-6">
+        <MaterialIcon name="store" size={36} className="text-on-surface-variant" />
+        <h2 className="text-headline-md text-on-surface">{t.scope.noBranchesTitle}</h2>
+        <p className="text-body-md text-on-surface-variant max-w-md">{t.scope.noBranchesBody}</p>
+        <Link
+          to="/app/branches"
+          className="mt-2 px-4 py-2 rounded-lg bg-primary text-on-primary text-label-md"
+        >
+          {t.branches.addBranch}
+        </Link>
+        <button
+          type="button"
+          onClick={refreshScope}
+          className="px-4 py-2 rounded-lg text-label-md text-primary"
+        >
+          {t.scope.retry}
+        </button>
+      </div>
+    )
   }
 
   if (status === 'empty_restaurants') {

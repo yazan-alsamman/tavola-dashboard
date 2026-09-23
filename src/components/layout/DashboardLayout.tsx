@@ -1,7 +1,8 @@
-import { Link, useLocation, Outlet } from 'react-router-dom'
+import { NavLink, Outlet } from 'react-router-dom'
 import { Sidebar } from './Sidebar'
 import { Header } from './Header'
 import { ScopeGate } from './ScopeGate'
+import { sidebarWidthVars } from './SidebarNav'
 import { useSidebar } from '@/context/SidebarContext'
 import { useLocale } from '@/context/LocaleContext'
 import { cn } from '@/lib/utils'
@@ -10,44 +11,62 @@ import { MaterialIcon } from '@/components/ui/Icon'
 export function DashboardLayout() {
   const { isCollapsed } = useSidebar()
   const { t } = useLocale()
-  const location = useLocation()
 
+  /** Service-critical destinations only — mobile is a thumb-reach surface. */
   const mobileNav = [
-    { path: '/app', icon: 'login', label: t.ops.arrivingSoon },
-    { path: '/app/floor-plan', icon: 'grid_view', label: t.floorPlan.title },
-    { path: '/app/waitlist', icon: 'timer', label: t.waitlist.title },
-    { path: '/app/reservations', icon: 'menu', label: t.reservations.title },
+    { path: '/app', end: true, icon: 'dashboard', label: t.nav.dashboard },
+    { path: '/app/reservations', end: false, icon: 'event', label: t.nav.reservations },
+    { path: '/app/floor-plan', end: false, icon: 'layers', label: t.nav.floorPlan },
+    { path: '/app/waitlist', end: false, icon: 'hourglass_empty', label: t.nav.waitlist },
   ]
 
   return (
-    <div className="min-h-screen bg-background pt-[var(--logout-leave-banner-h,0px)]">
+    <div
+      className="min-h-screen bg-background pt-[var(--logout-leave-banner-h,0px)]"
+      style={sidebarWidthVars(isCollapsed)}
+    >
       <Sidebar />
-      <div className={cn('transition-all duration-300', isCollapsed ? 'lg:ms-[80px]' : 'lg:ms-[260px]')}>
+
+      <div className="transition-[margin] duration-[var(--duration-slow)] ease-[var(--ease-standard)] lg:ms-[var(--sidebar-w)]">
         <Header />
-        <main className="p-4 md:p-6 max-w-[1400px] mx-auto pb-24 md:pb-6">
+        <main className="mx-auto w-full max-w-[1440px] px-4 py-6 pb-28 md:px-8 md:py-8 md:pb-8">
           <ScopeGate>
             <Outlet />
           </ScopeGate>
         </main>
       </div>
 
-      <nav className="md:hidden fixed bottom-0 inset-x-0 z-50 glass bg-surface/90 border-t border-outline-variant/10 flex justify-around items-center py-2 px-4 rounded-t-xl shadow-[0_-4px_20px_rgba(0,0,0,0.04)]">
-        {mobileNav.map(({ path, icon, label }) => {
-          const active = location.pathname === path
-          return (
-            <Link
-              key={path}
-              to={path}
-              className={cn(
-                'flex flex-col items-center justify-center gap-0.5 transition-transform active:scale-90',
-                active ? 'text-primary' : 'text-on-surface-variant/70',
-              )}
-            >
-              <MaterialIcon name={icon} size={22} filled={active} />
-              <span className="text-label-sm text-[10px]">{label}</span>
-            </Link>
-          )
-        })}
+      <nav
+        aria-label={t.nav.dashboard}
+        className={cn(
+          'fixed bottom-0 inset-x-0 z-50 md:hidden',
+          'glass bg-surface/90 border-t border-outline-variant/50',
+          'flex items-stretch justify-around px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2',
+        )}
+      >
+        {mobileNav.map(({ path, end, icon, label }) => (
+          <NavLink
+            key={path}
+            to={path}
+            end={end}
+            className={({ isActive }) =>
+              cn(
+                'flex min-w-16 flex-col items-center justify-center gap-1 rounded-lg px-2 py-1.5',
+                'transition-colors duration-[var(--duration-fast)]',
+                isActive
+                  ? 'bg-primary-subtle text-primary'
+                  : 'text-on-surface-variant active:bg-surface-container-high',
+              )
+            }
+          >
+            {({ isActive }) => (
+              <>
+                <MaterialIcon name={icon} size={20} filled={isActive} />
+                <span className="text-label-sm leading-none">{label}</span>
+              </>
+            )}
+          </NavLink>
+        ))}
       </nav>
     </div>
   )

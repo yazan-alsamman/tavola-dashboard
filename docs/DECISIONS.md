@@ -21,6 +21,21 @@ Consequences:
 
 ---
 
+## ADR-012 — Platform Owner console is a separate Vite app
+Date: 2026-09-14
+Status: Accepted
+
+Context:
+ADR-011 isolated platform code under `src/platform/` inside the restaurant dashboard repo. Operators still wanted a dedicated workspace folder so the two products cannot share routes, auth, or accidental UI coupling.
+
+Decision:
+1. Move the Platform Owner console to `Tavola_platform` (sibling of `Tavola`), with its own Vite app on port 5174.
+2. Restaurant app (`Tavola`) keeps `/app` only. `/platform/*` in this app is a pointer page to `http://localhost:5174/platform`.
+3. Remove `loginPlatformAdmin` and `src/platform/` from the restaurant client.
+
+Consequences:
+Two `npm run dev` processes are required for local full-stack UI. Shared UI primitives were copied, not linked — visual drift is possible and should be reconciled later if both apps keep evolving.
+
 ## ADR-010 — Landing Page 3D Vocabulary Is The Product's Own Table Model
 Date: 2026-08-16
 Status: Accepted
@@ -71,7 +86,7 @@ Decision:
 1. Extend `src/api/floorPlans.ts` / `src/api/tables.ts` with confirmed mutation functions only (framework-free).
 2. Orchestrate via `src/hooks/useInventoryMutations.ts` — each mutation captures `restaurantId`/`branchId`/(source|target)`floorPlanId` at invoke time and invalidates those exact `inventoryKeys` on success.
 3. Prefer pending UI + refetch over optimistic updates for activate/move/delete/status.
-4. Geometry persistence: **save-on-drop** (and form edit) via `PATCH /tables/:tableId` using `tableToUpdateRequest`; no PATCH on pointer-move. Do not remount mock `FloorDesigner` as production authority.
+4. Geometry persistence: **save-on-drop** (and form edit, rotate, resize) via `PATCH /tables/:tableId` using `tableToUpdateRequest` / `withCompleteGeometry`; no PATCH on pointer-move. The production editor is `FloorPlanReadView` (presets, snap, zoom/fit, tap-to-place). Always persist complete `width`/`height`/`rotation` when previously null so guest clients can render the same CSS-pixel, top-left, LTR coordinate space. Do not remount mock `FloorDesigner` as production authority.
 5. Viewing a FloorPlan never activates it; Activate is an explicit action.
 6. FloorPlan/Table create does not send `Idempotency-Key` (not in backend idempotency set).
 7. Advisory UI gate: organization Owner/Admin only (`useCanManageInventory`). Backend 403 remains authoritative. Employees remain unsupported for inventory.
@@ -227,3 +242,36 @@ Decision:
 
 Consequences:
 Owner/Admin OrganizationMember sessions may see the ownership fallback for calendar/inbox until they also hold an Employee actor. Customer and Platform Admin collections remain intentionally unwired.
+
+## ADR-011 — Isolate Platform Owner console under `src/platform/`
+Date: 2026-09-14
+Status: Accepted
+
+Context:
+The Platform Owner console was implemented next to the restaurant dashboard (`src/pages/platform/`, `src/components/platform/`, `src/api/platformAdmin.ts`). That mixed two products in the same folders and made it easy to change restaurant routes while touching platform files.
+
+Decision:
+1. Move all Platform Owner code into `src/platform/` (`api/`, `auth/`, `layout/`, `pages/`, `routes.tsx`).
+2. Keep public URLs unchanged (`/platform`, `/platform/login`, `/app`).
+3. Restaurant dashboard remains in `src/pages/` + `src/components/layout/DashboardLayout`.
+4. Leave compatibility re-exports at `src/api/platformAdmin.ts` and `src/components/auth/PlatformRoute.tsx` so older imports do not break.
+5. Shared providers (Theme, Locale, Auth, Toast, Sidebar) stay in `App.tsx`; they are not duplicated.
+
+Consequences:
+New platform screens belong under `src/platform/pages/`. New restaurant screens belong under `src/pages/`. Do not add platform pages to `src/pages/`.
+
+## ADR-010 — Platform Owner console (/platform)
+Date: 2026-08-28
+Status: Accepted (folder layout superseded by ADR-011)
+
+Context:
+Restaurant dashboard (/app) serves OrganizationMember/Employee actors. Platform operators need a separate console for restaurants/organizations lifecycle, revenue, acquisitions, admins, and account access control. Contracts live in `postman/TAVLA-Platform-Back-Office.postman_collection.json` plus `03 - Platform Owner` in `TAVLA-API.postman_collection.json`.
+
+Decision:
+1. Ship a separate route tree at `/platform` with `PlatformLayout` and `PlatformRoute` (requires `actorType === PlatformAdmin`).
+2. Authenticate via `POST /platform-admin/login` (`loginPlatformAdmin`); do not mix with restaurant `POST /auth/login`.
+3. Client module `src/api/platformAdmin.ts` owns all `/platform-admin/*` calls.
+4. `RestaurantAppRoute` redirects PlatformAdmin away from `/app`.
+
+Consequences:
+Platform sessions may lack refresh tokens (issuer isolation) — re-login after full reload is acceptable until a platform refresh contract is confirmed. Restaurant and platform consoles share Theme/Locale/Toast providers but not RestaurantScope.

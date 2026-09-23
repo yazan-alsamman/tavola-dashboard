@@ -27,7 +27,9 @@ import {
   clearForcedLogoutPending,
   isForcedLogoutPending,
 } from '@/lib/leaveGuard'
-import type { AuthIdentity } from '@/types/auth'
+import {
+  type AuthIdentity,
+} from '@/types/auth'
 
 interface AuthContextValue {
   user: AuthIdentity | null

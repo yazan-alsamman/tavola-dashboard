@@ -31,6 +31,7 @@ import { MenuPage } from '@/pages/Menu'
 import { GalleryPage } from '@/pages/Gallery'
 import { OffersPage } from '@/pages/Offers'
 import { ReviewsPage } from '@/pages/Reviews'
+import { PlatformMovedPage } from '@/pages/PlatformMoved'
 
 // Lazy-loaded: Three.js/R3F/Drei/GSAP only need to ship to visitors of the public landing page,
 // never to authenticated dashboard routes.
@@ -61,27 +62,28 @@ export default function App() {
                       <Route element={<PublicRoute />}>
                         <Route path="/login" element={<LoginPage />} />
                       </Route>
+                      <Route path="/platform/*" element={<PlatformMovedPage />} />
                       <Route element={<ProtectedRoute />}>
                         <Route path="/app" element={<DashboardLayout />}>
-                          <Route index element={<DashboardPage />} />
-                          <Route path="reservations" element={<ReservationsPage />} />
-                          <Route path="reservations/:id" element={<ReservationDetailPage />} />
-                          <Route path="calendar" element={<CalendarPage />} />
-                          <Route path="floor-plan" element={<FloorPlanPage />} />
-                          <Route path="tables" element={<TablesPage />} />
-                          <Route path="menu" element={<MenuPage />} />
-                          <Route path="gallery" element={<GalleryPage />} />
-                          <Route path="waitlist" element={<WaitlistPage />} />
-                          <Route path="walk-in" element={<WalkInPage />} />
-                          <Route path="offers" element={<OffersPage />} />
-                          <Route path="reviews" element={<ReviewsPage />} />
-                          <Route path="notifications" element={<NotificationsPage />} />
-                          <Route path="messaging" element={<MessagingPage />} />
-                          <Route path="reports" element={<ReportsPage />} />
-                          <Route path="branches" element={<BranchesPage />} />
-                          <Route path="settings" element={<SettingsPage />} />
-                          <Route path="staff" element={<StaffPage />} />
-                        </Route>
+                            <Route index element={<DashboardPage />} />
+                            <Route path="reservations" element={<ReservationsPage />} />
+                            <Route path="reservations/:id" element={<ReservationDetailPage />} />
+                            <Route path="calendar" element={<CalendarPage />} />
+                            <Route path="floor-plan" element={<FloorPlanPage />} />
+                            <Route path="tables" element={<TablesPage />} />
+                            <Route path="menu" element={<MenuPage />} />
+                            <Route path="gallery" element={<GalleryPage />} />
+                            <Route path="waitlist" element={<WaitlistPage />} />
+                            <Route path="walk-in" element={<WalkInPage />} />
+                            <Route path="offers" element={<OffersPage />} />
+                            <Route path="reviews" element={<ReviewsPage />} />
+                            <Route path="notifications" element={<NotificationsPage />} />
+                            <Route path="messaging" element={<MessagingPage />} />
+                            <Route path="reports" element={<ReportsPage />} />
+                            <Route path="branches" element={<BranchesPage />} />
+                            <Route path="settings" element={<SettingsPage />} />
+                            <Route path="staff" element={<StaffPage />} />
+                          </Route>
                       </Route>
                     </Routes>
                   </BrowserRouter>

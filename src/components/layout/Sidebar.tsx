@@ -1,16 +1,26 @@
-import { NavLink } from 'react-router-dom'
-import { cn } from '@/lib/utils'
 import { useLocale } from '@/context/LocaleContext'
 import { useSidebar } from '@/context/SidebarContext'
 import { useAuth } from '@/context/AuthContext'
 import { useRestaurantScope } from '@/context/RestaurantScopeContext'
-import { Num } from '@/components/ui/Num'
-import { MaterialIcon } from '@/components/ui/Icon'
 import { useUnreadNotificationCount } from '@/hooks/useNotificationQueries'
+import {
+  SidebarAccount,
+  SidebarAction,
+  SidebarBrand,
+  SidebarNavItem,
+  SidebarSection,
+  SidebarShell,
+} from './SidebarNav'
 
 type NavKey = keyof typeof import('@/i18n/en').en.nav
 
-const opsNav: { key: NavKey; path: string; icon: string }[] = [
+type NavEntry = { key: NavKey; path: string; icon: string }
+
+/**
+ * Grouped by how often staff reach for them during service, so the busiest
+ * destinations sit closest to the top of the rail.
+ */
+const opsNav: NavEntry[] = [
   { key: 'dashboard', path: '/app', icon: 'dashboard' },
   { key: 'reservations', path: '/app/reservations', icon: 'event' },
   { key: 'calendar', path: '/app/calendar', icon: 'calendar_today' },
@@ -19,17 +29,17 @@ const opsNav: { key: NavKey; path: string; icon: string }[] = [
   { key: 'walkIn', path: '/app/walk-in', icon: 'directions_walk' },
 ]
 
-const mgmtNav: { key: NavKey; path: string; icon: string }[] = [
+const mgmtNav: NavEntry[] = [
   { key: 'menu', path: '/app/menu', icon: 'restaurant_menu' },
   { key: 'gallery', path: '/app/gallery', icon: 'photo_library' },
   { key: 'offers', path: '/app/offers', icon: 'local_offer' },
   { key: 'reviews', path: '/app/reviews', icon: 'rate_review' },
-  { key: 'tables', path: '/app/tables', icon: 'restaurant' },
+  { key: 'tables', path: '/app/tables', icon: 'table_restaurant' },
   { key: 'messaging', path: '/app/messaging', icon: 'inbox' },
   { key: 'notifications', path: '/app/notifications', icon: 'notifications' },
 ]
 
-const adminNav: { key: NavKey; path: string; icon: string }[] = [
+const adminNav: NavEntry[] = [
   { key: 'staff', path: '/app/staff', icon: 'badge' },
   { key: 'reports', path: '/app/reports', icon: 'analytics' },
   { key: 'branches', path: '/app/branches', icon: 'store' },
@@ -47,115 +57,59 @@ export function Sidebar() {
     notifications: unreadQuery.data ?? 0,
   }
 
-  const renderGroup = (label: string, items: typeof opsNav) => (
-    <div className="mb-2">
-      {!isCollapsed && (
-        <p className="px-4 mb-1 text-label-sm text-on-surface-variant uppercase tracking-wider">{label}</p>
-      )}
-      <div className="space-y-0.5">
-        {items.map(({ key, path, icon }) => (
-          <NavLink
-            key={key}
-            to={path}
-            end={path === '/app'}
-            onClick={close}
-            className={({ isActive }) =>
-              cn(
-                'flex items-center gap-3 px-4 py-2.5 text-label-md transition-all duration-200',
-                isCollapsed && 'justify-center px-2',
-                isActive
-                  ? 'text-primary border-s-4 border-primary bg-primary-container/10'
-                  : 'text-on-surface-variant hover:bg-surface-container-high border-s-4 border-transparent',
-              )
-            }
-            title={isCollapsed ? t.nav[key] : undefined}
-          >
-            <MaterialIcon name={icon} size={20} />
-            {!isCollapsed && (
-              <>
-                <span className="flex-1 truncate">{t.nav[key]}</span>
-                {badges[key] !== undefined && badges[key]! > 0 && (
-                  <span className="bg-error text-on-error text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[16px] text-center">
-                    <Num>{badges[key]}</Num>
-                  </span>
-                )}
-              </>
-            )}
-          </NavLink>
-        ))}
-      </div>
-    </div>
-  )
+  const renderItems = (items: NavEntry[]) =>
+    items.map(({ key, path, icon }) => (
+      <SidebarNavItem
+        key={key}
+        to={path}
+        icon={icon}
+        label={t.nav[key]}
+        badge={badges[key]}
+        end={path === '/app'}
+        isCollapsed={isCollapsed}
+        onNavigate={close}
+      />
+    ))
+
+  const brandContext =
+    scopeStatus === 'loading' ? t.scope.loading : (selectedRestaurant?.name ?? undefined)
 
   return (
-    <>
-      {isOpen && (
-        <div className="fixed inset-0 bg-inverse-surface/50 z-40 lg:hidden backdrop-blur-sm" onClick={close} aria-hidden="true" />
-      )}
+    <SidebarShell isOpen={isOpen} onClose={close} ariaLabel={t.nav.dashboard}>
+      <SidebarBrand
+        title="Tavola"
+        shortTitle="T"
+        context={brandContext}
+        isCollapsed={isCollapsed}
+      />
 
-      <aside
-        className={cn(
-          'fixed top-[var(--logout-leave-banner-h,0px)] start-0 z-50 h-[calc(100%-var(--logout-leave-banner-h,0px))] bg-surface border-e border-outline-variant/30 flex flex-col shadow-lg',
-          'transition-all duration-300 ease-in-out py-6',
-          isCollapsed ? 'w-[80px]' : 'w-[260px]',
-          'lg:translate-x-0',
-          isOpen ? 'translate-x-0' : 'max-lg:translate-x-full max-lg:ltr:-translate-x-full lg:translate-x-0',
-        )}
+      <nav className="flex-1 overflow-y-auto scrollbar-none pb-2">
+        <SidebarSection label={t.navGroups.operations} isCollapsed={isCollapsed} first>
+          {renderItems(opsNav)}
+        </SidebarSection>
+        <SidebarSection label={t.navGroups.management} isCollapsed={isCollapsed}>
+          {renderItems(mgmtNav)}
+        </SidebarSection>
+        <SidebarSection label={t.navGroups.admin} isCollapsed={isCollapsed}>
+          {renderItems(adminNav)}
+        </SidebarSection>
+      </nav>
+
+      <SidebarAccount
+        initials={user?.initials}
+        name={user?.displayName ?? ''}
+        meta={user?.organization?.role ?? user?.actorType}
+        isCollapsed={isCollapsed}
       >
-        <div className={cn('px-6 mb-6 shrink-0', isCollapsed && 'px-2 text-center')}>
-          {!isCollapsed ? (
-            <>
-              <h1 className="text-headline-lg text-primary font-bold">Tavola</h1>
-              {scopeStatus === 'loading' && (
-                <p className="text-label-sm text-on-surface-variant mt-1 truncate">
-                  {t.scope.loading}
-                </p>
-              )}
-              {selectedRestaurant && (
-                <p className="text-label-sm text-on-surface-variant mt-1 truncate" title={selectedRestaurant.name}>
-                  {selectedRestaurant.name}
-                </p>
-              )}
-            </>
-          ) : (
-            <span className="text-headline-md text-primary font-bold">T</span>
-          )}
-        </div>
-
-        <nav className="flex-1 overflow-y-auto px-2 scrollbar-none">
-          {renderGroup(t.navGroups.operations, opsNav)}
-          {renderGroup(t.navGroups.management, mgmtNav)}
-          {renderGroup(t.navGroups.admin, adminNav)}
-        </nav>
-
-        <div className="mt-auto px-2 pt-4 border-t border-outline-variant/30">
-          {!isCollapsed && user && (
-            <div className="flex items-center gap-3 px-4 py-2 mb-2">
-              <div className="w-10 h-10 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center text-sm font-bold shrink-0">
-                {user.initials}
-              </div>
-              <div className="min-w-0">
-                <p className="text-body-md font-bold text-on-surface truncate">{user.displayName}</p>
-                <p className="text-label-sm text-on-surface-variant">
-                  {user.organization?.role ?? user.actorType}
-                </p>
-              </div>
-            </div>
-          )}
-          <button
-            onClick={() => {
-              void logout()
-            }}
-            className={cn(
-              'flex items-center gap-3 w-full px-4 py-2.5 text-on-surface-variant hover:bg-surface-container-high transition-colors rounded-lg text-label-md',
-              isCollapsed && 'justify-center',
-            )}
-          >
-            <MaterialIcon name="logout" size={20} />
-            {!isCollapsed && <span>{t.header.logout}</span>}
-          </button>
-        </div>
-      </aside>
-    </>
+        <SidebarAction
+          icon="logout"
+          label={t.header.logout}
+          isCollapsed={isCollapsed}
+          onClick={() => {
+            void logout()
+          }}
+        />
+      </SidebarAccount>
+    </SidebarShell>
   )
 }

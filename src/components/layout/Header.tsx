@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useTheme } from '@/context/ThemeContext'
 import { useLocale } from '@/context/LocaleContext'
 import { useSidebar } from '@/context/SidebarContext'
@@ -7,11 +7,46 @@ import { useRestaurantScope } from '@/context/RestaurantScopeContext'
 import { GlobalSearch } from './GlobalSearch'
 import { NotificationPopover } from './NotificationPopover'
 import { MaterialIcon } from '@/components/ui/Icon'
+import { Button } from '@/components/ui/Button'
+import { cn } from '@/lib/utils'
+
+/**
+ * Scope selector styled as a real form control rather than a coloured pill, so
+ * it reads as "this changes what you're looking at" instead of decoration.
+ */
+function ScopeChip({
+  icon,
+  children,
+  className,
+}: {
+  icon: string
+  children: React.ReactNode
+  className?: string
+}) {
+  return (
+    <div
+      className={cn(
+        'hidden lg:flex h-9 items-center gap-2 rounded-lg border border-outline-variant',
+        'bg-surface-container-lowest ps-3 pe-2',
+        'transition-colors duration-[var(--duration-fast)] hover:border-outline',
+        className,
+      )}
+    >
+      <MaterialIcon name={icon} size={15} className="text-outline shrink-0" />
+      {children}
+    </div>
+  )
+}
+
+const bareSelect = cn(
+  'max-w-[150px] truncate cursor-pointer border-none bg-transparent',
+  'text-label-md text-on-surface focus:outline-none',
+)
 
 export function Header() {
   const { theme, toggleTheme } = useTheme()
   const { t, toggleLocale } = useLocale()
-  const { toggle } = useSidebar()
+  const { toggle, isCollapsed, toggleCollapse } = useSidebar()
   const { user } = useAuth()
   const {
     status,
@@ -33,43 +68,70 @@ export function Header() {
   const showBranchSwitcher = scopeReady && branches.length > 0
 
   useEffect(() => {
-    const handler = (e: MouseEvent) => {
+    if (!profileOpen) return
+    const onPointerDown = (e: MouseEvent) => {
       if (profileRef.current && !profileRef.current.contains(e.target as Node)) setProfileOpen(false)
     }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
-  }, [])
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setProfileOpen(false)
+    }
+    document.addEventListener('mousedown', onPointerDown)
+    document.addEventListener('keydown', onKeyDown)
+    return () => {
+      document.removeEventListener('mousedown', onPointerDown)
+      document.removeEventListener('keydown', onKeyDown)
+    }
+  }, [profileOpen])
 
   return (
-    <header className="sticky top-0 z-40 w-full h-16 flex justify-between items-center px-4 lg:px-6 glass bg-surface/80 shadow-sm border-b border-outline-variant/10">
-      <div className="flex items-center gap-4 flex-1 min-w-0">
-        <button
+    <header
+      className={cn(
+        'sticky top-0 z-40 flex h-16 w-full items-center justify-between gap-3 px-4 lg:px-8',
+        'glass bg-surface/85 border-b border-outline-variant/50',
+      )}
+    >
+      <div className="flex min-w-0 flex-1 items-center gap-2">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="lg:hidden"
           onClick={toggle}
-          className="lg:hidden p-2 rounded-full text-on-surface-variant hover:bg-surface-variant/50 transition-colors"
-          aria-label="Open menu"
+          aria-label={t.header.openMenu}
         >
-          <MaterialIcon name="menu" size={22} />
-        </button>
-        <div className="lg:hidden text-headline-md text-primary font-extrabold">Tavola</div>
-        <div className="hidden lg:block flex-1 max-w-xs">
+          <MaterialIcon name="menu" size={20} />
+        </Button>
+
+        <Button
+          variant="ghost"
+          size="icon"
+          className="hidden lg:inline-flex"
+          onClick={toggleCollapse}
+          aria-label={t.header.toggleSidebar}
+          aria-pressed={isCollapsed}
+        >
+          <MaterialIcon name={isCollapsed ? 'chevron_right' : 'chevron_left'} size={20} className="rtl:rotate-180" />
+        </Button>
+
+        <span className="lg:hidden text-headline-md font-bold text-primary">Tavola</span>
+
+        <div className="hidden lg:block w-full max-w-sm">
           <GlobalSearch />
         </div>
       </div>
 
-      <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+      <div className="flex shrink-0 items-center gap-2">
         {status === 'loading' && (
-          <span className="hidden lg:inline text-label-md text-on-surface-variant">
+          <span className="hidden lg:inline text-body-sm text-on-surface-variant">
             {t.scope.loading}
           </span>
         )}
 
         {showRestaurantSwitcher && selectedRestaurantId && (
-          <div className="hidden lg:flex items-center gap-1.5 px-4 py-1.5 bg-secondary-container/30 rounded-full">
-            <MaterialIcon name="storefront" size={16} className="text-primary" />
+          <ScopeChip icon="storefront">
             <select
               value={selectedRestaurantId}
               onChange={(e) => selectRestaurant(e.target.value)}
-              className="bg-transparent border-none text-label-md text-primary font-semibold cursor-pointer focus:outline-none max-w-[140px] truncate"
+              className={bareSelect}
               aria-label={t.scope.restaurantSelector}
             >
               {restaurants.map((r) => (
@@ -78,16 +140,15 @@ export function Header() {
                 </option>
               ))}
             </select>
-          </div>
+          </ScopeChip>
         )}
 
         {showBranchSwitcher && selectedBranchId && (
-          <div className="hidden lg:flex items-center gap-1.5 px-4 py-1.5 bg-secondary-container/30 rounded-full">
-            <MaterialIcon name="location_on" size={16} className="text-primary" />
+          <ScopeChip icon="location_on">
             <select
               value={selectedBranchId}
               onChange={(e) => selectBranch(e.target.value)}
-              className="bg-transparent border-none text-label-md text-primary font-semibold cursor-pointer focus:outline-none max-w-[140px] truncate"
+              className={bareSelect}
               aria-label={t.header.branch}
             >
               {branches.map((b) => (
@@ -96,59 +157,73 @@ export function Header() {
                 </option>
               ))}
             </select>
-          </div>
+          </ScopeChip>
         )}
 
         {!showBranchSwitcher && selectedRestaurant && status === 'ready' && (
-          <div className="hidden lg:flex items-center gap-1.5 px-4 py-1.5 bg-secondary-container/30 rounded-full">
-            <MaterialIcon name="storefront" size={16} className="text-primary" />
-            <span className="text-label-md text-primary font-semibold truncate max-w-[140px]">
+          <ScopeChip icon="storefront" className="pe-3">
+            <span className="max-w-[150px] truncate text-label-md text-on-surface">
               {selectedRestaurant.name}
             </span>
-          </div>
+          </ScopeChip>
         )}
 
-        <button
-          onClick={toggleLocale}
-          className="p-2 rounded-full text-on-surface-variant hover:bg-surface-variant/50 transition-colors"
-          aria-label={t.header.language}
-        >
-          <MaterialIcon name="language" size={20} />
-        </button>
+        <div className="mx-1 hidden h-6 w-px bg-outline-variant/60 lg:block" />
+
+        <Button variant="ghost" size="icon" onClick={toggleLocale} aria-label={t.header.language}>
+          <MaterialIcon name="language" size={19} />
+        </Button>
 
         <NotificationPopover />
 
-        <button
-          onClick={toggleTheme}
-          className="p-2 rounded-full text-on-surface-variant hover:bg-surface-variant/50 transition-colors"
-        >
-          <MaterialIcon name={theme === 'light' ? 'dark_mode' : 'light_mode'} size={20} />
-        </button>
+        <Button variant="ghost" size="icon" onClick={toggleTheme} aria-label={t.header.theme}>
+          <MaterialIcon name={theme === 'light' ? 'dark_mode' : 'light_mode'} size={19} />
+        </Button>
 
         <div ref={profileRef} className="relative">
           <button
-            onClick={() => setProfileOpen(!profileOpen)}
-            className="w-8 h-8 rounded-full overflow-hidden bg-primary-container text-on-primary-container flex items-center justify-center text-xs font-bold hover:opacity-90 transition-opacity"
+            type="button"
+            onClick={() => setProfileOpen((o) => !o)}
+            aria-haspopup="menu"
+            aria-expanded={profileOpen}
+            aria-label={t.header.account}
+            className={cn(
+              'flex h-9 w-9 items-center justify-center rounded-full text-label-md font-bold',
+              'bg-primary-subtle text-primary ring-1 ring-primary-border',
+              'transition-colors duration-[var(--duration-fast)] hover:bg-primary-fixed',
+              'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
+            )}
           >
-            {user?.initials ?? 'U'}
+            {user?.initials ?? '—'}
           </button>
 
           {profileOpen && (
-            <div className="absolute top-full end-0 mt-2 w-56 bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-modal z-50 overflow-hidden animate-scale-in">
-              <div className="p-4 border-b border-outline-variant/30">
-                <p className="font-semibold text-on-surface text-sm">{user?.displayName}</p>
-                <p className="text-xs text-on-surface-variant">{user?.email}</p>
-              </div>
-              {selectedRestaurant && (
-                <div className="px-4 py-3 border-b border-outline-variant/30 flex items-center gap-2 text-xs text-on-surface-variant">
-                  <MaterialIcon name="storefront" size={14} />
-                  <span className="truncate">{selectedRestaurant.name}</span>
-                </div>
+            <div
+              role="menu"
+              className={cn(
+                'absolute end-0 top-full mt-2 w-64 overflow-hidden rounded-xl',
+                'border border-outline-variant/60 bg-surface-container-lowest elev-4 animate-scale-in',
               )}
-              {selectedBranch && (
-                <div className="px-4 py-3 border-b border-outline-variant/30 flex items-center gap-2 text-xs text-on-surface-variant lg:hidden">
-                  <MaterialIcon name="location_on" size={14} />
-                  <span className="truncate">{formatBranchLabel(selectedBranch)}</span>
+            >
+              <div className="px-4 py-3">
+                <p className="text-label-lg text-on-surface truncate">{user?.displayName}</p>
+                <p className="text-body-sm text-on-surface-variant truncate">{user?.email}</p>
+              </div>
+
+              {(selectedRestaurant || selectedBranch) && (
+                <div className="border-t border-outline-variant/50 px-4 py-3 space-y-2">
+                  {selectedRestaurant && (
+                    <div className="flex items-center gap-2 text-body-sm text-on-surface-variant">
+                      <MaterialIcon name="storefront" size={14} className="text-outline" />
+                      <span className="truncate">{selectedRestaurant.name}</span>
+                    </div>
+                  )}
+                  {selectedBranch && (
+                    <div className="flex items-center gap-2 text-body-sm text-on-surface-variant">
+                      <MaterialIcon name="location_on" size={14} className="text-outline" />
+                      <span className="truncate">{formatBranchLabel(selectedBranch)}</span>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

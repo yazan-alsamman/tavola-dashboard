@@ -17,9 +17,10 @@ import {
   extractValidationFieldErrors,
   mapInventoryMutationError,
 } from '@/lib/inventoryMutationErrors'
-
-const DEFAULT_W = 72
-const DEFAULT_H = 72
+import {
+  DEFAULT_TABLE_HEIGHT,
+  DEFAULT_TABLE_WIDTH,
+} from '@/lib/floorGeometry'
 
 type Mode =
   | { kind: 'create'; floorPlanId: string; defaultX?: number; defaultY?: number }
@@ -58,8 +59,8 @@ function emptyForm(mode: Mode | null): FormState {
       capacity: String(tb.capacity),
       positionX: tb.positionX != null ? String(tb.positionX) : '',
       positionY: tb.positionY != null ? String(tb.positionY) : '',
-      width: tb.width != null ? String(tb.width) : String(DEFAULT_W),
-      height: tb.height != null ? String(tb.height) : String(DEFAULT_H),
+      width: tb.width != null ? String(tb.width) : String(DEFAULT_TABLE_WIDTH),
+      height: tb.height != null ? String(tb.height) : String(DEFAULT_TABLE_HEIGHT),
       rotation: tb.rotation != null ? String(tb.rotation) : '0',
       shape: tb.shape,
       indoor: tb.indoor,
@@ -79,8 +80,8 @@ function emptyForm(mode: Mode | null): FormState {
       mode?.kind === 'create' && mode.defaultY != null
         ? String(mode.defaultY)
         : '40',
-    width: String(DEFAULT_W),
-    height: String(DEFAULT_H),
+    width: String(DEFAULT_TABLE_WIDTH),
+    height: String(DEFAULT_TABLE_HEIGHT),
     rotation: '0',
     shape: 'Rectangle',
     indoor: true,

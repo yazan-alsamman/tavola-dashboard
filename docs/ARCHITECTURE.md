@@ -21,10 +21,10 @@ There is currently no data-fetching/cache library (no React Query/SWR). See `STA
 
 ```
 src/
-├── api/            # HTTP client foundation + (later) one module per backend resource
+├── api/            # HTTP client foundation + restaurant resource modules
 ├── assets/         # static images
 ├── components/
-│   ├── auth/       # ProtectedRoute / PublicRoute
+│   ├── auth/       # ProtectedRoute / PublicRoute (restaurant)
 │   ├── dashboard/  # dashboard-page-specific composite components
 │   ├── floor/      # floor plan canvas/spatial components
 │   ├── landing/    # public landing page: R3F scene, GSAP entrance/scroll timelines, sections
@@ -33,10 +33,12 @@ src/
 ├── context/        # Theme, Locale, Sidebar, Auth, RestaurantScope, Restaurant (legacy mock), Toast
 ├── data/           # mock data — feature demos only; shell scope is not mock
 ├── i18n/           # en.ts / ar.ts translation dictionaries
-├── lib/            # utilities (floor layout, scope selection/persistence, auth claims, cn)
-├── pages/          # one file per route, thin orchestration only
+├── lib/            # utilities (floorGeometry, scope selection/persistence, auth claims, cn)
+├── pages/          # restaurant dashboard routes (`/app`) — one file per route
 └── types/          # shared TypeScript interfaces/enums
 ```
+
+The Platform Owner console is a **separate Vite app** in `../Tavola_platform` (`http://localhost:5174`). This restaurant app serves `/app` only. Visiting `/platform` here shows a pointer to that app.
 
 Path alias `@/` maps to `src/` (`vite.config.ts`, `tsconfig.app.json`). Always import via `@/...`; never use `../../..` relative climbs across top-level folders.
 
@@ -86,7 +88,7 @@ src/api/
 └── health.ts           # Terminus health/liveness/readiness (non-envelope)
 ```
 
-Customer Authentication, Platform Admin, Discovery, and customer favorites are intentionally **not** part of this dashboard client.
+Customer Authentication, Discovery, and customer favorites are intentionally **not** part of the restaurant dashboard client. Platform Admin lives in the `Tavola_platform` app, not in this restaurant client.
 
 **Reservations note:** Postman now exposes list/get + approve/reject/cancel/complete/no-show/table-ready + Phone/Walk-In create. Client functions live in `reservations.ts`. Staff branch-scoped inbox (if different from ownership `GET /reservations`) is not a separate path in Postman.
 

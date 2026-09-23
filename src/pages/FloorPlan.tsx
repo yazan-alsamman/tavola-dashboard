@@ -1,30 +1,43 @@
 import { useState } from 'react'
 import { isApiError } from '@/api/errors'
-import type { TableDto, TableStatusDto } from '@/api/tables'
-import { tableToUpdateRequest } from '@/api/tables'
+import type { TableDto } from '@/api/tables'
 import { CreateFloorPlanDialog } from '@/components/inventory/CreateFloorPlanDialog'
 import { ChangeTableStatusDialog } from '@/components/inventory/ChangeTableStatusDialog'
 import { MoveTableDialog } from '@/components/inventory/MoveTableDialog'
 import { TableFormDialog } from '@/components/inventory/TableFormDialog'
 import { FloorPlanReadView } from '@/components/floor/FloorPlanReadView'
+import { FloorTableInspector } from '@/components/floor/FloorTableInspector'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { MaterialIcon } from '@/components/ui/Icon'
 import { Num } from '@/components/ui/Num'
-import { StatusBadge } from '@/components/ui/StatusBadge'
+import { Button } from '@/components/ui/Button'
+import { PageHeader } from '@/components/ui/PageHeader'
 import { ConfirmDialog } from '@/components/ui/Modal'
 import { useLocale } from '@/context/LocaleContext'
 import { useRestaurantScope } from '@/context/RestaurantScopeContext'
+import { useToast } from '@/context/ToastContext'
 import {
   useFloorPlanTablesQuery,
   useSelectedFloorPlan,
 } from '@/hooks/useInventoryQueries'
 import {
   useActivateFloorPlanMutation,
+  useCreateTableMutation,
   useDeleteTableMutation,
   useUpdateTableMutation,
 } from '@/hooks/useInventoryMutations'
 import { useCanManageInventory } from '@/hooks/usePermissions'
 import { mapInventoryMutationError } from '@/lib/inventoryMutationErrors'
+import {
+  clampTableSize,
+  isTablePlaced,
+  layoutUnplaced,
+  nextTableNumber,
+  resolveTableSize,
+  tableBox,
+  withCompleteGeometry,
+  type TablePreset,
+} from '@/lib/floorGeometry'
 
 /**
  * Backend-driven Floor Plan with production mutations.
@@ -33,6 +46,7 @@ import { mapInventoryMutationError } from '@/lib/inventoryMutationErrors'
  */
 export function FloorPlanPage() {
   const { t } = useLocale()
+  const { toast } = useToast()
   const {
     status: scopeStatus,
     formatBranchLabel,
@@ -53,6 +67,7 @@ export function FloorPlanPage() {
   )
 
   const activateMutation = useActivateFloorPlanMutation()
+  const createMutation = useCreateTableMutation()
   const updateMutation = useUpdateTableMutation()
   const deleteMutation = useDeleteTableMutation()
 
@@ -67,19 +82,101 @@ export function FloorPlanPage() {
   )
   const [repositionBusyId, setRepositionBusyId] = useState<string | null>(null)
   const [repositionError, setRepositionError] = useState<string | null>(null)
+  const [failedSave, setFailedSave] = useState<{
+    tableId: string
+    overrides: Parameters<typeof withCompleteGeometry>[1]
+    message: string
+  } | null>(null)
   const [activateError, setActivateError] = useState<string | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
+  const [placePreset, setPlacePreset] = useState<TablePreset | null>(null)
+  const [snapEnabled, setSnapEnabled] = useState(true)
 
   const restaurantId = selectedRestaurantId ?? ''
   const branchId = selectedBranchId ?? ''
   const tables = tablesQuery.data ?? []
   const selectedTable = tables.find((tb) => tb.tableId === selectedTableId)
   const floorPlans = floorPlansQuery.data ?? []
+  const unplaced = tables.filter((tb) => !isTablePlaced(tb))
+  const placingUnplaced =
+    selectedTable != null && !isTablePlaced(selectedTable)
 
   const counts = {
     total: tables.length,
     available: tables.filter((tb) => tb.status === 'Available').length,
     occupied: tables.filter((tb) => tb.status === 'Occupied').length,
+  }
+
+  const persistGeometry = async (
+    table: TableDto,
+    overrides: Parameters<typeof withCompleteGeometry>[1],
+  ): Promise<boolean> => {
+    if (!restaurantId || !branchId) return false
+    setRepositionError(null)
+    setFailedSave((current) =>
+      current?.tableId === table.tableId ? null : current,
+    )
+    setRepositionBusyId(table.tableId)
+    try {
+      await updateMutation.mutateAsync({
+        tableId: table.tableId,
+        body: withCompleteGeometry(table, overrides),
+        scope: { restaurantId, branchId },
+        floorPlanId: table.floorPlanId,
+      })
+      return true
+    } catch (err) {
+      setFailedSave({
+        tableId: table.tableId,
+        overrides,
+        message: mapInventoryMutationError(err, t.inventory.errors),
+      })
+      return false
+    } finally {
+      setRepositionBusyId(null)
+    }
+  }
+
+  const retryFailedSave = async () => {
+    if (!failedSave) return
+    const table = tables.find((tb) => tb.tableId === failedSave.tableId)
+    if (!table) {
+      setFailedSave(null)
+      return
+    }
+    await persistGeometry(table, failedSave.overrides)
+  }
+
+  const handleDuplicate = async (table: TableDto) => {
+    if (!restaurantId || !branchId) return
+    setRepositionError(null)
+    const size = resolveTableSize(table)
+    try {
+      const created = await createMutation.mutateAsync({
+        restaurantId,
+        branchId,
+        body: {
+          floorPlanId: table.floorPlanId,
+          tableNumber: nextTableNumber(tables),
+          capacity: table.capacity,
+          shape: table.shape,
+          positionX: (table.positionX ?? 48) + 32,
+          positionY: (table.positionY ?? 48) + 32,
+          width: size.width,
+          height: size.height,
+          rotation: table.rotation ?? 0,
+          floor: table.floor,
+          layer: table.layer ?? 0,
+          indoor: table.indoor,
+          vip: table.vip,
+          smoking: table.smoking,
+        },
+      })
+      setSelectedTableId(created.tableId)
+      toast('success', t.floorPlan.duplicateSuccess)
+    } catch (err) {
+      setRepositionError(mapInventoryMutationError(err, t.inventory.errors))
+    }
   }
 
   const handleReposition = async (
@@ -88,20 +185,78 @@ export function FloorPlanPage() {
     positionY: number,
   ) => {
     const table = tables.find((tb) => tb.tableId === tableId)
-    if (!table || !restaurantId || !branchId) return
+    if (!table) return
+    await persistGeometry(table, { positionX, positionY })
+  }
+
+  const handleResize = async (
+    tableId: string,
+    width: number,
+    height: number,
+  ) => {
+    const table = tables.find((tb) => tb.tableId === tableId)
+    if (!table) return
+    const size =
+      table.shape === 'Round'
+        ? { width, height: width }
+        : { width, height }
+    await persistGeometry(table, size)
+  }
+
+  const handlePlaceAt = async (x: number, y: number) => {
+    if (!restaurantId || !branchId || !selectedFloorPlanId) return
     setRepositionError(null)
-    setRepositionBusyId(tableId)
+
+    if (placingUnplaced && selectedTable && !placePreset) {
+      await persistGeometry(selectedTable, { positionX: x, positionY: y })
+      return
+    }
+
+    if (!placePreset) return
     try {
-      await updateMutation.mutateAsync({
-        tableId,
-        body: tableToUpdateRequest(table, { positionX, positionY }),
-        scope: { restaurantId, branchId },
-        floorPlanId: table.floorPlanId,
+      await createMutation.mutateAsync({
+        restaurantId,
+        branchId,
+        body: {
+          floorPlanId: selectedFloorPlanId,
+          tableNumber: nextTableNumber(tables),
+          capacity: placePreset.capacity,
+          shape: placePreset.shape,
+          positionX: x,
+          positionY: y,
+          width: placePreset.width,
+          height: placePreset.height,
+          rotation: 0,
+          indoor: true,
+          vip: false,
+          smoking: false,
+          layer: 0,
+        },
       })
-    } catch {
-      setRepositionError(t.floorPlan.repositionFailed)
-    } finally {
-      setRepositionBusyId(null)
+      toast('success', t.floorPlan.createdSuccess)
+    } catch (err) {
+      setRepositionError(mapInventoryMutationError(err, t.inventory.errors))
+    }
+  }
+
+  const handleAutoPlace = async () => {
+    if (!restaurantId || !branchId || unplaced.length === 0) return
+    setRepositionError(null)
+    const occupied = tables.filter(isTablePlaced).map((tb) => tableBox(tb))
+    const laid = layoutUnplaced(unplaced, occupied)
+    for (const item of laid) {
+      const table = tables.find((tb) => tb.tableId === item.tableId)
+      if (!table) continue
+      const ok = await persistGeometry(table, {
+        positionX: item.x,
+        positionY: item.y,
+        width: item.width,
+        height: item.height,
+      })
+      if (!ok) return
+    }
+    if (laid.length > 0) {
+      toast('success', t.floorPlan.placedSuccess)
     }
   }
 
@@ -114,6 +269,7 @@ export function FloorPlanPage() {
         branchId,
         floorPlanId: selectedFloorPlan.floorPlanId,
       })
+      toast('success', t.floorPlan.activateSuccess)
     } catch (err) {
       setActivateError(mapInventoryMutationError(err, t.inventory.errors))
     }
@@ -136,6 +292,44 @@ export function FloorPlanPage() {
       setDeleteError(mapInventoryMutationError(err, t.inventory.errors))
     }
   }
+
+  const bumpSize = async (table: TableDto, delta: number) => {
+    const size = resolveTableSize(table)
+    const width = clampTableSize(size.width + delta)
+    const height =
+      table.shape === 'Round' ? width : clampTableSize(size.height + delta)
+    await persistGeometry(table, { width, height })
+  }
+
+  const header = (
+    <PageHeader
+      title={t.floorPlan.title}
+      subtitle={`${t.floorPlan.subtitle}${
+        selectedBranch ? ` · ${formatBranchLabel(selectedBranch)}` : ''
+      }`}
+      actions={
+        canManage ? (
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setCreateFloorOpen(true)}
+            >
+              {t.inventory.createFloorPlan}
+            </Button>
+            {selectedFloorPlanId ? (
+              <Button
+                type="button"
+                onClick={() => setCreateTableOpen(true)}
+              >
+                {t.inventory.createTable}
+              </Button>
+            ) : null}
+          </>
+        ) : undefined
+      }
+    />
+  )
 
   if (scopeStatus === 'loading' || scopeStatus === 'idle') {
     return (
@@ -180,14 +374,7 @@ export function FloorPlanPage() {
   if (floorPlans.length === 0) {
     return (
       <div className="space-y-4">
-        <Header
-          selectedBranchLabel={
-            selectedBranch ? formatBranchLabel(selectedBranch) : null
-          }
-          t={t}
-          canManage={canManage}
-          onCreateFloor={() => setCreateFloorOpen(true)}
-        />
+        {header}
         <EmptyState
           icon="layers"
           title={t.floorPlan.noFloorPlansTitle}
@@ -219,17 +406,7 @@ export function FloorPlanPage() {
 
   return (
     <div className="space-y-4">
-      <Header
-        selectedBranchLabel={
-          selectedBranch ? formatBranchLabel(selectedBranch) : null
-        }
-        t={t}
-        canManage={canManage}
-        onCreateFloor={() => setCreateFloorOpen(true)}
-        onCreateTable={
-          selectedFloorPlanId ? () => setCreateTableOpen(true) : undefined
-        }
-      />
+      {header}
 
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
         <label className="flex items-center gap-2 text-label-md text-on-surface-variant">
@@ -238,9 +415,10 @@ export function FloorPlanPage() {
             value={selectedFloorPlanId ?? ''}
             onChange={(e) => {
               setSelectedTableId(null)
+              setPlacePreset(null)
               selectFloorPlan(e.target.value)
             }}
-            className="rounded-lg bg-surface-container-low px-3 py-2 text-body-md text-on-surface outline-none focus:ring-2 focus:ring-primary/20"
+            className="rounded-lg bg-surface-container-low px-3 py-2 text-body-md text-on-surface outline-none focus:ring-2 focus:ring-primary/20 min-h-10"
             aria-label={t.floorPlan.floorSelector}
           >
             {floorPlans.map((fp) => (
@@ -270,43 +448,64 @@ export function FloorPlanPage() {
         </div>
       </div>
 
-      {canManage &&
-        selectedFloorPlan &&
-        !selectedFloorPlan.isActive && (
-          <div className="flex flex-wrap items-center gap-3 rounded-lg border border-outline-variant/30 bg-surface-container-lowest px-4 py-3">
-            <p className="text-label-md text-on-surface-variant flex-1">
-              {t.floorPlan.viewingInactive}
+      {canManage && selectedFloorPlan && !selectedFloorPlan.isActive && (
+        <div className="flex flex-wrap items-center gap-3 rounded-lg border border-outline-variant/30 bg-surface-container-lowest px-4 py-3">
+          <p className="text-label-md text-on-surface-variant flex-1">
+            {t.floorPlan.viewingInactive}
+          </p>
+          <Button
+            type="button"
+            size="sm"
+            disabled={activateMutation.isPending}
+            onClick={() => void handleActivate()}
+            loading={activateMutation.isPending}
+          >
+            {activateMutation.isPending
+              ? t.floorPlan.activating
+              : t.floorPlan.activate}
+          </Button>
+          {activateError && (
+            <p className="w-full text-label-sm text-error" role="alert">
+              {activateError}
             </p>
-            <button
-              type="button"
-              disabled={activateMutation.isPending}
-              onClick={() => void handleActivate()}
-              className="px-3 py-1.5 rounded-lg text-label-md bg-primary text-on-primary disabled:opacity-50"
-            >
-              {activateMutation.isPending
-                ? t.floorPlan.activating
-                : t.floorPlan.activate}
-            </button>
-            {activateError && (
-              <p className="w-full text-label-sm text-error" role="alert">
-                {activateError}
-              </p>
-            )}
-          </div>
-        )}
+          )}
+        </div>
+      )}
 
       <p className="text-label-sm text-on-surface-variant">
-        {canManage ? t.floorPlan.manageHint : t.inventory.employeeBlocked}
+        {canManage ? t.floorPlan.studioHint : t.inventory.employeeBlocked}
       </p>
-      {canManage && (
-        <p className="text-label-sm text-on-surface-variant">
-          {t.floorPlan.repositionHint}
-        </p>
-      )}
       {repositionError && (
         <p className="text-label-sm text-error" role="alert">
           {repositionError}
         </p>
+      )}
+      {failedSave && (
+        <div
+          className="flex flex-wrap items-center gap-3 rounded-lg border border-error/30 bg-error/5 px-4 py-3"
+          role="alert"
+        >
+          <p className="text-label-md text-error flex-1">
+            {t.floorPlan.saveFailedTitle} {failedSave.message}
+          </p>
+          <Button
+            type="button"
+            size="sm"
+            disabled={Boolean(repositionBusyId)}
+            onClick={() => void retryFailedSave()}
+          >
+            {t.floorPlan.retrySave}
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            disabled={Boolean(repositionBusyId)}
+            onClick={() => setFailedSave(null)}
+          >
+            {t.floorPlan.discardSave}
+          </Button>
+        </div>
       )}
 
       {tablesQuery.isLoading && (
@@ -332,91 +531,80 @@ export function FloorPlanPage() {
         />
       )}
 
-      {tablesQuery.isSuccess && tables.length === 0 && (
-        <EmptyState
-          icon="table_restaurant"
-          title={t.floorPlan.noTablesTitle}
-          description={t.floorPlan.noTablesBody}
-          action={
-            canManage ? (
-              <button
-                type="button"
-                className="text-label-md text-primary font-semibold"
-                onClick={() => setCreateTableOpen(true)}
-              >
-                {t.inventory.createTable}
-              </button>
-            ) : undefined
-          }
-        />
-      )}
-
-      {tablesQuery.isSuccess && tables.length > 0 && (
-        <FloorPlanReadView
-          tables={tables}
-          selectedTableId={selectedTableId}
-          onSelectTable={setSelectedTableId}
-          repositionEnabled={canManage}
-          repositionBusyTableId={repositionBusyId}
-          onReposition={(id, x, y) => void handleReposition(id, x, y)}
-        />
-      )}
-
-      {selectedTable && (
-        <div className="rounded-xl border border-outline-variant/20 bg-surface-container-lowest p-4 flex flex-wrap items-center gap-4">
-          <div>
-            <p className="font-semibold text-on-surface">
-              {selectedTable.tableNumber}
-            </p>
-            <p className="text-label-sm text-on-surface-variant">
-              <Num>{selectedTable.capacity}</Num> {t.common.seats} ·{' '}
-              {t.tables.shapes[selectedTable.shape]}
-            </p>
+      {tablesQuery.isSuccess && (
+        <div className="flex flex-col lg:grid lg:grid-cols-[minmax(0,1fr)_280px] gap-3">
+          <div className="min-w-0 space-y-3">
+            {unplaced.length > 0 && canManage && (
+              <div className="flex justify-end">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  disabled={Boolean(repositionBusyId)}
+                  onClick={() => void handleAutoPlace()}
+                >
+                  {t.floorPlan.autoPlace}
+                </Button>
+              </div>
+            )}
+            <FloorPlanReadView
+              tables={tables}
+              selectedTableId={selectedTableId}
+              onSelectTable={(id) => {
+                setSelectedTableId(id)
+                if (id) setPlacePreset(null)
+              }}
+              repositionEnabled={canManage}
+              repositionBusyTableId={repositionBusyId}
+              onReposition={(id, x, y) => void handleReposition(id, x, y)}
+              onResize={(id, w, h) => void handleResize(id, w, h)}
+              snapEnabled={snapEnabled}
+              onSnapChange={setSnapEnabled}
+              placePreset={placePreset}
+              onPlacePreset={(preset) => {
+                setPlacePreset(preset)
+                if (preset) setSelectedTableId(null)
+              }}
+              placeEnabled={Boolean(placePreset) || placingUnplaced}
+              placeSize={
+                placePreset ??
+                (placingUnplaced && selectedTable
+                  ? resolveTableSize(selectedTable)
+                  : undefined)
+              }
+              onPlaceAt={(x, y) => void handlePlaceAt(x, y)}
+              placing={createMutation.isPending || Boolean(repositionBusyId)}
+            />
           </div>
-          <StatusBadge
-            status={selectedTable.status}
-            label={t.status[selectedTable.status as TableStatusDto]}
-            type="table"
-          />
-          {selectedFloorPlan && (
-            <span className="text-label-sm text-on-surface-variant">
-              {selectedFloorPlan.name}
-              {selectedFloorPlan.isActive ? ` · ${t.floorPlan.active}` : ''}
-            </span>
-          )}
-          {canManage && (
-            <div className="flex flex-wrap gap-2 ms-auto">
-              <button
-                type="button"
-                className="text-label-sm text-primary font-semibold"
-                onClick={() => setEditTable(selectedTable)}
-              >
-                {t.common.edit}
-              </button>
-              <button
-                type="button"
-                className="text-label-sm text-primary font-semibold"
-                onClick={() => setMoveTableTarget(selectedTable)}
-              >
-                {t.inventory.moveTable}
-              </button>
-              <button
-                type="button"
-                className="text-label-sm text-primary font-semibold"
-                onClick={() => setStatusTable(selectedTable)}
-              >
-                {t.inventory.changeStatus}
-              </button>
-              <button
-                type="button"
-                className="text-label-sm text-error font-semibold"
-                onClick={() => {
-                  setDeleteError(null)
-                  setDeleteTableTarget(selectedTable)
-                }}
-              >
-                {t.common.delete}
-              </button>
+
+          {selectedTable ? (
+            <FloorTableInspector
+              table={selectedTable}
+              floorPlanName={selectedFloorPlan?.name ?? null}
+              floorPlanActive={Boolean(selectedFloorPlan?.isActive)}
+              canManage={canManage}
+              busy={repositionBusyId === selectedTable.tableId}
+              onRotate={() =>
+                void persistGeometry(selectedTable, {
+                  rotation: ((selectedTable.rotation ?? 0) + 45) % 360,
+                })
+              }
+              onLarger={() => void bumpSize(selectedTable, 16)}
+              onSmaller={() => void bumpSize(selectedTable, -16)}
+              onEdit={() => setEditTable(selectedTable)}
+              onMove={() => setMoveTableTarget(selectedTable)}
+              onStatus={() => setStatusTable(selectedTable)}
+              onDelete={() => {
+                setDeleteError(null)
+                setDeleteTableTarget(selectedTable)
+              }}
+              onDuplicate={() => void handleDuplicate(selectedTable)}
+              duplicating={createMutation.isPending}
+              onClose={() => setSelectedTableId(null)}
+            />
+          ) : (
+            <div className="hidden lg:flex rounded-xl border border-dashed border-outline-variant/40 bg-surface-container-lowest p-4 text-body-sm text-on-surface-variant items-center">
+              {canManage ? t.floorPlan.placePresetHint : t.floorPlan.selectTable}
             </div>
           )}
         </div>
@@ -442,8 +630,8 @@ export function FloorPlanPage() {
                 ? {
                     kind: 'create',
                     floorPlanId: selectedFloorPlanId,
-                    defaultX: 40 + tables.length * 16,
-                    defaultY: 40 + tables.length * 12,
+                    defaultX: 48 + tables.length * 16,
+                    defaultY: 48 + tables.length * 12,
                   }
                 : null
             }
@@ -496,52 +684,6 @@ export function FloorPlanPage() {
             closeOnConfirm={false}
           />
         </>
-      )}
-    </div>
-  )
-}
-
-function Header({
-  selectedBranchLabel,
-  t,
-  canManage,
-  onCreateFloor,
-  onCreateTable,
-}: {
-  selectedBranchLabel: string | null
-  t: ReturnType<typeof useLocale>['t']
-  canManage: boolean
-  onCreateFloor: () => void
-  onCreateTable?: () => void
-}) {
-  return (
-    <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-      <div>
-        <h1 className="text-headline-lg text-on-surface">{t.floorPlan.title}</h1>
-        <p className="text-body-md text-on-surface-variant">
-          {t.floorPlan.subtitle}
-          {selectedBranchLabel ? ` · ${selectedBranchLabel}` : ''}
-        </p>
-      </div>
-      {canManage && (
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={onCreateFloor}
-            className="px-3 py-2 rounded-lg text-label-md border border-outline-variant/40 text-on-surface"
-          >
-            {t.inventory.createFloorPlan}
-          </button>
-          {onCreateTable && (
-            <button
-              type="button"
-              onClick={onCreateTable}
-              className="px-3 py-2 rounded-lg text-label-md bg-primary text-on-primary"
-            >
-              {t.inventory.createTable}
-            </button>
-          )}
-        </div>
       )}
     </div>
   )

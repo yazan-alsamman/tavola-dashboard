@@ -64,9 +64,11 @@ Supporting modules:
 | `src/api/reviews.ts` | restaurant list/get, reply, delete (staff management) |
 | `src/api/messaging.ts` | restaurant inbox, conversation CRUD, multipart send |
 | `src/api/menus.ts` | full menu tree management + public GETs for render |
-| `src/api/notifications.ts` | list, unread-count, identity-token, mark read / read-all, restaurant broadcast |
+| `Tavola_platform/src/platform/api/platformAdmin.ts` | Platform Owner console (separate app) — login, dashboard, restaurants/orgs lifecycle, revenue, acquisitions, admins, accounts, audit, pricing, plans, provision, broadcast |
 
 See `docs/API_COMPATIBILITY_REPORT.md` for the full Postman ↔ client ↔ UI matrix (regenerate with `node scripts/build-compat-matrix.mjs`).
+
+**Platform Owner console (`/platform`):** separate Vite app in `Tavola_platform` (dev: `http://localhost:5174/platform`). Auth via `POST /platform-admin/login`. Contract sources: `postman/TAVLA-Platform-Back-Office.postman_collection.json` + folder `03 - Platform Owner` in `postman/TAVLA-API.postman_collection.json`.
 
 **Hard contract limits (no invented list endpoints):**
 
@@ -98,7 +100,7 @@ Confirmed live OpenAPI / Postman (Owner/Admin org role):
 
 **TableStatus:** `Available` \| `Occupied` \| `Cleaning` \| `Disabled` (no live `Reserved`).
 
-**Geometry:** `positionX`, `positionY`, `width`, `height`, `rotation`, `shape` (`Rectangle`\|`Round`). Persist via Update; UI uses save-on-drop (no PATCH per pointer move).
+**Geometry:** `positionX`, `positionY`, `width`, `height`, `rotation`, `shape` (`Rectangle`\|`Round`). Persist via Update; UI uses save-on-drop (no PATCH per pointer move). Coordinate space is CSS pixels, origin top-left, physical `left`/`top` (`dir="ltr"` canvas) — never mirrored in RTL. The floor studio fills null `width`/`height`/`rotation` on create, drop, and resize so mobile clients receive a complete box. Default new-table size is 80×80 unless a preset is chosen. There is no FloorPlan PATCH or zone API.
 
 **Structural status ≠** `GET /reservations/availability` (time-window booking indicator).
 

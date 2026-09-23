@@ -315,15 +315,44 @@ export function extractWaitlistStats(payload: AnalyticsPayload) {
   }
 }
 
+/** `totalRestaurants` → `Total restaurants`. Backend keys are not UI copy. */
+export function humanizePayloadKey(key: string): string {
+  const spaced = key
+    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .replace(/[_-]+/g, ' ')
+    .trim()
+    .toLowerCase()
+  return spaced.charAt(0).toUpperCase() + spaced.slice(1)
+}
+
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}(T[\d:.]+)?/
+
+/** Formats primitives for display: grouped numbers, readable dates, yes/no. */
+export function formatPayloadValue(value: unknown, key = ''): string {
+  if (typeof value === 'boolean') return value ? 'Yes' : 'No'
+  if (typeof value === 'number') {
+    if (!Number.isFinite(value)) return '—'
+    if (/rate|percent|percentage/i.test(key)) return formatRate(value)
+    return new Intl.NumberFormat().format(value)
+  }
+  if (typeof value === 'string') {
+    if (ISO_DATE.test(value)) {
+      const parsed = new Date(value)
+      if (!Number.isNaN(parsed.getTime())) return parsed.toLocaleString()
+    }
+    return value
+  }
+  return String(value)
+}
+
 export function displayPayloadFields(
   payload: Record<string, unknown>,
-): Array<{ key: string; value: string }> {
+): Array<{ key: string; label: string; value: string }> {
   return Object.entries(payload)
-    .filter(
-      ([, value]) =>
-        value !== null &&
-        value !== undefined &&
-        typeof value !== 'object',
-    )
-    .map(([key, value]) => ({ key, value: String(value) }))
+    .filter(([, value]) => value !== null && value !== undefined && typeof value !== 'object')
+    .map(([key, value]) => ({
+      key,
+      label: humanizePayloadKey(key),
+      value: formatPayloadValue(value, key),
+    }))
 }
