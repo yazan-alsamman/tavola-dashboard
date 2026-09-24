@@ -22,4 +22,16 @@ export const inventoryKeys = {
       floorPlanId,
     ] as const,
   table: (tableId: string) => [...inventoryKeys.all, 'table', tableId] as const,
+  floorPlanAreas: (
+    restaurantId: string,
+    branchId: string,
+    floorPlanId: string,
+  ) =>
+    [
+      ...inventoryKeys.all,
+      'floorPlanAreas',
+      restaurantId,
+      branchId,
+      floorPlanId,
+    ] as const,
 }

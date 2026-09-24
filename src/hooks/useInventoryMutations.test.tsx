@@ -52,6 +52,8 @@ const table = {
   indoor: true,
   vip: false,
   smoking: false,
+  floorPlanAreaId: null,
+  color: null,
   status: 'Available' as const,
   mergeGroupId: null,
   isMergePrimary: false,

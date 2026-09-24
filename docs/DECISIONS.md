@@ -308,3 +308,21 @@ Consequences:
 Guests see one area per branch until the backend adds partitions or returns every floor plan publicly. True sub-areas inside one map stay BACKEND REQUIRED (`TAVOLA_REMAINING_BACKEND_REQUIREMENTS.md` section 1).
 
 Update (same day): the Floor Plan page can show every floor plan together (`FloorAreasOverview`). That view is a layout of real FloorPlan records. It does not create a second coordinate system, and it does not persist a rectangle, a color, or a `sectionId`. Dropping a table on another area calls Move Table.
+
+## ADR-014 — Dining halls are FloorPlanAreas inside one floor plan
+Date: 2026-09-24
+Status: Accepted
+Supersedes: the ADR-013 claim that Main Hall and Terrace must each be a FloorPlan.
+
+Context:
+The Postman collection now exposes Floor Plan Areas (ADR-040). A hall is concurrent with other halls on the same floor plan. `FloorPlan.isActive` is still “one layout per branch is shown to guests.” Area fields are `name`, `#RRGGBB` `color`, and `sortOrder`. Tables carry `floorPlanAreaId` and an optional `color`. The area resource has no geometry.
+
+Decision:
+1. Add and draw a hall on the open floor plan via `src/api/floorPlanAreas.ts`. Create sends `{ name, color, sortOrder }`.
+2. Drawing a rectangle assigns intersecting tables through Update Table (`floorPlanAreaId`). Every later geometry save includes `floorPlanAreaId` and `color` so a drag does not clear membership.
+3. The colored outline is derived from those tables. It is not stored.
+4. Delete is refused in the UI copy when the server returns 409 because tables remain.
+5. Floor-plan tabs and the all-plans overview stay. They are layouts, not halls.
+
+Consequences:
+Guests still see the active floor plan only. A hall with no placed tables has a chip and no outline until tables join it.

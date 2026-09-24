@@ -95,16 +95,23 @@ Confirmed live OpenAPI / Postman (Owner/Admin org role):
 | Create table | `POST` | `.../branches/:branchId/tables` — always starts `Available`; `tableNumber` unique per branch |
 | Update table | `PATCH` | `/tables/:tableId` — profile + geometry; **never** `floorPlanId` or `status` |
 | Delete table | `DELETE` | `/tables/:tableId` — soft-delete, 204 |
-| Move table | `POST` | `/tables/:tableId/move` — `{ targetFloorPlanId }` same branch only |
+| Move table | `POST` | `/tables/:tableId/move` — `{ targetFloorPlanId, targetFloorPlanAreaId? }` same branch only |
+| List floor plan areas | `GET` | `.../floor-plans/:floorPlanId/areas` → `{ items }` (unpaginated, `sortOrder` then `createdAt`) |
+| Create floor plan area | `POST` | `.../areas` — `{ name, color, sortOrder }`; `color` is `#RRGGBB` |
+| Get floor plan area | `GET` | `.../areas/:areaId` |
+| Update floor plan area | `PATCH` | `.../areas/:areaId` — full replace of `name`, `color`, `sortOrder` |
+| Delete floor plan area | `DELETE` | `.../areas/:areaId` — 204; **409** while any live table is still assigned |
 | Change table status | `POST` | `/tables/:tableId/status` — `{ status }`; `Available` ↔ `Occupied`/`Cleaning`/`Disabled` only |
 
 **TableStatus (response):** `Available` \| `Occupied` \| `Cleaning` \| `Disabled` \| `Reserved` \| `Merged`. Only `Available` ↔ `Occupied`/`Cleaning`/`Disabled` can be set (`ManualTableStatusDto`); `Reserved` and `Merged` are read-only and offer no transitions. `TableDto` also carries `isMergePrimary`.
 
-**Areas:** there is no partition/section API and no geometry or color on FloorPlan (re-checked live OpenAPI, 187 paths, 23 September 2026). The Floor Plan page presents each FloorPlan as a named area. **All areas** draws every plan on one page; each frame is computed from that plan’s tables and is not stored. Add area = Create FloorPlan `{ name }`. Move to area = Move Table, then Update for the drop position. Per-area counts come from the branch table list (`countTablesByFloorPlan`). A tint on the frame is display-only.
+**Halls (ADR-040):** a floor plan area is a concurrent dining hall inside one floor plan (Main Hall, Terrace). It is not a second floor plan and it does not change `isActive`. The server stores `name`, uppercase `#RRGGBB` `color`, and `sortOrder`. It does not store a rectangle. The Floor Plan page draws the outline from the tables whose `floorPlanAreaId` matches, after the user drags a rectangle to assign them. Drag-to-save sends `floorPlanAreaId` and `color` on every table Update so membership is not cleared. `color: null` on a table inherits the hall color. Move Table may send `targetFloorPlanAreaId` for an area of the target plan; omitting it lands with no area. An empty area list is valid.
+
+**Floor-plan tabs:** the page can still show every FloorPlan together. That overview is a layout of floor plans, not of halls. Add floor plan remains Create FloorPlan `{ name }`.
 
 **Guest floor plan:** `GET /discovery/restaurants/:restaurantId/branches/:branchId/floor-plan` returns the **active** plan only, with `shape` and the full box per table. Tables on an inactive plan are invisible to mobile guests.
 
-**Geometry:** `positionX`, `positionY`, `width`, `height`, `rotation`, `shape` (`Rectangle`\|`Round`). Persist via Update; UI uses save-on-drop (no PATCH per pointer move). Coordinate space is CSS pixels, origin top-left, physical `left`/`top` (`dir="ltr"` canvas) — never mirrored in RTL. The floor studio fills null `width`/`height`/`rotation` on create, drop, and resize so mobile clients receive a complete box. Default new-table size is 80×80 unless a preset is chosen. There is no FloorPlan PATCH or zone API.
+**Geometry:** `positionX`, `positionY`, `width`, `height`, `rotation`, `shape` (`Rectangle`\|`Round`). Persist via Update; UI uses save-on-drop (no PATCH per pointer move). Coordinate space is CSS pixels, origin top-left, physical `left`/`top` (`dir="ltr"` canvas) — never mirrored in RTL. The floor studio fills null `width`/`height`/`rotation` on create, drop, and resize so mobile clients receive a complete box. Default new-table size is 80×80 unless a preset is chosen. There is no FloorPlan PATCH. Hall color and membership are Floor Plan Areas, not a stored zone rectangle.
 
 **Structural status ≠** `GET /reservations/availability` (time-window booking indicator).
 

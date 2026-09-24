@@ -77,6 +77,8 @@ const table = {
   indoor: true,
   vip: false,
   smoking: false,
+  floorPlanAreaId: null,
+  color: null,
   status: 'Available' as const,
   mergeGroupId: null,
   isMergePrimary: false,
@@ -538,6 +540,19 @@ describe('domain-action boundaries', () => {
     expect(body.capacity).toBe(8)
     expect(body.positionX).toBe(99)
     expect(body.tableNumber).toBe('T1')
+    expect(body.floorPlanAreaId).toBeNull()
+    expect(body.color).toBeNull()
+  })
+
+  it('keeps dining-area membership on a geometry save', () => {
+    const body = tableToUpdateRequest(
+      { ...table, floorPlanAreaId: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', color: '#D97706' },
+      { positionX: 12 },
+    )
+    expect(body.floorPlanAreaId).toBe('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa')
+    expect(body.color).toBe('#D97706')
+    expect(body.positionX).toBe(12)
+    expect(body).not.toHaveProperty('floorPlanId')
   })
 })
 

@@ -80,6 +80,7 @@ src/api/
 ├── branches.ts         # branches CRUD + working-hours
 ├── reservations.ts     # availability, create (online + staff), list/get, lifecycle Domain Actions
 ├── floorPlans.ts       # list + create + activate FloorPlan
+├── floorPlanAreas.ts   # halls inside one floor plan (name, color, sortOrder)
 ├── tables.ts           # list/get + CRUD + move/status + merge/split
 ├── employees.ts        # invite / role / branch assign / remove
 ├── taxonomy.ts         # cuisine + occasion categories

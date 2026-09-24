@@ -37,6 +37,10 @@ export interface TableDto {
   indoor: boolean
   vip: boolean
   smoking: boolean
+  /** Dining area of this table's floor plan. Null sits on the layout itself. */
+  floorPlanAreaId: string | null
+  /** Per-table `#RRGGBB` override. Null inherits the area color. */
+  color: string | null
   status: TableStatusDto
   mergeGroupId: string | null
   /** True only for the primary table of an active merge group. */
@@ -48,6 +52,8 @@ export interface TableDto {
 export interface ListTablesParams {
   page?: number
   limit?: number
+  /** Narrows one floor plan's tables to a dining area. Omit for the whole plan. */
+  floorPlanAreaId?: string
 }
 
 /** Confirmed `CreateTableRequestDto` — status is never client-set (always Available). */
@@ -66,11 +72,16 @@ export interface CreateTableRequest {
   indoor?: boolean
   vip?: boolean
   smoking?: boolean
+  /** Live area of the same floor plan, or omit/null for the layout itself. */
+  floorPlanAreaId?: string | null
+  /** `#RRGGBB` override, or null to inherit the area color. */
+  color?: string | null
 }
 
 /**
  * Confirmed `UpdateTableRequestDto` — full-replace of profile fields.
  * Does NOT accept `floorPlanId` or `status` (domain actions own those).
+ * `floorPlanAreaId` is resolved against this table's current floor plan.
  */
 export interface UpdateTableRequest {
   tableNumber: string
@@ -86,10 +97,14 @@ export interface UpdateTableRequest {
   indoor?: boolean
   vip?: boolean
   smoking?: boolean
+  floorPlanAreaId?: string | null
+  color?: string | null
 }
 
 export interface MoveTableRequest {
   targetFloorPlanId: string
+  /** Area of the target floor plan. Omit or null to land with no area. */
+  targetFloorPlanAreaId?: string | null
 }
 
 export interface ChangeTableStatusRequest {
@@ -140,6 +155,9 @@ export async function listTablesByFloorPlan(
       query: {
         page: params.page ?? 1,
         limit: params.limit ?? 20,
+        ...(params.floorPlanAreaId
+          ? { floorPlanAreaId: params.floorPlanAreaId }
+          : {}),
       },
       signal,
     },
@@ -174,6 +192,10 @@ export async function createTable(
         ...(body.indoor !== undefined ? { indoor: body.indoor } : {}),
         ...(body.vip !== undefined ? { vip: body.vip } : {}),
         ...(body.smoking !== undefined ? { smoking: body.smoking } : {}),
+        ...(body.floorPlanAreaId !== undefined
+          ? { floorPlanAreaId: body.floorPlanAreaId }
+          : {}),
+        ...(body.color !== undefined ? { color: body.color } : {}),
       },
     },
   )
@@ -199,6 +221,8 @@ export async function updateTable(
       indoor: body.indoor ?? true,
       vip: body.vip ?? false,
       smoking: body.smoking ?? false,
+      floorPlanAreaId: body.floorPlanAreaId ?? null,
+      color: body.color ?? null,
     },
   })
 }
@@ -214,7 +238,12 @@ export async function moveTable(
 ): Promise<TableDto> {
   return apiRequest<TableDto>(`/tables/${tableId}/move`, {
     method: 'POST',
-    body: { targetFloorPlanId: body.targetFloorPlanId },
+    body: {
+      targetFloorPlanId: body.targetFloorPlanId,
+      ...(body.targetFloorPlanAreaId !== undefined
+        ? { targetFloorPlanAreaId: body.targetFloorPlanAreaId }
+        : {}),
+    },
   })
 }
 
@@ -275,6 +304,11 @@ export function tableToUpdateRequest(
     indoor: overrides.indoor ?? table.indoor,
     vip: overrides.vip ?? table.vip,
     smoking: overrides.smoking ?? table.smoking,
+    floorPlanAreaId:
+      overrides.floorPlanAreaId !== undefined
+        ? overrides.floorPlanAreaId
+        : (table.floorPlanAreaId ?? null),
+    color: overrides.color !== undefined ? overrides.color : (table.color ?? null),
   }
 }
 

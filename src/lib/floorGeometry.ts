@@ -192,7 +192,14 @@ export function withCompleteGeometry(
   overrides: Partial<
     Pick<
       UpdateTableRequest,
-      'positionX' | 'positionY' | 'width' | 'height' | 'rotation' | 'shape'
+      | 'positionX'
+      | 'positionY'
+      | 'width'
+      | 'height'
+      | 'rotation'
+      | 'shape'
+      | 'floorPlanAreaId'
+      | 'color'
     >
   > = {},
 ): UpdateTableRequest {
@@ -206,6 +213,10 @@ export function withCompleteGeometry(
     height: overrides.height ?? table.height ?? size.height,
     rotation: overrides.rotation ?? table.rotation ?? 0,
     shape: overrides.shape ?? table.shape,
+    ...(overrides.floorPlanAreaId !== undefined
+      ? { floorPlanAreaId: overrides.floorPlanAreaId }
+      : {}),
+    ...(overrides.color !== undefined ? { color: overrides.color } : {}),
   })
 }
 

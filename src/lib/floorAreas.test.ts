@@ -24,6 +24,8 @@ function table(
     indoor: true,
     vip: false,
     smoking: false,
+    floorPlanAreaId: null,
+    color: null,
     status: 'Available',
     mergeGroupId: null,
     isMergePrimary: false,

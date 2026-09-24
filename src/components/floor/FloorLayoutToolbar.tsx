@@ -16,6 +16,7 @@ interface FloorLayoutToolbarProps {
   onPreset: (preset: TablePreset) => void
   onClearPreset: () => void
   placing: boolean
+  hidePresets?: boolean
 }
 
 export function FloorLayoutToolbar({
@@ -30,6 +31,7 @@ export function FloorLayoutToolbar({
   onPreset,
   onClearPreset,
   placing,
+  hidePresets = false,
 }: FloorLayoutToolbarProps) {
   const { t } = useLocale()
   const presetLabels: Record<TablePreset['id'], string> = {
@@ -85,7 +87,7 @@ export function FloorLayoutToolbar({
         </Button>
       </div>
 
-      {canManage && (
+      {canManage && !hidePresets && (
         <div className="flex items-center gap-2 overflow-x-auto">
           <span className="shrink-0 text-label-sm text-on-surface-variant">
             {t.floorPlan.presetsLabel}

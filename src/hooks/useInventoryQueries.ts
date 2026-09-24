@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { listFloorPlanAreas } from '@/api/floorPlanAreas'
 import { listFloorPlans } from '@/api/floorPlans'
 import { listAllTablesByBranch, listAllTablesByFloorPlan } from '@/api/tables'
 import { useAuth } from '@/context/AuthContext'
@@ -48,6 +49,31 @@ export function useBranchTablesQuery(enabled = true) {
     queryKey: inventoryKeys.tablesByBranch(restaurantId ?? '', branchId ?? ''),
     queryFn: ({ signal }) =>
       listAllTablesByBranch(restaurantId!, branchId!, 100, signal),
+    enabled: enabled && ready,
+  })
+}
+
+export function useFloorPlanAreasQuery(
+  floorPlanId: string | null,
+  enabled = true,
+) {
+  const { selectedRestaurantId, selectedBranchId, status } = useRestaurantScope()
+  const restaurantId = selectedRestaurantId
+  const branchId = selectedBranchId
+  const ready =
+    status === 'ready' &&
+    Boolean(restaurantId) &&
+    Boolean(branchId) &&
+    Boolean(floorPlanId)
+
+  return useQuery({
+    queryKey: inventoryKeys.floorPlanAreas(
+      restaurantId ?? '',
+      branchId ?? '',
+      floorPlanId ?? '',
+    ),
+    queryFn: ({ signal }) =>
+      listFloorPlanAreas(restaurantId!, branchId!, floorPlanId!, signal),
     enabled: enabled && ready,
   })
 }

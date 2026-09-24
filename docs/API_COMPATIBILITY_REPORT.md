@@ -246,6 +246,11 @@
 | GET | `/restaurants/:id/branches/:id/floor-plans` | `floorPlans.listFloorPlans` | wired |
 | GET | `/restaurants/:id/branches/:id/floor-plans/:id/tables` | `tables.listTablesByFloorPlan` | wired |
 | PATCH | `/restaurants/:id/branches/:id/floor-plans/:id/activate` | `floorPlans.activateFloorPlan` | wired |
+| GET | `/restaurants/:id/branches/:id/floor-plans/:id/areas` | `floorPlanAreas.listFloorPlanAreas` | wired |
+| POST | `/restaurants/:id/branches/:id/floor-plans/:id/areas` | `floorPlanAreas.createFloorPlanArea` | wired |
+| GET | `/restaurants/:id/branches/:id/floor-plans/:id/areas/:id` | `floorPlanAreas.getFloorPlanArea` | client only |
+| PATCH | `/restaurants/:id/branches/:id/floor-plans/:id/areas/:id` | `floorPlanAreas.updateFloorPlanArea` | client only |
+| DELETE | `/restaurants/:id/branches/:id/floor-plans/:id/areas/:id` | `floorPlanAreas.deleteFloorPlanArea` | wired |
 | POST | `/restaurants/:id/branches/:id/tables` | `tables.createTable` | wired |
 | GET | `/restaurants/:id/branches/:id/tables` | `tables.listTablesByBranch` | wired |
 | GET | `/tables/:id` | `tables.getTable` | wired |

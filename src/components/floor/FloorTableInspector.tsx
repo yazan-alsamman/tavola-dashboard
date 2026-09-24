@@ -1,3 +1,4 @@
+import type { FloorPlanAreaDto } from '@/api/floorPlanAreas'
 import type { TableDto, TableStatusDto } from '@/api/tables'
 import { isTablePlaced, resolveTableSize } from '@/lib/floorGeometry'
 import { Button } from '@/components/ui/Button'
@@ -22,6 +23,8 @@ interface FloorTableInspectorProps {
   onDuplicate: () => void
   duplicating: boolean
   onClose: () => void
+  halls?: FloorPlanAreaDto[]
+  onAssignHall?: (floorPlanAreaId: string | null) => void
 }
 
 export function FloorTableInspector({
@@ -40,6 +43,8 @@ export function FloorTableInspector({
   onDuplicate,
   duplicating,
   onClose,
+  halls = [],
+  onAssignHall,
 }: FloorTableInspectorProps) {
   const { t } = useLocale()
   const isPlaced = isTablePlaced(table)
@@ -104,6 +109,27 @@ export function FloorTableInspector({
         {table.vip ? ` · ${t.tables.vip}` : ''}
         {table.smoking ? ` · ${t.tables.smoking}` : ''}
       </p>
+
+      {canManage && onAssignHall && (
+        <label className="mt-3 block">
+          <span className="text-label-sm text-on-surface-variant">
+            {t.floorPlan.assignHall}
+          </span>
+          <select
+            className="mt-1 w-full min-h-11 rounded-lg bg-surface-container-low px-3 py-2 text-body-md outline-none focus:ring-2 focus:ring-primary/20"
+            value={table.floorPlanAreaId ?? ''}
+            disabled={busy}
+            onChange={(e) => onAssignHall(e.target.value || null)}
+          >
+            <option value="">{t.floorPlan.noHall}</option>
+            {halls.map((hall) => (
+              <option key={hall.floorPlanAreaId} value={hall.floorPlanAreaId}>
+                {hall.name}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
 
       {canManage && (
         <>

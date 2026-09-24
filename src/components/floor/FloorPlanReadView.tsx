@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
+import type { FloorPlanAreaDto } from '@/api/floorPlanAreas'
 import type { TableDto } from '@/api/tables'
 import { FloorLayoutToolbar } from '@/components/floor/FloorLayoutToolbar'
 import { FloorTableGlyph } from '@/components/floor/FloorTableGlyph'
@@ -14,8 +15,10 @@ import {
   snapCoord,
   tableBox,
   ZOOM_STEP,
+  type TableBox,
   type TablePreset,
 } from '@/lib/floorGeometry'
+import { areaFill, visiblePartitions } from '@/lib/floorPartitions'
 import { tableShapeKind } from '@/lib/tableShape'
 import { cn } from '@/lib/utils'
 
@@ -42,6 +45,24 @@ interface FloorPlanReadViewProps {
   onPlaceAt?: (x: number, y: number) => void
   placing?: boolean
   onDragActiveChange?: (active: boolean) => void
+  /** Dining areas of this floor plan. Outlines follow their tables. */
+  areas?: FloorPlanAreaDto[]
+  /** Drag a rectangle to create a hall. Empty-canvas taps do not place tables. */
+  drawHall?: boolean
+  onDrawHall?: (box: TableBox) => void
+  highlightedAreaId?: string | null
+  hidePresets?: boolean
+  /** Rectangles just drawn, keyed by floorPlanAreaId, until tables define the outline. */
+  sectionDrafts?: Record<string, TableBox>
+}
+
+interface HallDraw {
+  originX: number
+  originY: number
+  x: number
+  y: number
+  width: number
+  height: number
 }
 
 interface DragState {
@@ -81,11 +102,19 @@ export function FloorPlanReadView({
   onPlaceAt,
   placing = false,
   onDragActiveChange,
+  areas = [],
+  drawHall = false,
+  onDrawHall,
+  highlightedAreaId = null,
+  hidePresets = false,
+  sectionDrafts = {},
 }: FloorPlanReadViewProps) {
   const { t } = useLocale()
   const viewportRef = useRef<HTMLDivElement>(null)
   const worldRef = useRef<HTMLDivElement>(null)
   const [drag, setDrag] = useState<DragState | null>(null)
+  const [hallDraw, setHallDraw] = useState<HallDraw | null>(null)
+  const hallDrawRef = useRef<HallDraw | null>(null)
   const [zoom, setZoom] = useState(1)
   const [internalSnap, setInternalSnap] = useState(false)
   const dragMoved = useRef(false)
@@ -114,7 +143,12 @@ export function FloorPlanReadView({
     })
   }
 
-  const world = floorWorldSize(placed.map(liveBox))
+  const partitions = visiblePartitions(areas, tables, sectionDrafts)
+  const world = floorWorldSize([
+    ...placed.map(liveBox),
+    ...partitions,
+    ...(hallDraw ? [hallDraw] : []),
+  ])
   const overlapping = overlappingTableIds(tables, liveBox)
 
   const toWorldDelta = (clientDx: number, clientDy: number) => ({
@@ -152,7 +186,54 @@ export function FloorPlanReadView({
     }
   }
 
+  const beginHallDraw = (e: ReactPointerEvent) => {
+    if (!drawHall || !onDrawHall) return false
+    const target = e.target
+    if (target instanceof Element && target.closest('button')) return false
+    const point = worldPointFromClient(e.clientX, e.clientY)
+    const x = snapCoord(point.x, snapEnabled)
+    const y = snapCoord(point.y, snapEnabled)
+    const next: HallDraw = { originX: x, originY: y, x, y, width: 0, height: 0 }
+    hallDrawRef.current = next
+    setHallDraw(next)
+    emptyPointer.current = false
+    try {
+      viewportRef.current?.setPointerCapture(e.pointerId)
+    } catch {
+      // some environments do not support capture
+    }
+    return true
+  }
+
+  const updateHallDraw = (e: ReactPointerEvent) => {
+    const current = hallDrawRef.current
+    if (!current) return false
+    const point = worldPointFromClient(e.clientX, e.clientY)
+    const x2 = snapCoord(point.x, snapEnabled)
+    const y2 = snapCoord(point.y, snapEnabled)
+    const next: HallDraw = {
+      ...current,
+      x: Math.min(current.originX, x2),
+      y: Math.min(current.originY, y2),
+      width: Math.abs(x2 - current.originX),
+      height: Math.abs(y2 - current.originY),
+    }
+    hallDrawRef.current = next
+    setHallDraw(next)
+    return true
+  }
+
+  const finishHallDraw = () => {
+    const drawn = hallDrawRef.current
+    if (!drawn) return false
+    hallDrawRef.current = null
+    setHallDraw(null)
+    if (drawn.width >= 16 && drawn.height >= 16) onDrawHall?.(drawn)
+    return true
+  }
+
   const applyPointerMove = (e: ReactPointerEvent) => {
+    if (updateHallDraw(e)) return
     if (!drag) return
     const { dx, dy } = toWorldDelta(
       e.clientX - drag.startClientX,
@@ -188,6 +269,10 @@ export function FloorPlanReadView({
   }
 
   const handleCanvasPointerUp = (e: ReactPointerEvent) => {
+    if (finishHallDraw()) {
+      emptyPointer.current = false
+      return
+    }
     if (drag) {
       commitDrag(drag)
       emptyPointer.current = false
@@ -242,6 +327,7 @@ export function FloorPlanReadView({
           onPreset={(preset) => onPlacePreset?.(preset)}
           onClearPreset={() => onPlacePreset?.(null)}
           placing={placing}
+          hidePresets={hidePresets}
         />
       )}
 
@@ -262,7 +348,7 @@ export function FloorPlanReadView({
         className={cn(
           'relative w-full overflow-auto rounded-xl border border-outline-variant/30 bg-surface-container',
           'h-[min(62vh,560px)] lg:h-[min(70vh,720px)]',
-          placePreset || placeEnabled ? 'cursor-crosshair' : '',
+          drawHall || placePreset || placeEnabled ? 'cursor-crosshair' : '',
         )}
         data-testid="floor-plan-canvas"
         dir="ltr"
@@ -272,10 +358,10 @@ export function FloorPlanReadView({
           if (drag) commitDrag(drag)
         }}
         onPointerDown={(e) => {
-          if (e.target === e.currentTarget || e.target === worldRef.current) {
-            emptyPointer.current = true
-            dragMoved.current = false
-          }
+          if (beginHallDraw(e)) return
+          if (e.target !== e.currentTarget && e.target !== worldRef.current) return
+          emptyPointer.current = true
+          dragMoved.current = false
         }}
         onWheel={(e) => {
           if (!e.ctrlKey && !e.metaKey) return
@@ -307,12 +393,52 @@ export function FloorPlanReadView({
               backgroundSize: '16px 16px',
             }}
             onPointerDown={(e) => {
-              if (e.target === e.currentTarget) {
-                emptyPointer.current = true
-                dragMoved.current = false
-              }
+              if (drawHall) return
+              if (e.target !== e.currentTarget) return
+              emptyPointer.current = true
+              dragMoved.current = false
             }}
           >
+            {partitions.map((frame) => (
+              <div
+                key={frame.floorPlanAreaId}
+                data-testid={`floor-partition-${frame.floorPlanAreaId}`}
+                className="pointer-events-none absolute rounded-2xl border-2"
+                style={{
+                  left: frame.x,
+                  top: frame.y,
+                  width: frame.width,
+                  height: frame.height,
+                  backgroundColor: areaFill(frame.color, 0.22),
+                  borderColor: frame.color,
+                  opacity:
+                    highlightedAreaId && highlightedAreaId !== frame.floorPlanAreaId
+                      ? 0.35
+                      : 1,
+                  zIndex: 0,
+                }}
+              >
+                <span
+                  className="absolute left-3 top-2 max-w-[70%] truncate text-label-md font-semibold"
+                  style={{ color: frame.color }}
+                >
+                  {frame.name}
+                </span>
+              </div>
+            ))}
+            {hallDraw && hallDraw.width > 0 && hallDraw.height > 0 && (
+              <div
+                data-testid="floor-hall-draw"
+                className="pointer-events-none absolute rounded-2xl border-2 border-dashed border-primary bg-primary/15"
+                style={{
+                  left: hallDraw.x,
+                  top: hallDraw.y,
+                  width: hallDraw.width,
+                  height: hallDraw.height,
+                  zIndex: 5,
+                }}
+              />
+            )}
             {placed.map((tb) => {
               const box = liveBox(tb)
               const selected = selectedTableId === tb.tableId

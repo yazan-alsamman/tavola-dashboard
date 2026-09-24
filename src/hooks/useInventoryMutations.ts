@@ -1,5 +1,11 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import {
+  createFloorPlanArea,
+  deleteFloorPlanArea,
+  updateFloorPlanArea,
+  type FloorPlanAreaWriteRequest,
+} from '@/api/floorPlanAreas'
+import {
   activateFloorPlan,
   createFloorPlan,
 } from '@/api/floorPlans'
@@ -91,6 +97,86 @@ export function useActivateFloorPlanMutation() {
       ),
     onSuccess: async (_data, vars) => {
       await invalidateFloorPlanList(queryClient, vars)
+    },
+  })
+}
+
+async function invalidateFloorPlanAreas(
+  queryClient: ReturnType<typeof useQueryClient>,
+  scope: InventoryMutationScope,
+  floorPlanId: string,
+): Promise<void> {
+  await queryClient.invalidateQueries({
+    queryKey: inventoryKeys.floorPlanAreas(
+      scope.restaurantId,
+      scope.branchId,
+      floorPlanId,
+    ),
+  })
+}
+
+export function useCreateFloorPlanAreaMutation() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (
+      input: InventoryMutationScope & {
+        floorPlanId: string
+        body: FloorPlanAreaWriteRequest
+      },
+    ) =>
+      createFloorPlanArea(
+        input.restaurantId,
+        input.branchId,
+        input.floorPlanId,
+        input.body,
+      ),
+    onSuccess: async (_area, vars) => {
+      await invalidateFloorPlanAreas(queryClient, vars, vars.floorPlanId)
+    },
+  })
+}
+
+export function useUpdateFloorPlanAreaMutation() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (
+      input: InventoryMutationScope & {
+        floorPlanId: string
+        areaId: string
+        body: FloorPlanAreaWriteRequest
+      },
+    ) =>
+      updateFloorPlanArea(
+        input.restaurantId,
+        input.branchId,
+        input.floorPlanId,
+        input.areaId,
+        input.body,
+      ),
+    onSuccess: async (_area, vars) => {
+      await invalidateFloorPlanAreas(queryClient, vars, vars.floorPlanId)
+    },
+  })
+}
+
+export function useDeleteFloorPlanAreaMutation() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (
+      input: InventoryMutationScope & { floorPlanId: string; areaId: string },
+    ) =>
+      deleteFloorPlanArea(
+        input.restaurantId,
+        input.branchId,
+        input.floorPlanId,
+        input.areaId,
+      ),
+    onSuccess: async (_void, vars) => {
+      await Promise.all([
+        invalidateFloorPlanAreas(queryClient, vars, vars.floorPlanId),
+        invalidateFloorTables(queryClient, vars, vars.floorPlanId),
+        invalidateBranchTables(queryClient, vars),
+      ])
     },
   })
 }

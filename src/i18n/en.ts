@@ -356,6 +356,32 @@ export const en = {
       'Bar',
     ],
     areaCreated: 'Area added',
+    hallsLabel: 'Areas on this floor',
+    allHalls: 'Whole floor',
+    addHall: 'Name an area',
+    addHallHint:
+      'An area sits on this floor plan — Main Hall, Terrace, VIP Room. Pick a name and a color. Guests still see the active floor plan.',
+    drawHall: 'Draw area',
+    drawHallActive: 'Drawing area…',
+    drawHallHint:
+      'Drag across the floor to split off an area. Then name it and pick a color. Tables inside the rectangle join that area.',
+    hallName: 'Hall name',
+    hallColor: 'Color',
+    hallCreated: 'Hall added',
+    hallAssigned: 'Tables joined this hall',
+    hallDeleted: 'Hall deleted',
+    hallDeleteTitle: 'Delete hall?',
+    hallDeleteMessage: 'Delete {name}?',
+    hallDeleteBlocked:
+      'This hall still has tables. Move them to another hall, or delete the tables, before removing the hall.',
+    hallNameTaken: 'This floor plan already has a hall with that name.',
+    partitionNote:
+      'One floor plan for this branch. Draw a rectangle to add a section, name it, and pick a color. That section and the tables inside it are saved.',
+    oneFloorNote:
+      'Draw a section, then choose a table size and tap inside the rectangle. The section name, color, and tables are sent to the server.',
+    assignHall: 'Hall',
+    noHall: 'No hall',
+    deleteHall: 'Delete hall',
     guestVisible: 'Guests',
     guestVisibleHint: 'Guests see this area in the mobile app.',
     areaNotVisible:
