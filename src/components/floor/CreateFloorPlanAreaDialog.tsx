@@ -19,6 +19,7 @@ interface CreateFloorPlanAreaDialogProps {
   floorPlanId: string
   sortOrder: number
   existingNames: string[]
+  drawn?: boolean
   onCreated: (area: FloorPlanAreaDto) => void
 }
 
@@ -30,6 +31,7 @@ export function CreateFloorPlanAreaDialog({
   floorPlanId,
   sortOrder,
   existingNames,
+  drawn = false,
   onCreated,
 }: CreateFloorPlanAreaDialogProps) {
   const { t } = useLocale()
@@ -89,7 +91,7 @@ export function CreateFloorPlanAreaDialog({
       open={open}
       onClose={mutation.isPending ? () => undefined : onClose}
       title={t.floorPlan.addHall}
-      description={t.floorPlan.addHallHint}
+      description={drawn ? t.floorPlan.drawHallHint : t.floorPlan.addHallHint}
       size="sm"
     >
       <form onSubmit={(e) => void submit(e)} className="space-y-4">

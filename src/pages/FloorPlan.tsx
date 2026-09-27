@@ -35,7 +35,12 @@ import {
 } from '@/hooks/useInventoryMutations'
 import { useCanManageInventory } from '@/hooks/usePermissions'
 import { mapInventoryMutationError } from '@/lib/inventoryMutationErrors'
-import { nextHallSortOrder } from '@/lib/floorPartitions'
+import {
+  nextHallSortOrder,
+  sectionIdForBox,
+  tablesInsidePartition,
+  visiblePartitions,
+} from '@/lib/floorPartitions'
 import {
   clampTableSize,
   isTablePlaced,
@@ -44,6 +49,7 @@ import {
   resolveTableSize,
   tableBox,
   withCompleteGeometry,
+  type TableBox,
   type TablePreset,
 } from '@/lib/floorGeometry'
 import { tableShapeKind } from '@/lib/tableShape'
@@ -109,7 +115,10 @@ export function FloorPlanPage() {
   const [viewMode, setViewMode] = useState<'all' | 'focus'>('focus')
   const [overviewPlanId, setOverviewPlanId] = useState<string | null>(null)
   const [dragging, setDragging] = useState(false)
+  const [drawHall, setDrawHall] = useState(false)
   const [hallDialogOpen, setHallDialogOpen] = useState(false)
+  const [pendingPartition, setPendingPartition] = useState<TableBox | null>(null)
+  const [sectionRects, setSectionRects] = useState<Record<string, TableBox>>({})
   const [highlightedAreaId, setHighlightedAreaId] = useState<string | null>(null)
   const [deleteHallTarget, setDeleteHallTarget] = useState<FloorPlanAreaDto | null>(
     null,
@@ -119,6 +128,7 @@ export function FloorPlanPage() {
   const restaurantId = selectedRestaurantId ?? ''
   const branchId = selectedBranchId ?? ''
   const tables = tablesQuery.data ?? []
+  const halls = areasQuery.data ?? []
   const branchTables = branchTablesQuery.data ?? []
   const catalogTables = branchTables.length > 0 ? branchTables : tables
   const selectedTable = catalogTables.find((tb) => tb.tableId === selectedTableId)
@@ -280,7 +290,17 @@ export function FloorPlanPage() {
           vip: false,
           smoking: false,
           layer: 0,
-          ...(highlightedAreaId ? { floorPlanAreaId: highlightedAreaId } : {}),
+          ...(() => {
+            const areaId =
+              highlightedAreaId ??
+              sectionIdForBox(visiblePartitions(halls, tables, sectionRects), {
+                x,
+                y,
+                width: placePreset.width,
+                height: placePreset.height,
+              })
+            return areaId ? { floorPlanAreaId: areaId } : {}
+          })(),
         },
       })
       toast('success', t.floorPlan.createdSuccess)
@@ -310,11 +330,35 @@ export function FloorPlanPage() {
     }
   }
 
-  const halls = areasQuery.data ?? []
-
-  const handleHallCreated = (area: FloorPlanAreaDto) => {
+  const handleHallCreated = async (area: FloorPlanAreaDto) => {
+    const region = pendingPartition
+    setPendingPartition(null)
+    if (region) {
+      setSectionRects((current) => ({
+        ...current,
+        [area.floorPlanAreaId]: region,
+      }))
+    }
     setHighlightedAreaId(area.floorPlanAreaId)
-    toast('success', t.floorPlan.hallCreated)
+    if (!region) {
+      toast('success', t.floorPlan.hallCreated)
+      return
+    }
+    let assigned = false
+    for (const table of tablesInsidePartition(tables, region)) {
+      const ok = await persistGeometry(table, {
+        floorPlanAreaId: area.floorPlanAreaId,
+      })
+      if (!ok) return
+      assigned = true
+    }
+    toast('success', assigned ? t.floorPlan.hallAssigned : t.floorPlan.hallCreated)
+  }
+
+  const handleDrawHall = (box: TableBox) => {
+    setDrawHall(false)
+    setPendingPartition(box)
+    setHallDialogOpen(true)
   }
 
   const confirmDeleteHall = async () => {
@@ -330,6 +374,11 @@ export function FloorPlanPage() {
       if (highlightedAreaId === deleteHallTarget.floorPlanAreaId) {
         setHighlightedAreaId(null)
       }
+      setSectionRects((current) => {
+        const next = { ...current }
+        delete next[deleteHallTarget.floorPlanAreaId]
+        return next
+      })
       setDeleteHallTarget(null)
       toast('success', t.floorPlan.hallDeleted)
     } catch (err) {
@@ -621,16 +670,26 @@ export function FloorPlanPage() {
               areas={halls}
               tables={tables}
               highlightedAreaId={highlightedAreaId}
+              drawHall={drawHall}
               canManage={canManage}
               floorName={selectedFloorPlan?.name}
               activePresetId={placePreset?.id ?? null}
               placing={createMutation.isPending || Boolean(repositionBusyId)}
               onPreset={(preset) => {
+                setDrawHall(false)
                 setPlacePreset(preset)
                 if (preset) setSelectedTableId(null)
               }}
               onHighlight={setHighlightedAreaId}
-              onAdd={() => setHallDialogOpen(true)}
+              onAdd={() => {
+                setDrawHall(false)
+                setPendingPartition(null)
+                setHallDialogOpen(true)
+              }}
+              onToggleDraw={() => {
+                setPlacePreset(null)
+                setDrawHall((current) => !current)
+              }}
               onDelete={(area) => {
                 setHallError(null)
                 setDeleteHallTarget(area)
@@ -652,6 +711,10 @@ export function FloorPlanPage() {
             <FloorPlanReadView
               key={selectedFloorPlanId ?? 'floor'}
               tables={tables}
+              areas={halls}
+              drawHall={drawHall && canManage}
+              sectionDrafts={sectionRects}
+              onDrawHall={handleDrawHall}
               hidePresets
               selectedTableId={selectedTableId}
               onSelectTable={(id) => {
@@ -770,13 +833,17 @@ export function FloorPlanPage() {
           {selectedFloorPlanId && (
             <CreateFloorPlanAreaDialog
               open={hallDialogOpen}
-              onClose={() => setHallDialogOpen(false)}
+              onClose={() => {
+                setHallDialogOpen(false)
+                setPendingPartition(null)
+              }}
               restaurantId={restaurantId}
               branchId={branchId}
               floorPlanId={selectedFloorPlanId}
               sortOrder={nextHallSortOrder(halls)}
               existingNames={halls.map((area) => area.name)}
-              onCreated={handleHallCreated}
+              drawn={pendingPartition != null}
+              onCreated={(area) => void handleHallCreated(area)}
             />
           )}
           <ConfirmDialog

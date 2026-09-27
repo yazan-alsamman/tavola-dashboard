@@ -11,9 +11,11 @@ interface FloorPlanAreaBarProps {
   areas: FloorPlanAreaDto[]
   tables: TableDto[]
   highlightedAreaId: string | null
+  drawHall: boolean
   canManage: boolean
   onHighlight: (areaId: string | null) => void
   onAdd: () => void
+  onToggleDraw: () => void
   onDelete: (area: FloorPlanAreaDto) => void
   floorName?: string | null
   activePresetId?: TablePreset['id'] | null
@@ -26,9 +28,11 @@ export function FloorPlanAreaBar({
   areas,
   tables,
   highlightedAreaId,
+  drawHall,
   canManage,
   onHighlight,
   onAdd,
+  onToggleDraw,
   onDelete,
   floorName,
   activePresetId = null,
@@ -48,6 +52,16 @@ export function FloorPlanAreaBar({
     <div className="space-y-3 rounded-xl border border-outline-variant/30 bg-surface-container-lowest p-3">
       {canManage && (
         <div className="flex flex-wrap items-center gap-2">
+          <Button
+            type="button"
+            variant={drawHall ? 'primary' : 'secondary'}
+            size="sm"
+            onClick={onToggleDraw}
+            aria-pressed={drawHall}
+          >
+            <MaterialIcon name="gesture" size={18} />
+            {drawHall ? t.floorPlan.drawHallActive : t.floorPlan.drawHall}
+          </Button>
           <span className="text-label-sm text-on-surface-variant">
             {t.floorPlan.presetsLabel}
           </span>
@@ -138,7 +152,7 @@ export function FloorPlanAreaBar({
         )}
       </div>
       <p className="text-label-sm text-on-surface-variant">
-        {t.floorPlan.addHallHint}
+        {drawHall ? t.floorPlan.drawHallHint : t.floorPlan.partitionNote}
       </p>
     </div>
   )
