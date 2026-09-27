@@ -234,7 +234,7 @@ export const en = {
   },
   floorPlan: {
     title: 'Floor Plan',
-    subtitle: 'Arrange tables on a floor map — saved for every client, including mobile',
+    subtitle: 'Arrange the tables on your floor',
     legend: 'Legend',
     indoor: 'Indoor',
     outdoor: 'Outdoor',
@@ -279,8 +279,7 @@ export const en = {
     loadingTables: 'Loading tables…',
     floorSelector: 'Floor plan',
     active: 'Active',
-    manageHint:
-      'Structural table status is not reservation bookability. Use Activate only when this floor should become the branch active plan — selecting a floor for viewing does not activate it.',
+    manageHint: 'Guests see the floor you show them.',
     repositionHint:
       'Drag tables to reposition. Position is saved when you release (not while dragging).',
     repositionFailed: 'Could not save table position. Try again.',
@@ -293,14 +292,14 @@ export const en = {
     noFloorPlansBody: 'This branch has no floor plans yet. Create one to start managing tables.',
     noTablesTitle: 'No tables on this floor',
     noTablesBody: 'This floor plan has no tables assigned. Add a table to get started.',
-    noGeometry: 'Tables exist but none have position coordinates yet.',
-    unplacedTables: 'Tables without coordinates',
-    forbiddenTitle: 'Floor plans unavailable',
-    forbiddenBody: 'Floor plan lists require an organization Owner or Admin role.',
+    noGeometry: 'These tables are not on the map yet.',
+    unplacedTables: 'Not on the map yet',
+    forbiddenTitle: 'Floor plan unavailable',
+    forbiddenBody: 'Only an owner or admin can open the floor plan.',
     errorTitle: 'Could not load floor plan',
     errorBody: 'Something went wrong while loading floor plans or tables. Please try again.',
     studioHint:
-      'Pick a table size, then tap the map to place it. Drag to move — position is saved when you release. Complete width, height, and rotation are sent to the API so other apps can draw the same layout.',
+      'Choose a table size, then tap the floor. Drag a table to move it.',
     placeHint: 'Tap an empty spot on the map to place this table.',
     placePresetHint:
       'Choose a table size above, then tap the floor to add it. Tap a placed table to rotate, resize, or edit.',
@@ -384,20 +383,15 @@ export const en = {
     deleteHall: 'Delete hall',
     guestVisible: 'Guests',
     guestVisibleHint: 'Guests see this area in the mobile app.',
-    areaNotVisible:
-      'Guests can’t see this area. The mobile app shows only one area per branch — the one marked Guests.',
+    areaNotVisible: 'Guests can’t see this floor yet.',
     showToGuests: 'Show this area to guests',
     allAreas: 'All areas',
     overviewTitle: 'Restaurant layout',
-    overviewLead:
-      'Add areas first, then place tables inside each one. An area is saved as its own floor plan, and each table keeps that plan’s id.',
+    overviewLead: 'Add an area, then place tables in it.',
     overviewThenTables: 'Then add tables inside the area you want.',
-    areaBoundsNote:
-      'The frame around an area follows its tables. The server does not store a separate area size, position, or color yet.',
-    areaColorNote:
-      'The dot color only helps you tell areas apart on this screen. It is not saved.',
-    deleteAreaUnavailable:
-      'Deleting an area is not available. The server has no way to remove a floor plan, so its tables would be left without a home.',
+    areaBoundsNote: 'Each area keeps the tables you place in it.',
+    areaColorNote: 'The color is the area’s color.',
+    deleteAreaUnavailable: 'Move the tables out of this area before deleting it.',
     guestsHidden: 'Hidden from guests',
     focusArea: 'Open this area',
     duplicateArea: 'Duplicate area',
@@ -426,8 +420,7 @@ export const en = {
     noMoveTargets: 'No other areas in this branch. Add an area on the Floor Plan page first.',
     changeStatus: 'Change status',
     newStatus: 'New status',
-    statusVsAvailability:
-      'Changing structural status does not change reservation availability for a date/time.',
+    statusVsAvailability: 'This does not change today’s bookings.',
     deleteTable: 'Delete table',
     deleteConfirmTitle: 'Delete table?',
     deleteConfirmMessage:
@@ -445,16 +438,16 @@ export const en = {
     capacityInvalid: 'Capacity must be a whole number of at least 1.',
     actions: 'Actions',
     employeeBlocked:
-      'Inventory management requires an organization Owner or Admin role.',
+      'Only an owner or admin can change the floor.',
     errors: {
       unknown: 'Something went wrong. Please try again.',
       validation: 'Please check the form and try again.',
       forbidden: 'You do not have permission for this action.',
-      notFound: 'That resource was not found.',
-      conflict: 'This conflicts with existing data (for example a duplicate table number).',
+      notFound: 'We couldn’t find that. Try again.',
+      conflict: 'That name or number is already used.',
       duplicateTableNumber: 'That table number is already used in this branch.',
-      invalidStatusTransition: 'That status transition is not allowed.',
-      invalidMoveTarget: 'That floor plan is not a valid move target for this table.',
+      invalidStatusTransition: 'You can’t change the status that way.',
+      invalidMoveTarget: 'Choose a different floor.',
     },
   },
   floorDesigner: {
@@ -674,8 +667,7 @@ export const en = {
     vip: 'VIP',
     smoking: 'Smoking',
     loading: 'Loading tables…',
-    manageHint:
-      'Live branch table inventory. Move uses a dedicated action; status changes use Change status — not Edit.',
+    manageHint: 'These are the tables at this branch.',
     emptyTitle: 'No tables',
     emptyBody: 'This branch has no tables yet. Create a floor plan first if needed, then add a table.',
     forbiddenTitle: 'Tables unavailable',
