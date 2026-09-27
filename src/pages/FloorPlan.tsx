@@ -1,7 +1,7 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { isApiError } from '@/api/errors'
 import type { FloorPlanAreaDto } from '@/api/floorPlanAreas'
-import type { TableDto } from '@/api/tables'
+import type { CreateTableRequest, TableDto } from '@/api/tables'
 import { CreateFloorPlanDialog } from '@/components/inventory/CreateFloorPlanDialog'
 import { ChangeTableStatusDialog } from '@/components/inventory/ChangeTableStatusDialog'
 import { MoveTableDialog } from '@/components/inventory/MoveTableDialog'
@@ -37,10 +37,15 @@ import { useCanManageInventory } from '@/hooks/usePermissions'
 import { mapInventoryMutationError } from '@/lib/inventoryMutationErrors'
 import {
   nextHallSortOrder,
+  partitionFrame,
   sectionIdForBox,
   tablesInsidePartition,
   visiblePartitions,
 } from '@/lib/floorPartitions'
+import {
+  readSectionDrafts,
+  writeSectionDrafts,
+} from '@/lib/floorSectionDrafts'
 import {
   clampTableSize,
   isTablePlaced,
@@ -118,7 +123,9 @@ export function FloorPlanPage() {
   const [drawHall, setDrawHall] = useState(false)
   const [hallDialogOpen, setHallDialogOpen] = useState(false)
   const [pendingPartition, setPendingPartition] = useState<TableBox | null>(null)
+  const pendingPartitionRef = useRef<TableBox | null>(null)
   const [sectionRects, setSectionRects] = useState<Record<string, TableBox>>({})
+  const [draftScope, setDraftScope] = useState('')
   const [highlightedAreaId, setHighlightedAreaId] = useState<string | null>(null)
   const [deleteHallTarget, setDeleteHallTarget] = useState<FloorPlanAreaDto | null>(
     null,
@@ -129,6 +136,49 @@ export function FloorPlanPage() {
   const branchId = selectedBranchId ?? ''
   const tables = tablesQuery.data ?? []
   const halls = areasQuery.data ?? []
+  const draftScopeKey =
+    restaurantId && branchId && selectedFloorPlanId
+      ? `${restaurantId}:${branchId}:${selectedFloorPlanId}`
+      : ''
+
+  if (draftScopeKey && draftScope !== draftScopeKey) {
+    setDraftScope(draftScopeKey)
+    setSectionRects(
+      readSectionDrafts(restaurantId, branchId, selectedFloorPlanId!),
+    )
+  }
+
+  useEffect(() => {
+    if (!draftScopeKey || draftScope !== draftScopeKey || !selectedFloorPlanId) return
+    writeSectionDrafts(restaurantId, branchId, selectedFloorPlanId, sectionRects)
+  }, [
+    branchId,
+    draftScope,
+    draftScopeKey,
+    restaurantId,
+    sectionRects,
+    selectedFloorPlanId,
+  ])
+
+  useEffect(() => {
+    if (!draftScopeKey || draftScope !== draftScopeKey) return
+    const areas = areasQuery.data ?? []
+    const floorTables = tablesQuery.data ?? []
+    setSectionRects((current) => {
+      let changed = false
+      const next = { ...current }
+      for (const area of areas) {
+        if (next[area.floorPlanAreaId]) continue
+        const frame = partitionFrame(
+          floorTables.filter((table) => table.floorPlanAreaId === area.floorPlanAreaId),
+        )
+        if (!frame) continue
+        next[area.floorPlanAreaId] = frame
+        changed = true
+      }
+      return changed ? next : current
+    })
+  }, [areasQuery.data, draftScope, draftScopeKey, tablesQuery.data])
   const branchTables = branchTablesQuery.data ?? []
   const catalogTables = branchTables.length > 0 ? branchTables : tables
   const selectedTable = catalogTables.find((tb) => tb.tableId === selectedTableId)
@@ -204,17 +254,33 @@ export function FloorPlanPage() {
     await persistGeometry(table, failedSave.overrides)
   }
 
+  const createWithFreeNumber = async (body: Omit<CreateTableRequest, 'tableNumber'>) => {
+    const rejected: string[] = []
+    let lastError: unknown
+    for (let attempt = 0; attempt < 40; attempt += 1) {
+      const tableNumber = nextTableNumber([...branchTables, ...tables], rejected)
+      try {
+        return await createMutation.mutateAsync({
+          restaurantId,
+          branchId,
+          body: { ...body, tableNumber },
+        })
+      } catch (err) {
+        lastError = err
+        if (!isApiError(err) || err.code !== 'CONFLICT') throw err
+        rejected.push(tableNumber)
+      }
+    }
+    throw lastError
+  }
+
   const handleDuplicate = async (table: TableDto) => {
     if (!restaurantId || !branchId) return
     setRepositionError(null)
     const size = resolveTableSize(table)
     try {
-      const created = await createMutation.mutateAsync({
-        restaurantId,
-        branchId,
-        body: {
+      const created = await createWithFreeNumber({
           floorPlanId: table.floorPlanId,
-          tableNumber: nextTableNumber(catalogTables),
           capacity: table.capacity,
           shape: table.shape,
           positionX: (table.positionX ?? 48) + 32,
@@ -229,7 +295,6 @@ export function FloorPlanPage() {
           smoking: table.smoking,
           floorPlanAreaId: table.floorPlanAreaId,
           color: table.color,
-        },
       })
       setSelectedTableId(created.tableId)
       toast('success', t.floorPlan.duplicateSuccess)
@@ -273,12 +338,8 @@ export function FloorPlanPage() {
 
     if (!placePreset) return
     try {
-      await createMutation.mutateAsync({
-        restaurantId,
-        branchId,
-        body: {
+      await createWithFreeNumber({
           floorPlanId: selectedFloorPlanId,
-          tableNumber: nextTableNumber(catalogTables),
           capacity: placePreset.capacity,
           shape: placePreset.shape,
           positionX: x,
@@ -301,7 +362,6 @@ export function FloorPlanPage() {
               })
             return areaId ? { floorPlanAreaId: areaId } : {}
           })(),
-        },
       })
       toast('success', t.floorPlan.createdSuccess)
     } catch (err) {
@@ -330,33 +390,45 @@ export function FloorPlanPage() {
     }
   }
 
-  const handleHallCreated = async (area: FloorPlanAreaDto) => {
-    const region = pendingPartition
-    setPendingPartition(null)
-    if (region) {
-      setSectionRects((current) => ({
-        ...current,
-        [area.floorPlanAreaId]: region,
-      }))
+  const rememberSection = (areaId: string, region: TableBox) => {
+    setSectionRects((current) => ({ ...current, [areaId]: region }))
+  }
+
+  const assignTablesInRegion = async (areaId: string, region: TableBox) => {
+    let assigned = false
+    for (const table of tablesInsidePartition(tables, region)) {
+      const ok = await persistGeometry(table, { floorPlanAreaId: areaId })
+      if (!ok) return false
+      assigned = true
     }
+    if (assigned) toast('success', t.floorPlan.hallAssigned)
+    return true
+  }
+
+  const handleHallCreated = async (area: FloorPlanAreaDto) => {
+    const region = pendingPartitionRef.current ?? pendingPartition
+    pendingPartitionRef.current = null
+    setPendingPartition(null)
     setHighlightedAreaId(area.floorPlanAreaId)
     if (!region) {
       toast('success', t.floorPlan.hallCreated)
       return
     }
-    let assigned = false
-    for (const table of tablesInsidePartition(tables, region)) {
-      const ok = await persistGeometry(table, {
-        floorPlanAreaId: area.floorPlanAreaId,
-      })
-      if (!ok) return
-      assigned = true
+    rememberSection(area.floorPlanAreaId, region)
+    const ok = await assignTablesInRegion(area.floorPlanAreaId, region)
+    if (ok && tablesInsidePartition(tables, region).length === 0) {
+      toast('success', t.floorPlan.hallCreated)
     }
-    toast('success', assigned ? t.floorPlan.hallAssigned : t.floorPlan.hallCreated)
   }
 
   const handleDrawHall = (box: TableBox) => {
     setDrawHall(false)
+    if (highlightedAreaId) {
+      rememberSection(highlightedAreaId, box)
+      void assignTablesInRegion(highlightedAreaId, box)
+      return
+    }
+    pendingPartitionRef.current = box
     setPendingPartition(box)
     setHallDialogOpen(true)
   }
@@ -683,6 +755,7 @@ export function FloorPlanPage() {
               onHighlight={setHighlightedAreaId}
               onAdd={() => {
                 setDrawHall(false)
+                pendingPartitionRef.current = null
                 setPendingPartition(null)
                 setHallDialogOpen(true)
               }}
@@ -835,6 +908,7 @@ export function FloorPlanPage() {
               open={hallDialogOpen}
               onClose={() => {
                 setHallDialogOpen(false)
+                pendingPartitionRef.current = null
                 setPendingPartition(null)
               }}
               restaurantId={restaurantId}

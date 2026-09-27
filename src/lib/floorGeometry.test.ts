@@ -49,6 +49,7 @@ describe('floorGeometry', () => {
     expect(nextTableNumber([{ tableNumber: 'T1' }, { tableNumber: 'T3' }])).toBe(
       'T2',
     )
+    expect(nextTableNumber([], ['T1'])).toBe('T2')
   })
 
   it('fills null size/rotation so Update sends complete geometry', () => {

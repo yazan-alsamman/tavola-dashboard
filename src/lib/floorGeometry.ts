@@ -103,8 +103,15 @@ export function floorWorldSize(boxes: TableBox[]): { width: number; height: numb
   return { width: maxX, height: maxY }
 }
 
-export function nextTableNumber(tables: Pick<TableDto, 'tableNumber'>[]): string {
-  const used = new Set(tables.map((tb) => tb.tableNumber.trim().toLowerCase()))
+export function nextTableNumber(
+  tables: Pick<TableDto, 'tableNumber'>[],
+  reserved: readonly string[] = [],
+): string {
+  const used = new Set(
+    [...tables.map((tb) => tb.tableNumber), ...reserved].map((value) =>
+      value.trim().toLowerCase(),
+    ),
+  )
   let n = 1
   while (used.has(`t${n}`)) n += 1
   return `T${n}`
