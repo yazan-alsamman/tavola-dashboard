@@ -157,6 +157,8 @@ Confirmed against Swagger / Postman / backend docs:
 - Soft-deleted restaurants excluded; `Suspended` restaurants may still appear
 - DTO fields used by the dashboard: `restaurantId`, `name`, `slug`, `logoId`, `coverImageId`, `description`, `cuisineType`, `averageRating`, `priceLevel`, `status` (`Active` \| `Suspended`), `createdAt`, `updatedAt`
 - No `nameAr` / mock `id` field — use `restaurantId` and `name`
+- Staff `PATCH /restaurants/:id` still sends `name`, `description`, `cuisineType`, `priceLevel`, and `status` only. It does not set `coverImageId`.
+- Public discovery restaurant objects (`compare`, `nearby`, search, and `GET /discovery/restaurants/:id`) now also return `coverImageUrl`: a short-lived signed read URL, or `null` when there is no cover. The dashboard does not call those guest endpoints. Do not build a storage path from `coverImageId`, and do not reuse the logo or a gallery image as the cover.
 
 ## `GET /restaurants/:restaurantId/branches`
 
