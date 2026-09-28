@@ -16,8 +16,8 @@ function mapLoginError(
   error: unknown,
   t: ReturnType<typeof useLocale>['t'],
 ): string {
-  if (!isApiError(error)) {
-    return t.login.errors.unknown
+  if (!isApiError(error) || (error.code === 'UNKNOWN_ERROR' && error.status >= 500)) {
+    return t.login.errors.connectionFailed
   }
 
   switch (error.code) {
@@ -96,10 +96,15 @@ export function LoginPage() {
       await login(email.trim(), password)
       navigate('/app', { replace: true })
     } catch (err) {
-      setError(mapLoginError(err, t))
-      if (isApiError(err) && err.code === 'AUTH_TOO_MANY_SESSIONS') {
-        setShowClearSessionsCta(Boolean(tokenStore.getRefreshToken()))
-      }
+      const tooMany =
+        isApiError(err) && err.code === 'AUTH_TOO_MANY_SESSIONS'
+      const canRevokeHere = Boolean(tokenStore.getRefreshToken())
+      setShowClearSessionsCta(tooMany && canRevokeHere)
+      setError(
+        tooMany && !canRevokeHere
+          ? t.login.errors.tooManySessionsNoLocal
+          : mapLoginError(err, t),
+      )
     } finally {
       setSubmitting(false)
     }
@@ -114,11 +119,14 @@ export function LoginPage() {
       await login(email.trim(), password)
       navigate('/app', { replace: true })
     } catch (err) {
-      setError(mapLoginError(err, t))
-      setShowClearSessionsCta(
-        isApiError(err) &&
-          err.code === 'AUTH_TOO_MANY_SESSIONS' &&
-          Boolean(tokenStore.getRefreshToken()),
+      const tooMany =
+        isApiError(err) && err.code === 'AUTH_TOO_MANY_SESSIONS'
+      const canRevokeHere = Boolean(tokenStore.getRefreshToken())
+      setShowClearSessionsCta(tooMany && canRevokeHere)
+      setError(
+        tooMany && !canRevokeHere
+          ? t.login.errors.tooManySessionsNoLocal
+          : mapLoginError(err, t),
       )
     } finally {
       setSubmitting(false)
@@ -232,7 +240,7 @@ export function LoginPage() {
               {showClearSessionsCta && (
                 <button
                   type="button"
-                  className="w-full text-label-sm font-semibold text-primary hover:underline disabled:opacity-60"
+                  className="w-full py-3 rounded-lg border border-primary text-primary text-label-md font-semibold hover:bg-primary/10 disabled:opacity-60"
                   disabled={submitting}
                   onClick={() => void handleClearSessionsAndRetry()}
                 >

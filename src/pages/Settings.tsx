@@ -602,9 +602,9 @@ export function SettingsPage() {
                   key={item.galleryItemId}
                   className="relative group aspect-square rounded-xl overflow-hidden border border-outline-variant/30 bg-surface-container-low"
                 >
-                  {item.url ? (
+                  {item.imageUrl ? (
                     <img
-                      src={item.url}
+                      src={item.imageUrl}
                       alt=""
                       className="h-full w-full object-cover"
                     />

@@ -48,7 +48,7 @@ Supporting modules:
 | `src/api/tokenStore.ts` | In-memory access token + `sessionStorage` refresh token + session-invalidated listeners |
 | `src/api/auth.ts` | `login`, `logout`, `logoutAll`, `forgotPassword`, `resetPassword`, `changePassword`, `listSessions`, `revokeSession` |
 | `src/api/users.ts` | `getCurrentUser`, `updateCurrentUser`, `getMyPreferences`, `updateMyPreferences`, `uploadMyAvatar` |
-| `src/api/restaurants.ts` | list/get/create/update/delete + settings, working-hours, gallery, cuisine/occasion category assignment |
+| `src/api/restaurants.ts` | list/get/create/update/delete + settings, working-hours, gallery, cover (`POST /restaurants/:id/cover`), cuisine/occasion category assignment |
 | `src/api/branches.ts` | list/get/create/update/delete + working-hours |
 | `src/api/reservations.ts` | availability, Online + staff Phone/Walk-In create, list/get, approve/reject/cancel/reschedule/complete/no-show/table-ready |
 | `src/api/floorPlans.ts` | `listFloorPlans`, `createFloorPlan`, `activateFloorPlan` |
@@ -61,7 +61,7 @@ Supporting modules:
 | `src/api/analytics.ts` | customers, reservation summary, branch trends/peak-hours, waitlist, reviews-summary, org reservation summary |
 | `src/api/organizations.ts` | subscription + usage + members/invitations/transfer + accept invitation |
 | `src/api/offers.ts` | create/list/update/publish/delete |
-| `src/api/reviews.ts` | restaurant list/get, reply, delete (staff management) |
+| `src/api/reviews.ts` | restaurant list/get, reply, delete, and review image upload/remove (`POST`/`DELETE /reviews/:id/images`). Photos page adds images from that contract. |
 | `src/api/messaging.ts` | restaurant inbox, conversation CRUD, multipart send |
 | `src/api/menus.ts` | full menu tree management + public GETs for render |
 | `Tavola_platform/src/platform/api/platformAdmin.ts` | Platform Owner console (separate app) — login, dashboard, restaurants/orgs lifecycle, revenue, acquisitions, admins, accounts, audit, pricing, plans, provision, broadcast |
@@ -158,7 +158,8 @@ Confirmed against Swagger / Postman / backend docs:
 - DTO fields used by the dashboard: `restaurantId`, `name`, `slug`, `logoId`, `coverImageId`, `description`, `cuisineType`, `averageRating`, `priceLevel`, `status` (`Active` \| `Suspended`), `createdAt`, `updatedAt`
 - No `nameAr` / mock `id` field — use `restaurantId` and `name`
 - Staff `PATCH /restaurants/:id` still sends `name`, `description`, `cuisineType`, `priceLevel`, and `status` only. It does not set `coverImageId`.
-- Public discovery restaurant objects (`compare`, `nearby`, search, and `GET /discovery/restaurants/:id`) now also return `coverImageUrl`: a short-lived signed read URL, or `null` when there is no cover. The dashboard does not call those guest endpoints. Do not build a storage path from `coverImageId`, and do not reuse the logo or a gallery image as the cover.
+- The guest cover is `POST /restaurants/:id/cover` (Owner/Admin, multipart field `file`). The 201 body is `{ coverImageId, coverImageUrl }`. `coverImageUrl` is a short-lived signed read URL. Gallery upload and `POST /restaurants/:id/logo` do not set the cover, and the app card does not show the logo.
+- The Photos page previews that same `coverImageUrl` with public `GET /discovery/restaurants/:id` (`auth: false`). Do not build a storage path from `coverImageId`. Platform Admin cover upload stays on the platform console.
 
 ## `GET /restaurants/:restaurantId/branches`
 
@@ -370,7 +371,9 @@ Grouped by Postman folder. `{base}` = `VITE_API_BASE_URL` (i.e. `/api/v1`). All 
 | DELETE | `/restaurants/:id` | soft delete |
 | GET / PATCH | `/restaurants/:id/settings` | `RestaurantSettings` (reservationInterval, maxGuestsPerReservation, cancellationWindow, autoApproval, timezone, defaultCurrency) |
 | GET / PATCH | `/restaurants/:id/working-hours` | |
-| POST / GET / DELETE | `/restaurants/:id/gallery[/:galleryItemId]` | multipart on POST |
+| POST | `/restaurants/:id/cover` | Owner/Admin multipart `file`. Sets `coverImageId`. 201 `{ coverImageId, coverImageUrl }`. |
+| GET | `/discovery/restaurants/:id` | Public. Photos page reads `coverImageUrl` only, to preview the cover. |
+| POST / GET / DELETE | `/restaurants/:id/gallery[/:galleryItemId]` | multipart `file` on POST. GET `data` is `{ restaurantId, items }`. Each item uses `imageUrl`. This does not set the cover. |
 | GET / PATCH | `/restaurants/:id/cuisine-categories` | |
 | GET / PATCH | `/restaurants/:id/occasion-categories` | |
 

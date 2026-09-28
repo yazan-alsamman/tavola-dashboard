@@ -21,6 +21,21 @@ Consequences:
 
 ---
 
+## ADR-015 — Restaurant cover is a staff upload, not the gallery
+Date: 2026-09-28
+Status: Accepted
+
+Context:
+The guest app shows `coverImageUrl` from public discovery. Gallery images and the restaurant logo do not set that field. Postman now has `POST /restaurants/:id/cover` for Owner/Admin and a separate Platform Admin upload.
+
+Decision:
+1. This dashboard calls `POST /restaurants/:id/cover` with the staff access token and a single multipart field `file`.
+2. The Photos page shows the returned `coverImageUrl`, and refreshes it from `GET /discovery/restaurants/:id`. The URL is not stored or rebuilt from `coverImageId`.
+3. Platform Admin `POST /platform-admin/restaurants/:id/cover` stays out of this app.
+
+Consequences:
+Replacing the cover deletes the previous object on the server. An employee sees the cover and cannot upload one.
+
 ## ADR-012 — Platform Owner console is a separate Vite app
 Date: 2026-09-14
 Status: Accepted

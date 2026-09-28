@@ -33,7 +33,7 @@ Per `API_INTEGRATION.md`, every API error carries a stable `code`. Branch UI beh
 | Code(s) | UI behavior |
 |---|---|
 | `AUTH_INVALID_TOKEN`, `AUTH_EXPIRED_TOKEN` | `AUTH_EXPIRED_TOKEN` is handled by the API client's single refresh-and-retry (see `API_INTEGRATION.md`). `AUTH_INVALID_TOKEN` is not refreshable — treat as forced logout. If either surfaces to the UI after the client has given up, force logout. |
-| `AUTH_INVALID_CREDENTIALS`, `AUTH_ACCOUNT_LOCKED`, `AUTH_ACCOUNT_SUSPENDED`, `AUTH_EMAIL_NOT_VERIFIED`, `AUTH_TOO_MANY_SESSIONS` | Inline error on the login form via translated keys in `t.login.errors.*` (see `Login.tsx` code→message map). `RATE_LIMIT_EXCEEDED` and `VALIDATION_ERROR` are also mapped there. |
+| `AUTH_INVALID_CREDENTIALS`, `AUTH_ACCOUNT_LOCKED`, `AUTH_ACCOUNT_SUSPENDED`, `AUTH_EMAIL_NOT_VERIFIED`, `AUTH_TOO_MANY_SESSIONS` | Inline error on the login form via translated keys in `t.login.errors.*` (see `Login.tsx` code→message map). `RATE_LIMIT_EXCEEDED` and `VALIDATION_ERROR` are also mapped there. A dropped connection (`UNKNOWN_ERROR` with status ≥ 500, or a non-API failure) is `t.login.errors.connectionFailed`. Login retries that case once. |
 | `VALIDATION_ERROR` | Inline, per-field errors from the `errors` array — never a single generic toast when field-level detail is available. Inventory forms use `extractValidationFieldErrors` + `mapInventoryMutationError`. |
 | `CONFLICT` | Inventory create/update (e.g. duplicate `tableNumber` within branch) — form-level translated conflict message. |
 | `FORBIDDEN` | Toast + no-op for mutations. For restaurant/branch **scope** load, `ScopeGate` shows a dedicated forbidden empty state (Owner/Admin list endpoints) — not a crash. See `AUTH_AND_RBAC.md`, "UI Gating Is Not Enforcement." |

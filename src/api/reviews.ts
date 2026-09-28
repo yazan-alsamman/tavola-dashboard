@@ -16,6 +16,7 @@ export interface ReviewDto {
   restaurantId?: string
   rating?: number
   comment?: string | null
+  reviewerUsername?: string | null
   reply?: string | null
   images?: ReviewImageDto[]
   createdAt?: string

@@ -63,28 +63,43 @@ function claimsFromAccessToken(): ReturnType<typeof parseAccessTokenClaims> {
   return parseAccessTokenClaims(accessToken)
 }
 
+function serverDidNotAnswer(error: unknown): boolean {
+  if (!isApiError(error)) return true
+  return error.code === 'UNKNOWN_ERROR' && error.status >= 500
+}
+
+async function loginOnce(email: string, password: string) {
+  const body = {
+    email,
+    password,
+    deviceName: DASHBOARD_DEVICE_NAME,
+    deviceType: DASHBOARD_DEVICE_TYPE,
+  }
+  try {
+    return await loginRequest(body)
+  } catch (err) {
+    if (!serverDidNotAnswer(err)) throw err
+    return loginRequest(body)
+  }
+}
+
 /**
- * When login hits the 10-session cap, reuse a stored refresh token (if any)
+ * When login hits the session cap, reuse a stored refresh token (if any)
  * to call logout-all, then retry login once.
+ * The stored token is removed only after logout-all succeeds, so a failed
+ * revoke can be tried again from the login screen.
  */
 async function loginClearingStaleSessions(
   email: string,
   password: string,
 ): Promise<Awaited<ReturnType<typeof loginRequest>>> {
   try {
-    return await loginRequest({
-      email,
-      password,
-      deviceName: DASHBOARD_DEVICE_NAME,
-      deviceType: DASHBOARD_DEVICE_TYPE,
-    })
+    return await loginOnce(email, password)
   } catch (err) {
     if (!isApiError(err) || err.code !== 'AUTH_TOO_MANY_SESSIONS') {
       throw err
     }
-
-    const hasRefresh = Boolean(tokenStore.getRefreshToken())
-    if (!hasRefresh) {
+    if (!tokenStore.getRefreshToken()) {
       throw err
     }
 
@@ -96,17 +111,11 @@ async function loginClearingStaleSessions(
     try {
       await logoutAllRequest()
     } catch {
-      // Still attempt a fresh login; local tokens are cleared below on failure.
+      throw err
     }
-
     tokenStore.clear()
 
-    return loginRequest({
-      email,
-      password,
-      deviceName: DASHBOARD_DEVICE_NAME,
-      deviceType: DASHBOARD_DEVICE_TYPE,
-    })
+    return loginOnce(email, password)
   }
 }
 

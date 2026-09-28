@@ -1,4 +1,5 @@
 import { apiRequest } from './client'
+import { ApiError } from './errors'
 import type { PaginatedData } from './types'
 
 export type RestaurantStatus = 'Active' | 'Suspended'
@@ -65,11 +66,15 @@ export interface WorkingHoursDto {
   entries: WorkingHoursEntry[]
 }
 
+/** One gallery photo. `imageUrl` is a short-lived signed read URL. */
 export interface GalleryItemDto {
   galleryItemId: string
-  sortOrder?: number
-  url?: string | null
-  fileId?: string | null
+  restaurantId?: string
+  caption: string | null
+  sortOrder: number
+  imageUrl: string | null
+  createdAt?: string
+  updatedAt?: string
 }
 
 export async function listRestaurants(
@@ -145,10 +150,99 @@ export async function updateRestaurantWorkingHours(
   })
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null
+}
+
+export function normalizeGalleryItem(raw: unknown): GalleryItemDto | null {
+  if (!isRecord(raw) || typeof raw.galleryItemId !== 'string' || !raw.galleryItemId) {
+    return null
+  }
+  return {
+    galleryItemId: raw.galleryItemId,
+    restaurantId: typeof raw.restaurantId === 'string' ? raw.restaurantId : undefined,
+    caption: typeof raw.caption === 'string' ? raw.caption : null,
+    sortOrder: typeof raw.sortOrder === 'number' ? raw.sortOrder : 0,
+    imageUrl: typeof raw.imageUrl === 'string' && raw.imageUrl ? raw.imageUrl : null,
+    createdAt: typeof raw.createdAt === 'string' ? raw.createdAt : undefined,
+    updatedAt: typeof raw.updatedAt === 'string' ? raw.updatedAt : undefined,
+  }
+}
+
+/** GET /restaurants/:id/gallery returns `{ restaurantId, items }`, not a bare array. */
+export function normalizeGalleryList(data: unknown): GalleryItemDto[] {
+  const records =
+    isRecord(data) && Array.isArray(data.items) ? data.items : []
+  return records
+    .map(normalizeGalleryItem)
+    .filter((item): item is GalleryItemDto => item !== null)
+    .sort((a, b) => a.sortOrder - b.sortOrder)
+}
+
 export async function listRestaurantGallery(
   restaurantId: string,
 ): Promise<GalleryItemDto[]> {
-  return apiRequest<GalleryItemDto[]>(`/restaurants/${restaurantId}/gallery`)
+  const data = await apiRequest<unknown>(`/restaurants/${restaurantId}/gallery`)
+  return normalizeGalleryList(data)
+}
+
+/** Signed cover the guest app reads. Do not build this URL from `coverImageId`. */
+export interface RestaurantCoverDto {
+  coverImageId: string | null
+  coverImageUrl: string | null
+}
+
+export function normalizeRestaurantCover(raw: unknown): RestaurantCoverDto {
+  if (!isRecord(raw)) {
+    return { coverImageId: null, coverImageUrl: null }
+  }
+  const coverImageId =
+    typeof raw.coverImageId === 'string' && raw.coverImageId ? raw.coverImageId : null
+  const url =
+    typeof raw.coverImageUrl === 'string' && /^https?:\/\//i.test(raw.coverImageUrl)
+      ? raw.coverImageUrl
+      : null
+  return {
+    coverImageId,
+    coverImageUrl: coverImageId ? url : null,
+  }
+}
+
+/**
+ * Owner/Admin. Multipart field `file` (JPEG/PNG/WebP).
+ * Sets `coverImageId`. Gallery upload and logo upload do not.
+ */
+export async function uploadRestaurantCover(
+  restaurantId: string,
+  file: File,
+): Promise<RestaurantCoverDto> {
+  const form = new FormData()
+  form.append('file', file)
+  const data = await apiRequest<unknown>(`/restaurants/${restaurantId}/cover`, {
+    method: 'POST',
+    body: form,
+  })
+  const cover = normalizeRestaurantCover(data)
+  if (!cover.coverImageId || !cover.coverImageUrl) {
+    throw new ApiError({
+      message: 'Unexpected API response shape.',
+      status: 201,
+      code: 'UNKNOWN_ERROR',
+    })
+  }
+  return cover
+}
+
+/** Public read of the signed cover URL. Same field the guest app uses. */
+export async function getPublicRestaurantCover(
+  restaurantId: string,
+  signal?: AbortSignal,
+): Promise<RestaurantCoverDto> {
+  const data = await apiRequest<unknown>(
+    `/discovery/restaurants/${restaurantId}`,
+    { auth: false, signal },
+  )
+  return normalizeRestaurantCover(data)
 }
 
 export async function addRestaurantGalleryImage(
@@ -157,10 +251,19 @@ export async function addRestaurantGalleryImage(
 ): Promise<GalleryItemDto> {
   const form = new FormData()
   form.append('file', file)
-  return apiRequest<GalleryItemDto>(`/restaurants/${restaurantId}/gallery`, {
+  const data = await apiRequest<unknown>(`/restaurants/${restaurantId}/gallery`, {
     method: 'POST',
     body: form,
   })
+  const item = normalizeGalleryItem(data)
+  if (!item) {
+    throw new ApiError({
+      message: 'Unexpected API response shape.',
+      status: 200,
+      code: 'UNKNOWN_ERROR',
+    })
+  }
+  return item
 }
 
 export async function removeRestaurantGalleryImage(

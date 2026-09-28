@@ -40,6 +40,7 @@ import {
   partitionFrame,
   sectionIdForBox,
   tablesInsidePartition,
+  drawAttachesToSelectedArea,
   visiblePartitions,
 } from '@/lib/floorPartitions'
 import {
@@ -423,9 +424,9 @@ export function FloorPlanPage() {
 
   const handleDrawHall = (box: TableBox) => {
     setDrawHall(false)
-    if (highlightedAreaId) {
-      rememberSection(highlightedAreaId, box)
-      void assignTablesInRegion(highlightedAreaId, box)
+    if (drawAttachesToSelectedArea(highlightedAreaId, sectionRects)) {
+      rememberSection(highlightedAreaId!, box)
+      void assignTablesInRegion(highlightedAreaId!, box)
       return
     }
     pendingPartitionRef.current = box

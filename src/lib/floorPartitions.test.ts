@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { FloorPlanAreaDto } from '@/api/floorPlanAreas'
 import type { TableDto } from '@/api/tables'
 import {
+  drawAttachesToSelectedArea,
   nextHallSortOrder,
   partitionFrame,
   sectionIdForBox,
@@ -90,5 +91,12 @@ describe('drawn sections', () => {
       [{ ...inside, floorPlanAreaId: 'area-0' }],
     )
     expect(sectionIdForBox(frames, { x: 40, y: 40, width: 80, height: 80 })).toBe('area-0')
+  })
+
+  it('keeps an existing outline when a new area is drawn', () => {
+    const box = { x: 8, y: 8, width: 120, height: 80 }
+    expect(drawAttachesToSelectedArea(null, {})).toBe(false)
+    expect(drawAttachesToSelectedArea('area-0', {})).toBe(true)
+    expect(drawAttachesToSelectedArea('area-0', { 'area-0': box })).toBe(false)
   })
 })

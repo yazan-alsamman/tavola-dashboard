@@ -13,6 +13,8 @@ import { MaterialIcon } from '@/components/ui/Icon'
 import { ConfirmDialog } from '@/components/ui/Modal'
 import { Num } from '@/components/ui/Num'
 import { PageHeader } from '@/components/ui/PageHeader'
+import { RestaurantCoverSection } from '@/components/gallery/RestaurantCoverSection'
+import { ReviewImagesSection } from '@/components/gallery/ReviewImagesSection'
 import { useLocale } from '@/context/LocaleContext'
 import { useRestaurantScope } from '@/context/RestaurantScopeContext'
 import { useToast } from '@/context/ToastContext'
@@ -121,6 +123,8 @@ export function GalleryPage() {
         }
       />
 
+      <RestaurantCoverSection restaurantId={selectedRestaurantId!} />
+
       <p className="text-body-sm text-on-surface-variant mb-6 max-w-2xl">
         {t.gallery.hint}
       </p>
@@ -182,10 +186,10 @@ export function GalleryPage() {
                   'shadow-sm transition-shadow hover:shadow-md',
                 )}
               >
-                {item.url ? (
-                  <a href={item.url} target="_blank" rel="noreferrer" className="block h-full w-full">
+                {item.imageUrl ? (
+                  <a href={item.imageUrl} target="_blank" rel="noreferrer" className="block h-full w-full">
                     <img
-                      src={item.url}
+                      src={item.imageUrl}
                       alt=""
                       className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
                     />
@@ -230,6 +234,8 @@ export function GalleryPage() {
           </div>
         </>
       )}
+
+      <ReviewImagesSection />
 
       <ConfirmDialog
         open={Boolean(removeTarget)}

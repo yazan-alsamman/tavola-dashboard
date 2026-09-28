@@ -92,6 +92,18 @@ export function tablesInsidePartition(
   )
 }
 
+/**
+ * A new stroke stays on the selected area only when that area has no rectangle yet.
+ * An area that already has an outline keeps it; the stroke becomes a new area.
+ */
+export function drawAttachesToSelectedArea(
+  highlightedAreaId: string | null,
+  drafts: Record<string, TableBox>,
+): boolean {
+  if (!highlightedAreaId) return false
+  return drafts[highlightedAreaId] == null
+}
+
 export function sectionIdForBox(
   partitions: FloorPartition[],
   box: TableBox,
