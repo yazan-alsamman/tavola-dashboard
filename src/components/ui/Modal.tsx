@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId, useRef, type ReactNode } from 'react'
+import { useEffect, useId, useRef, type ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 import { MaterialIcon } from '@/components/ui/Icon'
 import { Button } from '@/components/ui/Button'
@@ -35,14 +35,21 @@ export function Modal({
 }: ModalProps) {
   const panelRef = useRef<HTMLDivElement>(null)
   const restoreFocusRef = useRef<HTMLElement | null>(null)
+  const onCloseRef = useRef(onClose)
   const uid = useId()
   const titleId = `modal-title-${uid}`
   const descriptionId = `modal-description-${uid}`
 
-  const handleKeyDown = useCallback(
-    (e: KeyboardEvent) => {
+  // Parents pass a fresh onClose after every keystroke. Reading it from a ref
+  // keeps the open-dialog effect from running again and pulling focus off the field.
+  onCloseRef.current = onClose
+
+  useEffect(() => {
+    if (!open) return
+
+    const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        onClose()
+        onCloseRef.current()
         return
       }
       if (e.key !== 'Tab' || !panelRef.current) return
@@ -65,12 +72,7 @@ export function Modal({
         e.preventDefault()
         first.focus()
       }
-    },
-    [onClose],
-  )
-
-  useEffect(() => {
-    if (!open) return
+    }
 
     restoreFocusRef.current = document.activeElement as HTMLElement | null
     document.addEventListener('keydown', handleKeyDown)
@@ -85,7 +87,7 @@ export function Modal({
       document.body.style.overflow = previousOverflow
       restoreFocusRef.current?.focus?.()
     }
-  }, [open, handleKeyDown])
+  }, [open])
 
   if (!open) return null
 
