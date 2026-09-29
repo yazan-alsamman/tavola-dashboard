@@ -25,6 +25,8 @@ interface FloorTableInspectorProps {
   onClose: () => void
   halls?: FloorPlanAreaDto[]
   onAssignHall?: (floorPlanAreaId: string | null) => void
+  /** Drop the card frame when a drawer already supplies the title and close control. */
+  plain?: boolean
 }
 
 export function FloorTableInspector({
@@ -45,12 +47,19 @@ export function FloorTableInspector({
   onClose,
   halls = [],
   onAssignHall,
+  plain = false,
 }: FloorTableInspectorProps) {
   const { t } = useLocale()
   const isPlaced = isTablePlaced(table)
 
   return (
-    <aside className="rounded-xl border border-outline-variant/20 bg-surface-container-lowest p-4 shadow-sm max-lg:sticky max-lg:bottom-2 max-lg:z-20">
+    <aside
+      className={
+        plain
+          ? 'p-1'
+          : 'rounded-xl border border-outline-variant/20 bg-surface-container-lowest p-4 shadow-sm max-lg:sticky max-lg:bottom-2 max-lg:z-20'
+      }
+    >
       <div className="flex items-start gap-3">
         <div className="min-w-0 flex-1">
           <p className="font-semibold text-on-surface truncate">
@@ -66,15 +75,18 @@ export function FloorTableInspector({
           label={t.status[table.status as TableStatusDto]}
           type="table"
         />
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-sm"
-          onClick={onClose}
-          aria-label={t.common.close}
-        >
-          <MaterialIcon name="close" size={18} />
-        </Button>
+        {!plain && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-11 w-11"
+            onClick={onClose}
+            aria-label={t.common.close}
+          >
+            <MaterialIcon name="close" size={18} />
+          </Button>
+        )}
       </div>
 
       {floorPlanName && (

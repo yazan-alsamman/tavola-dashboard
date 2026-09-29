@@ -6,9 +6,11 @@ export type FloorSaveState = 'saved' | 'unsaved' | 'saving' | 'failed'
 
 interface FloorSaveStatusProps {
   state: FloorSaveState
+  onRetry?: () => void
+  retryLabel?: string
 }
 
-export function FloorSaveStatus({ state }: FloorSaveStatusProps) {
+export function FloorSaveStatus({ state, onRetry, retryLabel }: FloorSaveStatusProps) {
   const { t } = useLocale()
   const label = {
     saved: t.floorPlan.saveSaved,
@@ -41,6 +43,11 @@ export function FloorSaveStatus({ state }: FloorSaveStatusProps) {
         className={state === 'saving' ? 'animate-spin' : undefined}
       />
       {label}
+      {state === 'failed' && onRetry && retryLabel && (
+        <button type="button" className="ms-1 min-h-11 underline underline-offset-2" onClick={onRetry}>
+          {retryLabel}
+        </button>
+      )}
     </p>
   )
 }

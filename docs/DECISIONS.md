@@ -21,6 +21,22 @@ Consequences:
 
 ---
 
+## ADR-023 — The service floor keeps the map in front
+Date: 2026-09-29
+Status: Accepted
+
+Context:
+The floor editor shared the screen with a permanent side column, the waiting list opened with a form, and walk-in asked for every field before a table could be chosen. Table inventory showed every action on the row. Geometry still saves when a drag ends. The waiting list has no branch-wide read, so the page can only show guests added in this tab.
+
+Decision:
+1. The floor canvas fills the screen. Zoom, fit, snap, table sizes, draw, and zones sit on one toolbar. Zones collapse. The selected table opens in a drawer. The save chip shows saving, saved, or retry, and a failed save keeps its message on the page until retry or discard. A browser leave prompt is not added: closing the tab already goes through the signed-in leave flow.
+2. The tables list uses one primary action, change status, and puts edit, move, split, and delete in the overflow. Below the `md` breakpoint the same rows are cards. Status stays the structural table status.
+3. The waiting list leads with the queue. Add opens in a drawer. Wait time is how long ago the guest was added on this device.
+4. Walk-in starts at the current time and a party size, searches once, and keeps email and notes behind a disclosure.
+
+Consequences:
+A failed floor save stays on screen until it is retried or discarded. Drawn zone rectangles stay in this browser, as they did before. The waiting list still is not the branch queue.
+
 ## ADR-022 — Operations screens lead with the next decision
 Date: 2026-09-29
 Status: Accepted

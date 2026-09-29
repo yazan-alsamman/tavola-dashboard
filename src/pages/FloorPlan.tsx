@@ -11,6 +11,7 @@ import { FloorPlanAreaBar } from '@/components/floor/FloorPlanAreaBar'
 import { FloorPlanReadView } from '@/components/floor/FloorPlanReadView'
 import { FloorSaveStatus, type FloorSaveState } from '@/components/floor/FloorSaveStatus'
 import { FloorTableInspector } from '@/components/floor/FloorTableInspector'
+import { Drawer } from '@/components/ui/Drawer'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { MaterialIcon } from '@/components/ui/Icon'
 import { Num } from '@/components/ui/Num'
@@ -132,6 +133,7 @@ export function FloorPlanPage() {
     null,
   )
   const [hallError, setHallError] = useState<string | null>(null)
+  const [zonesOpen, setZonesOpen] = useState(false)
 
   const restaurantId = selectedRestaurantId ?? ''
   const branchId = selectedBranchId ?? ''
@@ -210,6 +212,7 @@ export function FloorPlanPage() {
         : dragging
           ? 'unsaved'
           : 'saved'
+
   const createOnFloorPlanId =
     viewMode === 'focus'
       ? selectedFloorPlanId
@@ -611,25 +614,13 @@ export function FloorPlanPage() {
     <div className="space-y-4">
       {header}
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        {layoutReady ? <FloorSaveStatus state={saveState} /> : <span />}
-        <div className="flex flex-wrap items-center gap-3 text-label-md">
-          <span className="flex items-center gap-1.5 text-on-surface-variant">
-            <MaterialIcon
-              name="table_restaurant"
-              size={18}
-              className="text-primary"
-            />
-            <Num>{counts.total}</Num> {t.floorPlan.tablesCount}
-          </span>
-          <span className="text-primary font-semibold">
-            <Num>{counts.occupied}</Num> {t.status.Occupied}
-          </span>
-          <span className="text-on-surface-variant font-semibold">
-            <Num>{counts.available}</Num> {t.status.Available}
-          </span>
-        </div>
-      </div>
+      {!layoutReady && (
+        <FloorSaveStatus
+          state={saveState}
+          onRetry={failedSave ? () => void retryFailedSave() : undefined}
+          retryLabel={t.floorPlan.retrySave}
+        />
+      )}
 
       {canManage && inspectedPlan && !inspectedPlan.isActive && (
         <div className="flex flex-wrap items-center gap-3 rounded-lg border border-warning/30 bg-warning-light px-4 py-3">
@@ -656,9 +647,9 @@ export function FloorPlanPage() {
         </div>
       )}
 
-      <p className="text-label-sm text-on-surface-variant">
-        {canManage ? t.floorPlan.studioHint : t.inventory.employeeBlocked}
-      </p>
+      {!canManage && (
+        <p className="text-label-sm text-on-surface-variant">{t.inventory.employeeBlocked}</p>
+      )}
       {repositionError && (
         <p className="text-label-sm text-error" role="alert">
           {repositionError}
@@ -720,7 +711,7 @@ export function FloorPlanPage() {
       )}
 
       {layoutReady && (
-        <div className="flex flex-col lg:grid lg:grid-cols-[minmax(0,1fr)_280px] gap-3">
+        <div className="min-w-0 space-y-3">
           <div className="min-w-0 space-y-3">
             {areasQuery.isError && (
               <p className="text-label-sm text-error" role="alert">
@@ -739,36 +730,32 @@ export function FloorPlanPage() {
                 {hallError}
               </p>
             )}
-            <FloorPlanAreaBar
-              areas={halls}
-              tables={tables}
-              highlightedAreaId={highlightedAreaId}
-              drawHall={drawHall}
-              canManage={canManage}
-              floorName={selectedFloorPlan?.name}
-              activePresetId={placePreset?.id ?? null}
-              placing={createMutation.isPending || Boolean(repositionBusyId)}
-              onPreset={(preset) => {
-                setDrawHall(false)
-                setPlacePreset(preset)
-                if (preset) setSelectedTableId(null)
-              }}
-              onHighlight={setHighlightedAreaId}
-              onAdd={() => {
-                setDrawHall(false)
-                pendingPartitionRef.current = null
-                setPendingPartition(null)
-                setHallDialogOpen(true)
-              }}
-              onToggleDraw={() => {
-                setPlacePreset(null)
-                setDrawHall((current) => !current)
-              }}
-              onDelete={(area) => {
-                setHallError(null)
-                setDeleteHallTarget(area)
-              }}
-            />
+            {zonesOpen && (
+              <FloorPlanAreaBar
+                areas={halls}
+                tables={tables}
+                highlightedAreaId={highlightedAreaId}
+                drawHall={drawHall}
+                canManage={canManage}
+                tools={false}
+                floorName={selectedFloorPlan?.name}
+                onHighlight={setHighlightedAreaId}
+                onAdd={() => {
+                  setDrawHall(false)
+                  pendingPartitionRef.current = null
+                  setPendingPartition(null)
+                  setHallDialogOpen(true)
+                }}
+                onToggleDraw={() => {
+                  setPlacePreset(null)
+                  setDrawHall((current) => !current)
+                }}
+                onDelete={(area) => {
+                  setHallError(null)
+                  setDeleteHallTarget(area)
+                }}
+              />
+            )}
             {viewMode === 'focus' && unplaced.length > 0 && canManage && (
               <div className="flex justify-end">
                 <Button
@@ -789,7 +776,45 @@ export function FloorPlanPage() {
               drawHall={drawHall && canManage}
               sectionDrafts={sectionRects}
               onDrawHall={handleDrawHall}
-              hidePresets
+              toolbarLeading={
+                <>
+                  <FloorSaveStatus
+                    state={saveState}
+                    onRetry={failedSave ? () => void retryFailedSave() : undefined}
+                    retryLabel={t.floorPlan.retrySave}
+                  />
+                  <Button
+                    type="button"
+                    variant={zonesOpen ? 'secondary' : 'ghost'}
+                    className="h-11 shrink-0"
+                    aria-expanded={zonesOpen}
+                    onClick={() => setZonesOpen((open) => !open)}
+                  >
+                    {t.floorPlan.hallsLabel}
+                  </Button>
+                  {canManage && (
+                    <Button
+                      type="button"
+                      variant={drawHall ? 'primary' : 'ghost'}
+                      className="h-11 shrink-0"
+                      aria-pressed={drawHall}
+                      onClick={() => {
+                        setPlacePreset(null)
+                        setDrawHall((current) => !current)
+                      }}
+                    >
+                      {drawHall ? t.floorPlan.drawHallActive : t.floorPlan.drawHall}
+                    </Button>
+                  )}
+                </>
+              }
+              toolbarTrailing={
+                <span className="ms-auto flex items-center gap-2 text-label-sm text-on-surface-variant">
+                  <Num>{counts.occupied}</Num> {t.status.Occupied}
+                  <span aria-hidden="true">·</span>
+                  <Num>{counts.available}</Num> {t.status.Available}
+                </span>
+              }
               selectedTableId={selectedTableId}
               onSelectTable={(id) => {
                 setSelectedTableId(id)
@@ -818,89 +843,52 @@ export function FloorPlanPage() {
               onDragActiveChange={setDragging}
             />
           </div>
-
-          {selectedTable ? (
-            <FloorTableInspector
-              table={selectedTable}
-              floorPlanName={
-                floorPlans.find((fp) => fp.floorPlanId === selectedTable.floorPlanId)
-                  ?.name ?? null
-              }
-              floorPlanActive={Boolean(
-                floorPlans.find((fp) => fp.floorPlanId === selectedTable.floorPlanId)
-                  ?.isActive,
-              )}
-              canManage={canManage}
-              busy={repositionBusyId === selectedTable.tableId}
-              onRotate={() =>
-                void persistGeometry(selectedTable, {
-                  rotation: ((selectedTable.rotation ?? 0) + 45) % 360,
-                })
-              }
-              onLarger={() => void bumpSize(selectedTable, 16)}
-              onSmaller={() => void bumpSize(selectedTable, -16)}
-              onEdit={() => setEditTable(selectedTable)}
-              onMove={() => setMoveTableTarget(selectedTable)}
-              onStatus={() => setStatusTable(selectedTable)}
-              onDelete={() => {
-                setDeleteError(null)
-                setDeleteTableTarget(selectedTable)
-              }}
-              onDuplicate={() => void handleDuplicate(selectedTable)}
-              duplicating={createMutation.isPending}
-              onClose={() => setSelectedTableId(null)}
-              halls={
-                selectedTable.floorPlanId === selectedFloorPlanId ? halls : []
-              }
-              onAssignHall={(areaId) =>
-                void persistGeometry(selectedTable, { floorPlanAreaId: areaId })
-              }
-            />
-          ) : (
-            <aside className="rounded-xl border border-outline-variant/20 bg-surface-container-lowest p-4 shadow-sm">
-              <p className="text-label-lg font-semibold text-on-surface">
-                {selectedFloorPlan?.name ?? t.floorPlan.title}
-              </p>
-              <p className="mt-2 text-body-sm text-on-surface-variant leading-relaxed">
-                {t.floorPlan.addHallHint}
-              </p>
-              {halls.length > 0 && (
-                <ul className="mt-4 space-y-2">
-                  {halls.map((area) => {
-                    const count = tables.filter(
-                      (table) => table.floorPlanAreaId === area.floorPlanAreaId,
-                    ).length
-                    return (
-                      <li key={area.floorPlanAreaId}>
-                        <button
-                          type="button"
-                          className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-start hover:bg-surface-container-low"
-                          onClick={() =>
-                            setHighlightedAreaId(
-                              highlightedAreaId === area.floorPlanAreaId
-                                ? null
-                                : area.floorPlanAreaId,
-                            )
-                          }
-                        >
-                          <span
-                            className="h-2.5 w-2.5 shrink-0 rounded-full"
-                            style={{ backgroundColor: area.color }}
-                          />
-                          <span className="min-w-0 flex-1 truncate text-label-md font-semibold">
-                            {area.name}
-                          </span>
-                          <Num>{count}</Num>
-                        </button>
-                      </li>
-                    )
-                  })}
-                </ul>
-              )}
-            </aside>
-          )}
         </div>
       )}
+
+      <Drawer
+        open={selectedTable != null}
+        onClose={() => setSelectedTableId(null)}
+        title={selectedTable?.tableNumber ?? t.floorPlan.title}
+        closeLabel={t.common.close}
+      >
+        {selectedTable && (
+          <FloorTableInspector
+            plain
+            table={selectedTable}
+            floorPlanName={
+              floorPlans.find((fp) => fp.floorPlanId === selectedTable.floorPlanId)?.name ??
+              null
+            }
+            floorPlanActive={Boolean(
+              floorPlans.find((fp) => fp.floorPlanId === selectedTable.floorPlanId)?.isActive,
+            )}
+            canManage={canManage}
+            busy={repositionBusyId === selectedTable.tableId}
+            onRotate={() =>
+              void persistGeometry(selectedTable, {
+                rotation: ((selectedTable.rotation ?? 0) + 45) % 360,
+              })
+            }
+            onLarger={() => void bumpSize(selectedTable, 16)}
+            onSmaller={() => void bumpSize(selectedTable, -16)}
+            onEdit={() => setEditTable(selectedTable)}
+            onMove={() => setMoveTableTarget(selectedTable)}
+            onStatus={() => setStatusTable(selectedTable)}
+            onDelete={() => {
+              setDeleteError(null)
+              setDeleteTableTarget(selectedTable)
+            }}
+            onDuplicate={() => void handleDuplicate(selectedTable)}
+            duplicating={createMutation.isPending}
+            onClose={() => setSelectedTableId(null)}
+            halls={selectedTable.floorPlanId === selectedFloorPlanId ? halls : []}
+            onAssignHall={(areaId) =>
+              void persistGeometry(selectedTable, { floorPlanAreaId: areaId })
+            }
+          />
+        )}
+      </Drawer>
 
       {canManage && restaurantId && branchId && (
         <>

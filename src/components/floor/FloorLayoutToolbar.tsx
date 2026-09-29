@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { MaterialIcon } from '@/components/ui/Icon'
 import { Button } from '@/components/ui/Button'
 import { useLocale } from '@/context/LocaleContext'
@@ -17,6 +18,8 @@ interface FloorLayoutToolbarProps {
   onClearPreset: () => void
   placing: boolean
   hidePresets?: boolean
+  leading?: ReactNode
+  trailing?: ReactNode
 }
 
 export function FloorLayoutToolbar({
@@ -32,6 +35,8 @@ export function FloorLayoutToolbar({
   onClearPreset,
   placing,
   hidePresets = false,
+  leading,
+  trailing,
 }: FloorLayoutToolbarProps) {
   const { t } = useLocale()
   const presetLabels: Record<TablePreset['id'], string> = {
@@ -43,12 +48,14 @@ export function FloorLayoutToolbar({
   }
 
   return (
-    <div className="flex flex-col gap-2 rounded-xl border border-outline-variant/30 bg-surface-container-lowest p-2 sm:p-3">
-      <div className="flex items-center gap-1 overflow-x-auto pb-0.5">
+    <div className="flex flex-col gap-2 rounded-xl border border-outline-variant/30 bg-surface-container-lowest p-2">
+      <div className="flex items-center gap-1 overflow-x-auto">
+        {leading}
         <Button
           type="button"
           variant="ghost"
-          size="icon-sm"
+          size="icon"
+          className="h-11 w-11"
           onClick={onZoomOut}
           aria-label={t.floorPlan.zoomOut}
         >
@@ -60,7 +67,8 @@ export function FloorLayoutToolbar({
         <Button
           type="button"
           variant="ghost"
-          size="icon-sm"
+          size="icon"
+          className="h-11 w-11"
           onClick={onZoomIn}
           aria-label={t.floorPlan.zoomIn}
         >
@@ -69,7 +77,8 @@ export function FloorLayoutToolbar({
         <Button
           type="button"
           variant="ghost"
-          size="icon-sm"
+          size="icon"
+          className="h-11 w-11"
           onClick={onFit}
           aria-label={t.floorPlan.fitView}
         >
@@ -80,11 +89,12 @@ export function FloorLayoutToolbar({
           variant={snapEnabled ? 'secondary' : 'ghost'}
           size="sm"
           onClick={onSnapToggle}
-          className="ms-1 shrink-0"
+          className="ms-1 h-11 shrink-0"
         >
           <MaterialIcon name="grid_on" size={16} />
           {snapEnabled ? t.floorPlan.snapOn : t.floorPlan.snapOff}
         </Button>
+        {trailing}
       </div>
 
       {canManage && !hidePresets && (
@@ -103,7 +113,7 @@ export function FloorLayoutToolbar({
                   active ? onClearPreset() : onPreset(preset)
                 }
                 className={cn(
-                  'shrink-0 rounded-full border px-3 py-1.5 text-label-md font-semibold min-h-10',
+                  'shrink-0 rounded-full border px-3 text-label-md font-semibold min-h-11',
                   active
                     ? 'border-primary bg-primary text-on-primary'
                     : 'border-outline-variant/40 bg-surface-container-low text-on-surface hover:border-primary/50',

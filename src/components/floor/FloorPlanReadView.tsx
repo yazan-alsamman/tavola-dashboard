@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
+import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
 import type { FloorPlanAreaDto } from '@/api/floorPlanAreas'
 import type { TableDto } from '@/api/tables'
 import { FloorLayoutToolbar } from '@/components/floor/FloorLayoutToolbar'
@@ -46,6 +46,8 @@ interface FloorPlanReadViewProps {
   placing?: boolean
   onDragActiveChange?: (active: boolean) => void
   hidePresets?: boolean
+  toolbarLeading?: ReactNode
+  toolbarTrailing?: ReactNode
   areas?: FloorPlanAreaDto[]
   drawHall?: boolean
   onDrawHall?: (box: TableBox) => void
@@ -99,6 +101,8 @@ export function FloorPlanReadView({
   placing = false,
   onDragActiveChange,
   hidePresets = false,
+  toolbarLeading,
+  toolbarTrailing,
   areas = [],
   drawHall = false,
   onDrawHall,
@@ -300,11 +304,9 @@ export function FloorPlanReadView({
     setZoom(clampZoom(next))
   }
 
-  const showStudioChrome = repositionEnabled
-
   return (
     <div className="space-y-3">
-      {showStudioChrome && (
+      {(
         <FloorLayoutToolbar
           canManage={repositionEnabled}
           snapEnabled={snapEnabled}
@@ -318,6 +320,8 @@ export function FloorPlanReadView({
           onClearPreset={() => onPlacePreset?.(null)}
           placing={placing}
           hidePresets={hidePresets}
+          leading={toolbarLeading}
+          trailing={toolbarTrailing}
         />
       )}
 
@@ -343,7 +347,7 @@ export function FloorPlanReadView({
         ref={viewportRef}
         className={cn(
           'relative w-full overflow-auto rounded-xl border border-outline-variant/30 bg-surface-container',
-          'h-[min(62vh,560px)] lg:h-[min(70vh,720px)]',
+          'h-[min(78vh,920px)]',
           drawHall || placePreset || placeEnabled ? 'cursor-crosshair' : '',
         )}
         data-testid="floor-plan-canvas"

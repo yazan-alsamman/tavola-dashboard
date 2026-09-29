@@ -6,22 +6,30 @@ import {
   type WaitlistEntryDto,
 } from '@/api/waitlist'
 import { isApiError } from '@/api/errors'
+import { Drawer } from '@/components/ui/Drawer'
 import { MaterialIcon } from '@/components/ui/Icon'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Button } from '@/components/ui/Button'
-import { Card, CardTitle } from '@/components/ui/Card'
+import { Card } from '@/components/ui/Card'
 import { ConfirmDialog } from '@/components/ui/Modal'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Input } from '@/components/ui/Input'
 import { useLocale } from '@/context/LocaleContext'
 import { useRestaurantScope } from '@/context/RestaurantScopeContext'
 import { useToast } from '@/context/ToastContext'
-import { cn, formatTime, formatTimeEn } from '@/lib/utils'
+import { formatDate, formatRelative, formatTime } from '@/lib/format'
+import { cn, getTodayISO } from '@/lib/utils'
 import { Num } from '@/components/ui/Num'
 
 const SESSION_STORAGE_KEY = 'tavola-waitlist-session'
 
-type SessionWaitlistEntry = WaitlistEntryDto & { entryId: string }
+type SessionWaitlistEntry = WaitlistEntryDto & { entryId: string; joinedAt?: string }
+
+function clockLabel(value: string, locale: string): string {
+  const match = /^(\d{2}):(\d{2})/.exec(value)
+  if (!match) return formatTime(value, locale)
+  return formatTime(new Date(2000, 0, 1, Number(match[1]), Number(match[2])), locale)
+}
 
 function loadSessionEntries(): SessionWaitlistEntry[] {
   try {
@@ -45,7 +53,7 @@ export function WaitlistPage() {
 
   const [entries, setEntries] = useState<SessionWaitlistEntry[]>(loadSessionEntries)
   const [partySize, setPartySize] = useState('2')
-  const [preferredDate, setPreferredDate] = useState('')
+  const [preferredDate, setPreferredDate] = useState(getTodayISO)
   const [preferredTimeFrom, setPreferredTimeFrom] = useState('')
   const [preferredTimeTo, setPreferredTimeTo] = useState('')
   const [notes, setNotes] = useState('')
@@ -53,9 +61,9 @@ export function WaitlistPage() {
   const [actionEntryId, setActionEntryId] = useState<string | null>(null)
   const [cancelEntryId, setCancelEntryId] = useState<string | null>(null)
   const [promoting, setPromoting] = useState(false)
+  const [joinOpen, setJoinOpen] = useState(false)
 
   const canOperate = scopeStatus === 'ready' && Boolean(selectedBranchId)
-  const formatLocalTime = locale === 'ar' ? formatTime : formatTimeEn
 
   useEffect(() => {
     persistSessionEntries(entries)
@@ -86,10 +94,14 @@ export function WaitlistPage() {
         toast('error', t.waitlist.errors.unknown)
         return
       }
-      setEntries((prev) => [{ ...created, entryId }, ...prev])
+      setEntries((prev) => [
+        { ...created, entryId, joinedAt: created.createdAt ?? new Date().toISOString() },
+        ...prev,
+      ])
       toast('success', t.waitlist.joinSuccess)
       setNotes('')
       setPreferredTimeTo('')
+      setJoinOpen(false)
     } catch (err) {
       toast('error', isApiError(err) ? err.message : t.waitlist.errors.unknown)
     } finally {
@@ -133,21 +145,23 @@ export function WaitlistPage() {
         title={t.waitlist.title}
         subtitle={t.waitlist.subtitle}
         actions={
-          <span className="text-sm font-semibold text-on-surface-variant">
-            <Num>{activeEntries.length}</Num> {t.common.guests}
-          </span>
+          <Button type="button" onClick={() => setJoinOpen(true)} disabled={!canOperate}>
+            <MaterialIcon name="person_add" size={18} />
+            {t.waitlist.join}
+          </Button>
         }
       />
 
-      <Card className="mb-6">
-        <CardTitle className="mb-4 flex items-center gap-2">
-          <MaterialIcon name="person_add" size={20} className="text-primary" />
-          {t.waitlist.join}
-        </CardTitle>
+      <Drawer
+        open={joinOpen}
+        onClose={() => setJoinOpen(false)}
+        title={t.waitlist.join}
+        closeLabel={t.common.close}
+      >
         {!canOperate ? (
-          <p className="text-sm text-on-surface-variant">{t.scope.noBranchesBody}</p>
+          <p className="text-body-sm text-on-surface-variant">{t.scope.noBranchesBody}</p>
         ) : (
-          <form onSubmit={(e) => void handleJoin(e)} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <form onSubmit={(e) => void handleJoin(e)} className="grid grid-cols-1 gap-4">
             <label className="flex flex-col gap-1.5">
               <span className="text-sm font-medium text-on-surface-variant">{t.waitlist.partySize}</span>
               <Input
@@ -189,14 +203,12 @@ export function WaitlistPage() {
               <span className="text-sm font-medium text-on-surface-variant">{t.reservations.notes}</span>
               <Input value={notes} onChange={(e) => setNotes(e.target.value)} />
             </label>
-            <div className="md:col-span-2">
-              <Button type="submit" disabled={submitting}>
-                {submitting ? t.common.loading : t.waitlist.join}
-              </Button>
-            </div>
+            <Button type="submit" disabled={submitting} className="h-11">
+              {submitting ? t.common.loading : t.waitlist.join}
+            </Button>
           </form>
         )}
-      </Card>
+      </Drawer>
 
       <EmptyState
         icon="info"
@@ -216,7 +228,7 @@ export function WaitlistPage() {
                   <div
                     className={cn(
                       'w-11 h-11 rounded-xl flex items-center justify-center font-bold text-sm',
-                      index === 0 ? 'bg-primary text-white' : 'bg-primary-light text-primary',
+                      index === 0 ? 'bg-primary text-on-primary' : 'bg-primary/10 text-primary',
                     )}
                   >
                     #<Num>{index + 1}</Num>
@@ -225,24 +237,27 @@ export function WaitlistPage() {
                     <p className="font-semibold text-on-surface">
                       <Num>{entry.partySize ?? '—'}</Num> {t.common.guests}
                     </p>
-                    <p className="text-xs text-on-surface-variant font-mono truncate max-w-[140px]">
-                      {entry.entryId}
-                    </p>
+                    {entry.joinedAt && (
+                      <p className="text-label-md text-primary">
+                        {t.waitlist.waiting} {formatRelative(entry.joinedAt, locale)}
+                      </p>
+                    )}
                   </div>
                 </div>
                 {entry.status && (
-                  <span className="text-xs font-medium text-on-surface-variant bg-surface-container-lowest px-2 py-1 rounded-lg capitalize">
-                    {entry.status}
+                  <span className="text-label-sm font-medium text-on-surface-variant bg-surface-container-low px-2 py-1 rounded-lg">
+                    {t.waitlist.statuses[entry.status as keyof typeof t.waitlist.statuses] ??
+                      entry.status}
                   </span>
                 )}
               </div>
-              <p className="text-sm text-on-surface-variant mb-2">
-                {entry.preferredDate}
+              <p className="text-body-sm text-on-surface-variant mb-2">
+                {entry.preferredDate ? formatDate(entry.preferredDate, locale) : ''}
                 {entry.preferredTimeFrom
-                  ? ` · ${formatLocalTime(entry.preferredTimeFrom)}`
+                  ? ` · ${clockLabel(entry.preferredTimeFrom, locale)}`
                   : ''}
                 {entry.preferredTimeTo
-                  ? ` – ${formatLocalTime(entry.preferredTimeTo)}`
+                  ? ` – ${clockLabel(entry.preferredTimeTo, locale)}`
                   : ''}
               </p>
               {entry.notes && (
@@ -265,6 +280,8 @@ export function WaitlistPage() {
                 <Button
                   variant="ghost"
                   size="icon"
+                  className="h-11 w-11"
+                  label={t.waitlist.cancel}
                   disabled={entry.status === 'Cancelled'}
                   onClick={() => setCancelEntryId(entry.entryId)}
                 >

@@ -17,6 +17,10 @@ Everything else (`layout/`, `dashboard/`, `floor/`, and page-level components) c
 
 ---
 
+# Service floor
+
+The floor canvas is the page. Zoom, fit, snap, presets, and zones share one toolbar; zones collapse, and the selected table opens in `Drawer`. `FloorSaveStatus` is the save chip, including retry. The tables list uses `DataTableRowActions` (change status, then the overflow) and cards below `md`. The waiting list is the queue; add opens in `Drawer`. Walk-in starts from now and a party size.
+
 # Operations screens
 
 The home page has one loud metric: the count that needs a decision. Zeros stay quiet through `StatCard`. Next arrivals stay short, and each row links to the next step. A booking ticket leads with guest, party, time, table, and status; the reference is short, and the full id sits behind a disclosure with `CopyButton`. `ReservationActions` shows one primary button. Reject, no-show, and cancel use `ConfirmDialog`. Only cancel collects a reason, because only that call accepts one.

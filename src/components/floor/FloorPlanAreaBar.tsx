@@ -21,6 +21,8 @@ interface FloorPlanAreaBarProps {
   activePresetId?: TablePreset['id'] | null
   onPreset?: (preset: TablePreset | null) => void
   placing?: boolean
+  /** Presets and the draw control live on the floor toolbar. */
+  tools?: boolean
 }
 
 /** Halls inside the open floor plan. Drawing assigns tables; the outline follows them. */
@@ -38,6 +40,7 @@ export function FloorPlanAreaBar({
   activePresetId = null,
   onPreset,
   placing = false,
+  tools = true,
 }: FloorPlanAreaBarProps) {
   const { t } = useLocale()
   const presetLabels: Record<TablePreset['id'], string> = {
@@ -50,7 +53,7 @@ export function FloorPlanAreaBar({
 
   return (
     <div className="space-y-3 rounded-xl border border-outline-variant/30 bg-surface-container-lowest p-3">
-      {canManage && (
+      {canManage && tools && (
         <div className="flex flex-wrap items-center gap-2">
           <Button
             type="button"

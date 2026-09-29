@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   createStaffReservationWithIdempotency,
@@ -19,6 +19,13 @@ import { useRestaurantScope } from '@/context/RestaurantScopeContext'
 import { useToast } from '@/context/ToastContext'
 import { branchLocalDateTimeToUtcIso, formatInstantInTimeZone } from '@/lib/branchDateTime'
 import { cn } from '@/lib/utils'
+
+function defaultLocalStart(): string {
+  const date = new Date()
+  date.setMinutes(Math.ceil(date.getMinutes() / 15) * 15, 0, 0)
+  const pad = (value: number) => String(value).padStart(2, '0')
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
+}
 
 function mapWalkInError(
   error: unknown,
@@ -55,11 +62,13 @@ export function WalkInPage() {
   const [phoneNumber, setPhoneNumber] = useState('')
   const [email, setEmail] = useState('')
   const [partySize, setPartySize] = useState(2)
-  const [localStart, setLocalStart] = useState('')
+  const [localStart, setLocalStart] = useState(defaultLocalStart)
   const [notes, setNotes] = useState('')
+  const [moreOpen, setMoreOpen] = useState(false)
   const [tables, setTables] = useState<TableAvailabilityDto[]>([])
   const [selectedTableId, setSelectedTableId] = useState<string | null>(null)
   const [searching, setSearching] = useState(false)
+  const [searched, setSearched] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [formError, setFormError] = useState('')
   const [lastCreated, setLastCreated] = useState<ReservationDto | null>(null)
@@ -67,6 +76,7 @@ export function WalkInPage() {
   const idempotencyKeyRef = useRef<string | null>(null)
 
   const branchTimezone = selectedBranch?.timezone ?? 'UTC'
+  const autoSearched = useRef(false)
   const canOperate =
     scopeStatus === 'ready' &&
     Boolean(selectedRestaurantId) &&
@@ -80,6 +90,7 @@ export function WalkInPage() {
     }
     setFormError('')
     setSearching(true)
+    setSearched(true)
     setSelectedTableId(null)
     setLastCreated(null)
     idempotencyKeyRef.current = null
@@ -141,6 +152,29 @@ export function WalkInPage() {
     }
   }
 
+  useEffect(() => {
+    if (!canOperate || !selectedRestaurantId || !selectedBranchId || autoSearched.current) return
+    autoSearched.current = true
+    const start = defaultLocalStart()
+    setLocalStart(start)
+    setSearching(true)
+    void searchAvailability({
+      restaurantId: selectedRestaurantId,
+      branchId: selectedBranchId,
+      date: start.slice(0, 10),
+      partySize: 2,
+    })
+      .then((result) => {
+        setSearched(true)
+        setTables(result)
+        if (result.length === 0) setFormError(t.walkIn.errors.noTables)
+      })
+      .catch(() => {
+        setTables([])
+      })
+      .finally(() => setSearching(false))
+  }, [canOperate, selectedBranchId, selectedRestaurantId])
+
   if (!canOperate) {
     return (
       <div>
@@ -191,47 +225,81 @@ export function WalkInPage() {
                 />
               </label>
             </div>
-            <label className="flex flex-col gap-1.5">
-              <span className="text-sm font-medium text-on-surface-variant">{t.customers.email}</span>
-              <Input
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                type="email"
-                placeholder={t.walkIn.emailOptional}
-              />
-            </label>
-            <label className="flex flex-col gap-1.5">
+            <div>
               <span className="text-sm font-medium text-on-surface-variant">{t.reservations.guests}</span>
-              <Input
-                type="number"
-                min={1}
-                max={100}
-                value={partySize}
-                onChange={(e) => setPartySize(Number(e.target.value) || 1)}
-                required
-              />
-            </label>
+              <div className="mt-1.5 flex flex-wrap gap-2">
+                {[1, 2, 3, 4, 5, 6, 8].map((size) => (
+                  <button
+                    key={size}
+                    type="button"
+                    className={cn(
+                      'min-h-11 min-w-11 rounded-full border px-3 text-label-md font-semibold',
+                      partySize === size
+                        ? 'border-primary bg-primary text-on-primary'
+                        : 'border-outline-variant/40 bg-surface-container-low text-on-surface',
+                    )}
+                    onClick={() => setPartySize(size)}
+                  >
+                    <Num>{size}</Num>
+                  </button>
+                ))}
+              </div>
+            </div>
             <label className="flex flex-col gap-1.5">
               <span className="text-sm font-medium text-on-surface-variant">{t.reservations.date}</span>
-              <input
-                type="datetime-local"
-                value={localStart}
-                onChange={(e) => {
-                  setLocalStart(e.target.value)
-                  idempotencyKeyRef.current = null
-                }}
-                className="rounded-lg bg-surface-container-low px-3 py-2.5 text-body-md outline-none focus:ring-2 focus:ring-primary/20 w-full"
-                required
-              />
+              <div className="flex gap-2">
+                <input
+                  type="datetime-local"
+                  value={localStart}
+                  onChange={(e) => {
+                    setLocalStart(e.target.value)
+                    idempotencyKeyRef.current = null
+                  }}
+                  className="h-11 min-w-0 flex-1 rounded-lg bg-surface-container-low px-3 text-body-md outline-none focus-visible:border-primary"
+                  required
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-11 shrink-0"
+                  onClick={() => {
+                    setLocalStart(defaultLocalStart())
+                    idempotencyKeyRef.current = null
+                  }}
+                >
+                  {t.walkIn.useNow}
+                </Button>
+              </div>
             </label>
-            <label className="flex flex-col gap-1.5">
-              <span className="text-sm font-medium text-on-surface-variant">{t.reservations.notes}</span>
-              <Input value={notes} onChange={(e) => setNotes(e.target.value)} />
-            </label>
+            <button
+              type="button"
+              className="min-h-11 text-start text-label-md font-semibold text-primary"
+              aria-expanded={moreOpen}
+              onClick={() => setMoreOpen((open) => !open)}
+            >
+              {moreOpen ? t.walkIn.hideDetails : t.walkIn.moreDetails}
+            </button>
+            {moreOpen && (
+              <>
+                <label className="flex flex-col gap-1.5">
+                  <span className="text-sm font-medium text-on-surface-variant">{t.customers.email}</span>
+                  <Input
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    type="email"
+                    placeholder={t.walkIn.emailOptional}
+                  />
+                </label>
+                <label className="flex flex-col gap-1.5">
+                  <span className="text-sm font-medium text-on-surface-variant">{t.reservations.notes}</span>
+                  <Input value={notes} onChange={(e) => setNotes(e.target.value)} />
+                </label>
+              </>
+            )}
             <p className="text-label-sm text-on-surface-variant">
               {t.reservations.create.timezoneHint}: {branchTimezone}
             </p>
-            <Button type="button" onClick={() => void handleSearch()} disabled={searching || !localStart}>
+            <Button type="button" className="h-11" onClick={() => void handleSearch()} disabled={searching || !localStart}>
               {searching ? t.common.loading : t.reservations.create.searchAvailability}
             </Button>
             {formError && (
@@ -255,8 +323,8 @@ export function WalkInPage() {
           {tables.length === 0 ? (
             <EmptyState
               icon="restaurant"
-              title={t.walkIn.searchFirstTitle}
-              description={t.walkIn.searchFirstBody}
+              title={searched ? t.walkIn.errors.noTables : t.walkIn.searchFirstTitle}
+              description={searched ? t.walkIn.errors.noTables : t.walkIn.searchFirstBody}
               className="py-10"
             />
           ) : (
@@ -268,15 +336,16 @@ export function WalkInPage() {
                     type="button"
                     onClick={() => setSelectedTableId(table.tableId)}
                     className={cn(
-                      'p-4 rounded-xl border-2 text-start transition-all duration-200',
+                      'min-h-11 p-4 rounded-xl border-2 text-start transition-colors duration-200',
                       selectedTableId === table.tableId
-                        ? 'border-primary bg-primary-light shadow-card scale-[1.02]'
+                        ? 'border-primary bg-primary/10'
                         : 'border-outline-variant/30 bg-surface-container-lowest hover:border-primary/40',
                     )}
                   >
                     <p className="font-semibold text-on-surface">{table.tableNumber}</p>
                     <p className="text-xs text-on-surface-variant mt-1">
-                      <Num>{table.capacity}</Num> {t.common.seats} · {table.shape}
+                      <Num>{table.capacity}</Num> {t.common.seats} ·{' '}
+                      {t.tables.shapes[table.shape as keyof typeof t.tables.shapes] ?? table.shape}
                     </p>
                     <p
                       className={cn(
@@ -296,6 +365,7 @@ export function WalkInPage() {
               </p>
               <Button
                 type="button"
+                className="h-12"
                 onClick={() => void handleSeat()}
                 disabled={!selectedTableId || submitting || !fullName.trim() || !phoneNumber.trim()}
               >

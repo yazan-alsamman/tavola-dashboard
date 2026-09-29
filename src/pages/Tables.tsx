@@ -4,10 +4,12 @@ import type { TableDto, TableStatusDto } from '@/api/tables'
 import { ChangeTableStatusDialog } from '@/components/inventory/ChangeTableStatusDialog'
 import { MoveTableDialog } from '@/components/inventory/MoveTableDialog'
 import { TableFormDialog } from '@/components/inventory/TableFormDialog'
+import { Button } from '@/components/ui/Button'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { Num } from '@/components/ui/Num'
+import { DropdownMenu, DropdownMenuItem } from '@/components/ui/DropdownMenu'
 import { ConfirmDialog } from '@/components/ui/Modal'
 import {
   DataTable,
@@ -16,6 +18,7 @@ import {
   DataTableBody,
   DataTableRow,
   DataTableCell,
+  DataTableRowActions,
 } from '@/components/ui/DataTable'
 import { useLocale } from '@/context/LocaleContext'
 import { useRestaurantScope } from '@/context/RestaurantScopeContext'
@@ -46,6 +49,50 @@ function tableFlags(
   if (table.vip) flags.push(t.tables.vip)
   if (table.smoking) flags.push(t.tables.smoking)
   return flags
+}
+
+function TableRowMenu({
+  table,
+  t,
+  splitPending,
+  onEdit,
+  onMove,
+  onStatus,
+  onSplit,
+  onDelete,
+}: {
+  table: TableDto
+  t: ReturnType<typeof useLocale>['t']
+  splitPending: boolean
+  onEdit: () => void
+  onMove: () => void
+  onStatus: () => void
+  onSplit: () => void
+  onDelete: () => void
+}) {
+  return (
+    <DataTableRowActions
+      primary={
+        <Button type="button" size="sm" variant="outline" className="h-11" onClick={onStatus}>
+          {t.inventory.changeStatus}
+        </Button>
+      }
+      menu={
+        <DropdownMenu label={t.common.moreActions}>
+          <DropdownMenuItem onSelect={onEdit}>{t.common.edit}</DropdownMenuItem>
+          <DropdownMenuItem onSelect={onMove}>{t.inventory.moveTable}</DropdownMenuItem>
+          {table.mergeGroupId ? (
+            <DropdownMenuItem onSelect={splitPending ? () => undefined : onSplit}>
+              {t.tables.split}
+            </DropdownMenuItem>
+          ) : null}
+          <DropdownMenuItem destructive onSelect={onDelete}>
+            {t.common.delete}
+          </DropdownMenuItem>
+        </DropdownMenu>
+      }
+    />
+  )
 }
 
 /**
@@ -234,6 +281,8 @@ export function TablesPage() {
 
       <p className="text-label-sm text-on-surface-variant mb-4">
         {canManage ? t.tables.manageHint : t.inventory.employeeBlocked}
+        {' · '}
+        {t.inventory.statusVsAvailability}
       </p>
       {mergeError && (
         <p className="text-label-sm text-error mb-3">{mergeError}</p>
@@ -257,7 +306,51 @@ export function TablesPage() {
           }
         />
       ) : (
-        <DataTable>
+        <DataTable
+          cards={
+            <div className="grid gap-3">
+              {tables.map((table) => (
+                <article
+                  key={table.tableId}
+                  className="rounded-xl border border-outline-variant/40 bg-surface-container-lowest p-4"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-label-lg font-semibold text-on-surface">
+                        {table.tableNumber}
+                      </p>
+                      <p className="text-body-sm text-on-surface-variant">
+                        <Num>{table.capacity}</Num> {t.common.seats} · {t.tables.shapes[table.shape]}
+                      </p>
+                    </div>
+                    <StatusBadge
+                      status={table.status}
+                      label={t.status[table.status as TableStatusDto]}
+                      type="table"
+                    />
+                  </div>
+                  {canManage && (
+                    <div className="mt-3">
+                      <TableRowMenu
+                        table={table}
+                        t={t}
+                        splitPending={splitMutation.isPending}
+                        onEdit={() => setEditTable(table)}
+                        onMove={() => setMoveTableTarget(table)}
+                        onStatus={() => setStatusTable(table)}
+                        onSplit={() => void runSplit(table)}
+                        onDelete={() => {
+                          setDeleteError(null)
+                          setDeleteTableTarget(table)
+                        }}
+                      />
+                    </div>
+                  )}
+                </article>
+              ))}
+            </div>
+          }
+        >
           <DataTableHead>
             {canManage && <DataTableHeader>{t.tables.select}</DataTableHeader>}
             <DataTableHeader>{t.tables.number}</DataTableHeader>
@@ -320,49 +413,19 @@ export function TablesPage() {
                 </DataTableCell>
                 {canManage && (
                   <DataTableCell>
-                    <div className="flex flex-wrap gap-2">
-                      <button
-                        type="button"
-                        className="text-label-sm text-primary font-semibold"
-                        onClick={() => setEditTable(table)}
-                      >
-                        {t.common.edit}
-                      </button>
-                      <button
-                        type="button"
-                        className="text-label-sm text-primary font-semibold"
-                        onClick={() => setMoveTableTarget(table)}
-                      >
-                        {t.inventory.moveTable}
-                      </button>
-                      <button
-                        type="button"
-                        className="text-label-sm text-primary font-semibold"
-                        onClick={() => setStatusTable(table)}
-                      >
-                        {t.inventory.changeStatus}
-                      </button>
-                      {table.mergeGroupId ? (
-                        <button
-                          type="button"
-                          className="text-label-sm text-primary font-semibold"
-                          disabled={splitMutation.isPending}
-                          onClick={() => void runSplit(table)}
-                        >
-                          {t.tables.split}
-                        </button>
-                      ) : null}
-                      <button
-                        type="button"
-                        className="text-label-sm text-error font-semibold"
-                        onClick={() => {
-                          setDeleteError(null)
-                          setDeleteTableTarget(table)
-                        }}
-                      >
-                        {t.common.delete}
-                      </button>
-                    </div>
+                    <TableRowMenu
+                      table={table}
+                      t={t}
+                      splitPending={splitMutation.isPending}
+                      onEdit={() => setEditTable(table)}
+                      onMove={() => setMoveTableTarget(table)}
+                      onStatus={() => setStatusTable(table)}
+                      onSplit={() => void runSplit(table)}
+                      onDelete={() => {
+                        setDeleteError(null)
+                        setDeleteTableTarget(table)
+                      }}
+                    />
                   </DataTableCell>
                 )}
               </DataTableRow>
