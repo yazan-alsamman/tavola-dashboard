@@ -34,7 +34,7 @@ Covered today:
 Priority order:
 
 1. **`src/api/*` modules and `client.ts`** — envelope unwrapping, error mapping (`ApiError` shape, `code` propagation), auth-refresh-and-retry (single-flight, no infinite loop), idempotency key attachment, FormData vs JSON Content-Type. Covered by `src/api/client.test.ts` for the foundation.
-2. **`lib/*` utilities with real logic** — floor-plan layout math (`floorDesigner.ts`, `floorLayout.ts`), currency/date formatting, the `cn` utility's edge cases if extended.
+2. **`lib/*` utilities with real logic** — floor-plan layout math (`floorGeometry.ts`, `floorLayout.ts`), currency/date formatting, the `cn` utility's edge cases if extended.
 3. **Hooks with business rules** — permission resolution (`useHasPermission`), status-transition validation mirrored client-side.
 4. **Critical user flows** (integration/component-level, RTL included) — login, creating a reservation, approving/rejecting a reservation, changing a table's status.
 

@@ -381,7 +381,7 @@
 | Capability | Postman | Dashboard UI |
 |---|---|---|
 | Waitlist queue | `POST /waitlist`, cancel, promote only — **no** `GET /waitlist` | Waitlist page uses session-local entries + live mutations |
-| Employees roster | invite / role / branch assign / remove — **no** `GET …/employees` | Staff page invite + manage-by-id |
+| Employees roster | invite / role / branch assign / remove — **no** `GET …/employees` and no role catalog | Staff page invites, assigns the selected branch, and keeps those people for the visit |
 
 ---
 

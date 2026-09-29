@@ -74,9 +74,9 @@ See `docs/API_COMPATIBILITY_REPORT.md` for the full Postman ↔ client ↔ UI ma
 
 | Surface | Reality | UI approach |
 |---|---|---|
-| Staff reservation inbox | Branch `GET …/branches/:bid/reservations?dateFrom&dateTo` (Employee); ownership `GET /reservations` fallback | Calendar + Reservations use branch window; fallback banner if 403 |
+| Staff reservation inbox | Branch `GET …/branches/:bid/reservations?dateFrom&dateTo`. Owner/Admin or a branch Employee. Row fields are `partySize`, `reservationSource`, nested `table`, and `customer`. Staff/Billing members receive 403. Ownership `GET /reservations` is the account's own rows only. | Calendar + Reservations map branch rows to guest, table number, and party size, with Arrived / Finished / Didn't come. On 403, the board falls back to that account's own rows plus owner-visible day counts. |
 | Waitlist board | No GET list | Session-tracked entries + join/promote/cancel |
-| Employee directory | No GET list | Invite + manage-by-id |
+| Employee directory | No GET list and no role catalog. Invite requires a restaurant `roleId`. | Staff page collects name, email, phone, and a branch from scope, then `POST` invite and `POST` assign-branch. People returned by those calls stay on the page for the visit. |
 | Org team | Members + invitations live | Settings → Team (Owner/Admin) |
 ---
 
@@ -133,10 +133,13 @@ Confirmed against Postman / live OpenAPI:
 | Create | `POST` | `/reservations` | Body: `branchId`, `tableId`, `reservationStartTime`, `guests`, optional end/notes. Always `Online` / `Pending` for JWT user. Send `Idempotency-Key`. |
 | Cancel | `POST` | `/reservations/:id/cancel` | Optional `{ reason }`. Customer owner or staff with `reservations:cancel`. |
 | Reschedule | `POST` | `/reservations/:id/reschedule` | `{ tableId, reservationStartTime, guests, reservationEndTime? }`. |
-| Complete | `POST` | `/reservations/:id/complete` | Staff `reservations:complete`; Approved → Completed. |
-| No-show | `POST` | `/reservations/:id/no-show` | Staff `reservations:noshow`. |
+| Approve | `POST` | `/reservations/:id/approve` | Owner/Admin, or Employee `reservations:approve`. Pending → Approved. |
+| Reject | `POST` | `/reservations/:id/reject` | Owner/Admin, or Employee `reservations:approve`. Pending → Rejected. |
+| Table ready | `POST` | `/reservations/:id/table-ready` | Owner/Admin, or Employee `reservations:tableready`. One-time floor signal. Status stays Approved. The board labels this Arrived. |
+| Complete | `POST` | `/reservations/:id/complete` | Owner/Admin, or Employee `reservations:complete`. Approved → Completed, after the service window has started. The board labels this Finished. |
+| No-show | `POST` | `/reservations/:id/no-show` | Owner/Admin, or Employee `reservations:noshow`. |
 
-**Not in collection yet:** list, detail (`GET /reservations/:id`), approve, reject, phone/walk-in guest create.
+**Not in collection yet:** phone and walk-in guest create. Staff list, ownership list, detail, approve, and reject are live for the roles the backend allows.
 
 **Status enum (backend):** `Pending` \| `Approved` \| `Rejected` \| `Cancelled` \| `Completed` \| `Expired` \| `NoShow`
 
@@ -373,7 +376,8 @@ Grouped by Postman folder. `{base}` = `VITE_API_BASE_URL` (i.e. `/api/v1`). All 
 | GET / PATCH | `/restaurants/:id/working-hours` | |
 | POST | `/restaurants/:id/cover` | Owner/Admin multipart `file`. Sets `coverImageId`. 201 `{ coverImageId, coverImageUrl }`. |
 | GET | `/discovery/restaurants/:id` | Public. Photos page reads `coverImageUrl` only, to preview the cover. |
-| POST / GET / DELETE | `/restaurants/:id/gallery[/:galleryItemId]` | multipart `file` on POST. GET `data` is `{ restaurantId, items }`. Each item uses `imageUrl`. This does not set the cover. |
+| POST / DELETE | `/restaurants/:id/gallery[/:galleryItemId]` | Owner/Admin. Multipart `file` on POST. This does not set the cover. |
+| GET | `/restaurants/:id/gallery` | Public. `data` is `{ restaurantId, items }`, ordered by `sortOrder`. Each item uses signed `imageUrl`. |
 | GET / PATCH | `/restaurants/:id/cuisine-categories` | |
 | GET / PATCH | `/restaurants/:id/occasion-categories` | |
 
@@ -409,9 +413,9 @@ Grouped by Postman folder. `{base}` = `VITE_API_BASE_URL` (i.e. `/api/v1`). All 
 
 | Method | Path | Notes |
 |---|---|---|
-| POST | `/restaurants/:restaurantId/employees` | Invite |
+| POST | `/restaurants/:restaurantId/employees` | Invite. Body: `roleId`, `firstName`, `lastName`, `email`, optional `phone`. Status `Invited` until first login. No list route. |
 | POST | `/restaurants/:restaurantId/employees/:employeeId/role` | Assign role |
-| POST | `/restaurants/:restaurantId/employees/:employeeId/branches` | Assign to branch |
+| POST | `/restaurants/:restaurantId/employees/:employeeId/branches` | Assign to branch. Empty `assignedBranchIds` means restaurant-wide scope. The staff page assigns the branch chosen in the form so that employee can open that branch's bookings. |
 | DELETE | `/restaurants/:restaurantId/employees/:employeeId/branches/:branchId` | Remove from one branch |
 | DELETE | `/restaurants/:restaurantId/employees/:employeeId` | Remove entirely |
 
@@ -424,7 +428,7 @@ Grouped by Postman folder. `{base}` = `VITE_API_BASE_URL` (i.e. `/api/v1`). All 
 
 `GET /reservations/availability` returns every table matching branch/time/party-size criteria, each carrying an explicit availability indicator — a table already holding a `Pending`/`Approved` reservation for that window is still returned, marked Reserved/Unavailable, not omitted. **Never infer bookability from a table's mere presence in this response.** Always read the per-table availability indicator, and always expect `POST /reservations` to be the final word (a table shown available here can fail at create time, and vice versa) — handle `RESERVATION_CONFLICT` / `TABLE_UNAVAILABLE` on submit regardless of what the search showed.
 
-The Postman collection currently only documents `Search Availability` and `Create Reservation` for this resource. Approve/Reject/Reschedule/list-by-branch endpoints referenced in backend docs (`POST /reservations/:id/approve`, `/reject`, `/reschedule`) are not yet in the collection — confirm their exact path/shape directly against a running backend or an updated collection before wiring the reservation-management screens (`Reservations`, `ReservationDetail` pages), and update this table + the Postman collection together once confirmed.
+Staff list, ownership list, detail, and the lifecycle actions (approve, reject, cancel, reschedule, table-ready, complete, no-show) are documented in the Postman collection. The staff-facing board and detail page call those paths. See the Reservations section above for which role each call allows.
 
 ## Health
 
