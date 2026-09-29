@@ -10,8 +10,8 @@ interface StatCardProps {
   /** Set when a decrease is the good outcome (no-shows, cancellations). */
   trendPolarity?: 'up-is-good' | 'down-is-good'
   variant?: 'default' | 'primary' | 'success' | 'warning' | 'danger'
-  /** Promotes one metric per view to lead the hierarchy. */
-  emphasis?: boolean
+  /** Quiet metrics recede. Loud is the one number that needs a decision. */
+  emphasis?: 'quiet' | 'default' | 'loud'
   /** Contextual action, e.g. a link into the underlying list. */
   action?: React.ReactNode
   className?: string
@@ -38,10 +38,13 @@ export function StatCard({
   trend,
   trendPolarity = 'up-is-good',
   variant = 'default',
-  emphasis = false,
+  emphasis = 'default',
   action,
   className,
 }: StatCardProps) {
+  const numeric = typeof value === 'number' ? value : Number(String(value).replace(/[%\s,]/g, ''))
+  const quietZero = Number.isFinite(numeric) && numeric === 0 && emphasis !== 'loud'
+  const level = quietZero ? 'quiet' : emphasis
   const isGood =
     trend === undefined
       ? null
@@ -55,7 +58,9 @@ export function StatCard({
         'group relative flex flex-col rounded-xl border bg-surface-container-lowest p-5',
         'transition-[border-color,box-shadow] duration-[var(--duration-base)] ease-[var(--ease-standard)]',
         'hover:elev-2',
-        emphasis ? 'border-primary-border elev-2' : 'border-outline-variant/60 elev-1',
+        level === 'loud' && 'border-primary-border elev-2',
+        level === 'default' && 'border-outline-variant/60 elev-1',
+        level === 'quiet' && 'border-outline-variant/40 bg-surface-container-low/40',
         className,
       )}
     >
@@ -72,7 +77,9 @@ export function StatCard({
         <span
           className={cn(
             'nums text-on-surface',
-            emphasis ? 'text-display-lg' : 'text-display',
+            level === 'loud' && 'text-display-lg',
+            level === 'default' && 'text-display',
+            level === 'quiet' && 'text-headline-md text-on-surface-variant',
           )}
         >
           {value}

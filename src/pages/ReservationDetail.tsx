@@ -23,6 +23,7 @@ import {
 } from '@/hooks/useReservationQueries'
 import { reservationKeys } from '@/lib/queryKeys'
 import { toReservationView, type ReservationView } from '@/lib/reservationView'
+import { formatDateTime } from '@/lib/format'
 import { reservationStatusLabel } from '@/lib/statusLabel'
 
 function mergeReservation(
@@ -45,12 +46,7 @@ function mergeReservation(
 }
 
 function formatInstant(iso: string, locale: string): string {
-  const date = new Date(iso)
-  if (Number.isNaN(date.getTime())) return iso
-  return new Intl.DateTimeFormat(locale, {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  }).format(date)
+  return formatDateTime(iso, locale)
 }
 
 function isoToDatetimeLocal(iso: string): string {

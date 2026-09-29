@@ -6,6 +6,7 @@ import { StatusBadge } from '@/components/ui/StatusBadge'
 import { MaterialIcon } from '@/components/ui/Icon'
 import { Num } from '@/components/ui/Num'
 import { shiftDateKey } from '@/lib/calendarDates'
+import { formatTime } from '@/lib/format'
 import { reservationStatusLabel } from '@/lib/statusLabel'
 import { getTodayISO } from '@/lib/utils'
 
@@ -119,13 +120,7 @@ export function GlobalSearch({
                 {t.reservations.title}
               </p>
               {results.map((r) => {
-                const start = new Date(r.reservationStartTime)
-                const timeLabel = Number.isNaN(start.getTime())
-                  ? r.reservationDate
-                  : start.toLocaleTimeString(locale, {
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })
+                const timeLabel = formatTime(r.reservationStartTime, locale)
                 return (
                   <button
                     key={r.reservationId}

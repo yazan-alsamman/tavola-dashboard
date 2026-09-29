@@ -171,9 +171,9 @@ export function formatRate(value: number | null): string {
   return `${value}%`
 }
 
-export function formatCount(value: number | null): string {
+export function formatCount(value: number | null, locale?: string): string {
   if (value === null) return '—'
-  return new Intl.NumberFormat().format(value)
+  return new Intl.NumberFormat(locale).format(value)
 }
 
 function sumStatusCounts(payload: AnalyticsPayload): number | null {
@@ -328,17 +328,19 @@ export function humanizePayloadKey(key: string): string {
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}(T[\d:.]+)?/
 
 /** Formats primitives for display: grouped numbers, readable dates, yes/no. */
-export function formatPayloadValue(value: unknown, key = ''): string {
+export function formatPayloadValue(value: unknown, key = '', locale?: string): string {
   if (typeof value === 'boolean') return value ? 'Yes' : 'No'
   if (typeof value === 'number') {
     if (!Number.isFinite(value)) return '—'
     if (/rate|percent|percentage/i.test(key)) return formatRate(value)
-    return new Intl.NumberFormat().format(value)
+    return new Intl.NumberFormat(locale).format(value)
   }
   if (typeof value === 'string') {
     if (ISO_DATE.test(value)) {
       const parsed = new Date(value)
-      if (!Number.isNaN(parsed.getTime())) return parsed.toLocaleString()
+      if (!Number.isNaN(parsed.getTime())) {
+        return new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short' }).format(parsed)
+      }
     }
     return value
   }
@@ -347,12 +349,13 @@ export function formatPayloadValue(value: unknown, key = ''): string {
 
 export function displayPayloadFields(
   payload: Record<string, unknown>,
+  locale?: string,
 ): Array<{ key: string; label: string; value: string }> {
   return Object.entries(payload)
     .filter(([, value]) => value !== null && value !== undefined && typeof value !== 'object')
     .map(([key, value]) => ({
       key,
       label: humanizePayloadKey(key),
-      value: formatPayloadValue(value, key),
+      value: formatPayloadValue(value, key, locale),
     }))
 }

@@ -20,6 +20,7 @@ import {
 import { formatDateLabel, shiftDateKey } from '@/lib/calendarDates'
 import { extractStatusBreakdown, extractTrendSeries } from '@/lib/analyticsPayload'
 import type { ReservationView } from '@/lib/reservationView'
+import { formatTime } from '@/lib/format'
 import { reservationStatusLabel } from '@/lib/statusLabel'
 import { cn, getTodayISO } from '@/lib/utils'
 
@@ -38,15 +39,6 @@ function sourceLabel(
   t: ReturnType<typeof useLocale>['t'],
 ): string {
   return t.reservations.sources[source] ?? source
-}
-
-function formatTime(iso: string, locale: string): string {
-  const date = new Date(iso)
-  if (Number.isNaN(date.getTime())) return iso
-  return new Intl.DateTimeFormat(locale, {
-    hour: 'numeric',
-    minute: '2-digit',
-  }).format(date)
 }
 
 function matchesSearch(reservation: ReservationView, query: string): boolean {

@@ -33,6 +33,7 @@ import {
   useUpdateOfferMutation,
 } from '@/hooks/useOfferMutations'
 import { useCanManageOffers } from '@/hooks/usePermissions'
+import { formatDateTime } from '@/lib/format'
 
 const PAGE_SIZE = 20
 
@@ -97,12 +98,7 @@ function formToRequest(form: OfferFormState): CreateOfferRequest {
 
 function formatInstant(iso: string | undefined, locale: string): string {
   if (!iso) return '—'
-  const date = new Date(iso)
-  if (Number.isNaN(date.getTime())) return iso
-  return new Intl.DateTimeFormat(locale, {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  }).format(date)
+  return formatDateTime(iso, locale)
 }
 
 function offerStatusLabel(

@@ -47,7 +47,7 @@ import { reservationStatusLabel } from '@/lib/statusLabel'
 const COLORS = ['#461599', '#5e35b1', '#6c45c0', '#ecdeee', '#7d5f9a', '#dc2626']
 
 export function ReportsPage() {
-  const { t } = useLocale()
+  const { t, locale } = useLocale()
   const { status: scopeStatus } = useRestaurantScope()
   const { from, to, setFrom, setTo } = useAnalyticsDateRange()
 
@@ -162,7 +162,7 @@ export function ReportsPage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
         <StatCard
           title={t.reports.totalReservations}
-          value={formatCount(summaryStats.total)}
+          value={formatCount(summaryStats.total, locale)}
           icon="calendar_today"
           variant="primary"
         />
@@ -174,13 +174,13 @@ export function ReportsPage() {
         />
         <StatCard
           title={t.reports.newCustomers}
-          value={formatCount(customerStats.newCustomers)}
+          value={formatCount(customerStats.newCustomers, locale)}
           icon="group"
           variant="success"
         />
         <StatCard
           title={t.reports.returning}
-          value={formatCount(customerStats.returning)}
+          value={formatCount(customerStats.returning, locale)}
           icon="cake"
           variant="default"
         />
@@ -324,11 +324,11 @@ export function ReportsPage() {
           <div className="space-y-4">
             <InsightRow
               label={t.reports.averagePartySize}
-              value={formatCount(summaryStats.averagePartySize)}
+              value={formatCount(summaryStats.averagePartySize, locale)}
             />
             <InsightRow
               label={t.reports.waitlistEntries}
-              value={formatCount(waitlistStats.entries)}
+              value={formatCount(waitlistStats.entries, locale)}
             />
             <InsightRow
               label={t.reports.waitlistConversion}
@@ -336,7 +336,7 @@ export function ReportsPage() {
             />
             <InsightRow
               label={t.reports.reviewCount}
-              value={formatCount(reviewStats.count)}
+              value={formatCount(reviewStats.count, locale)}
             />
             <InsightRow
               label={t.reports.averageRating}

@@ -24,24 +24,16 @@ import { useCalendarRangeReservationsQuery } from '@/hooks/useReservationQueries
 import { extractReservationSummaryStats, formatCount, formatRate } from '@/lib/analyticsPayload'
 import { defaultAnalyticsRange } from '@/lib/dateRange'
 import type { ReservationView } from '@/lib/reservationView'
+import { formatRelative, formatTime } from '@/lib/format'
 import { reservationStatusLabel } from '@/lib/statusLabel'
 import { getTodayISO } from '@/lib/utils'
-
-function formatReservationTime(iso: string, locale: string): string {
-  const date = new Date(iso)
-  if (Number.isNaN(date.getTime())) return iso
-  return new Intl.DateTimeFormat(locale, { timeStyle: 'short' }).format(date)
-}
 
 function formatCountdown(iso: string, locale: string): string | null {
   const start = new Date(iso).getTime()
   if (Number.isNaN(start)) return null
   const minutes = Math.round((start - Date.now()) / 60000)
   if (minutes < -30 || minutes > 240) return null
-  const rtf = new Intl.RelativeTimeFormat(locale, { numeric: 'auto', style: 'short' })
-  return minutes >= 60 || minutes <= -60
-    ? rtf.format(Math.round(minutes / 60), 'hour')
-    : rtf.format(minutes, 'minute')
+  return formatRelative(iso, locale)
 }
 
 function isServiceBooking(reservation: ReservationView): boolean {
@@ -75,7 +67,7 @@ function ArrivalRow({
     >
       <div className="w-16 shrink-0">
         <p className="text-label-lg text-on-surface nums">
-          <Num>{formatReservationTime(reservation.reservationStartTime, locale)}</Num>
+          <Num>{formatTime(reservation.reservationStartTime, locale)}</Num>
         </p>
         {countdown && <p className="text-body-sm text-on-surface-variant">{countdown}</p>}
       </div>
@@ -242,9 +234,9 @@ export function DashboardPage() {
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <StatLink to="/app/reservations">
             <StatCard
-              emphasis
+              emphasis="loud"
               title={t.dashboard.todayReservations}
-              value={formatCount(summaryStats.total)}
+              value={formatCount(summaryStats.total, locale)}
               icon="calendar_today"
               variant="primary"
               subtitle={t.dashboard.liveSummary}
@@ -385,7 +377,7 @@ export function DashboardPage() {
                     <div className="flex min-w-0 items-center gap-3">
                       <span className="flex h-9 w-11 shrink-0 flex-col items-center justify-center rounded-lg bg-surface-container-high">
                         <span className="text-label-md text-on-surface nums leading-none">
-                          <Num>{formatReservationTime(r.reservationStartTime, locale)}</Num>
+                          <Num>{formatTime(r.reservationStartTime, locale)}</Num>
                         </span>
                       </span>
                       <div className="min-w-0">
@@ -439,7 +431,7 @@ export function DashboardPage() {
                   {t.reports.totalReservations}
                 </dt>
                 <dd className="text-label-lg text-on-surface nums">
-                  <Num>{formatCount(monthStats.total ?? summaryStats.total)}</Num>
+                  <Num>{formatCount(monthStats.total ?? summaryStats.total, locale)}</Num>
                 </dd>
               </div>
               <div className="flex items-center justify-between gap-4 py-2.5">

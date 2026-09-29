@@ -24,6 +24,7 @@ import {
 } from '@/hooks/useOrganizationQueries'
 import { SettingsTeamPanel } from '@/components/settings/SettingsTeamPanel'
 import { displayPayloadFields } from '@/lib/analyticsPayload'
+import { formatDateTime } from '@/lib/format'
 import {
   addRestaurantGalleryImage,
   getRestaurant,
@@ -840,7 +841,7 @@ export function SettingsPage() {
                 ? subscriptionQuery.error.message
                 : null
             }
-            fields={displayPayloadFields(subscriptionQuery.data ?? {})}
+            fields={displayPayloadFields(subscriptionQuery.data ?? {}, locale)}
             emptyTitle={t.settings.subscriptionPlan.noData}
           />
           <SubscriptionCard
@@ -851,7 +852,7 @@ export function SettingsPage() {
                 ? usageQuery.error.message
                 : null
             }
-            fields={displayPayloadFields(usageQuery.data ?? {})}
+            fields={displayPayloadFields(usageQuery.data ?? {}, locale)}
             emptyTitle={t.settings.subscriptionPlan.noData}
           />
         </div>
@@ -1131,12 +1132,7 @@ function SessionRow({
     session.deviceType ??
     session.sessionId.slice(0, 8)
 
-  const lastSeen = session.lastSeenAt
-    ? new Intl.DateTimeFormat(locale, {
-        dateStyle: 'medium',
-        timeStyle: 'short',
-      }).format(new Date(session.lastSeenAt))
-    : null
+  const lastSeen = session.lastSeenAt ? formatDateTime(session.lastSeenAt, locale) : null
 
   return (
     <div className="flex items-center justify-between gap-4 p-3 rounded-lg border border-outline-variant/30">

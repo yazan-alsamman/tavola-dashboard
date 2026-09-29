@@ -31,6 +31,7 @@ import {
   useUploadReviewImageMutation,
 } from '@/hooks/useReviewMutations'
 import { useCanReplyToReviews } from '@/hooks/usePermissions'
+import { formatDateTime } from '@/lib/format'
 
 const PAGE_SIZE = 20
 
@@ -44,12 +45,7 @@ function reviewImages(review: ReviewDto): ReviewImageDto[] {
 
 function formatInstant(iso: string | undefined, locale: string): string {
   if (!iso) return '—'
-  const date = new Date(iso)
-  if (Number.isNaN(date.getTime())) return iso
-  return new Intl.DateTimeFormat(locale, {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  }).format(date)
+  return formatDateTime(iso, locale)
 }
 
 function RatingStars({ rating }: { rating: number | undefined }) {

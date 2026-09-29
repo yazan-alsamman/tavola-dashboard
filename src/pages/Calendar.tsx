@@ -24,6 +24,7 @@ import {
   startOfWeekMonday,
   toDateKey,
 } from '@/lib/calendarDates'
+import { formatHour, formatTime } from '@/lib/format'
 import { reservationStatusLabel } from '@/lib/statusLabel'
 import { cn, getTodayISO } from '@/lib/utils'
 
@@ -37,22 +38,6 @@ function hourOfReservation(reservation: ReservationView): number {
   const timePart = reservation.reservationStartTime.slice(11, 13)
   const parsed = Number.parseInt(timePart, 10)
   return Number.isFinite(parsed) ? parsed : -1
-}
-
-function formatTime(iso: string, locale: string): string {
-  const date = new Date(iso)
-  if (Number.isNaN(date.getTime())) return iso
-  return new Intl.DateTimeFormat(locale, {
-    hour: 'numeric',
-    minute: '2-digit',
-  }).format(date)
-}
-
-function formatHourLabel(hour: number): string {
-  if (hour === 0) return '12 AM'
-  if (hour === 12) return '12 PM'
-  if (hour > 12) return `${hour - 12} PM`
-  return `${hour} AM`
 }
 
 function dayKeyOf(reservation: ReservationView): string {
@@ -456,7 +441,7 @@ export function CalendarPage() {
                             >
                               <div className="flex flex-col justify-center gap-1 border-e border-outline-variant/20 p-3">
                                 <span className="text-xs font-semibold text-on-surface-variant">
-                                  {formatHourLabel(hour)}
+                                  {formatHour(hour, locale)}
                                 </span>
                                 {hourReservations.length > 0 && (
                                   <span className="text-[11px] font-medium text-primary tabular-nums">
@@ -710,7 +695,7 @@ export function CalendarPage() {
                         className="flex items-center justify-between rounded-lg bg-surface-container px-2.5 py-1.5 text-sm"
                       >
                         <span className="font-medium text-on-surface">
-                          {formatHourLabel(row.hour)}
+                          {formatHour(row.hour, locale)}
                         </span>
                         <span className="font-bold tabular-nums text-primary">
                           <Num>{row.count}</Num>

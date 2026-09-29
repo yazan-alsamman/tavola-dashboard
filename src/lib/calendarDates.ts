@@ -1,5 +1,7 @@
 /** Calendar date helpers — all dates are local YYYY-MM-DD strings. */
 
+import { formatDate } from '@/lib/format'
+
 export function toDateKey(date: Date): string {
   const year = date.getFullYear()
   const month = String(date.getMonth() + 1).padStart(2, '0')
@@ -74,5 +76,5 @@ export function formatDateLabel(
 ): string {
   const date = parseDateKey(dateKey)
   if (Number.isNaN(date.getTime())) return dateKey
-  return new Intl.DateTimeFormat(locale, options).format(date)
+  return formatDate(date, locale, options)
 }

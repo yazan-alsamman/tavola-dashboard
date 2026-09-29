@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { useLocale } from '@/context/LocaleContext'
 import { useRestaurantScope } from '@/context/RestaurantScopeContext'
 import { useUnreadNotificationCount } from '@/hooks/useNotificationQueries'
+import { formatDate, formatTime } from '@/lib/format'
 import { getServicePeriod } from '@/lib/utils'
 import { MaterialIcon } from '@/components/ui/Icon'
 import { Num } from '@/components/ui/Num'
@@ -19,15 +20,12 @@ export function LiveServiceBar() {
   }, [])
 
   const period = getServicePeriod()
-  const timeLabel = new Intl.DateTimeFormat(locale, {
-    hour: 'numeric',
-    minute: '2-digit',
-  }).format(now)
-  const dateLabel = new Intl.DateTimeFormat(locale, {
+  const timeLabel = formatTime(now, locale)
+  const dateLabel = formatDate(now, locale, {
     weekday: 'short',
     month: 'short',
     day: 'numeric',
-  }).format(now)
+  })
   const unreadCount = unreadQuery.data ?? 0
   const branchLabel =
     status === 'ready' && selectedBranch ? formatBranchLabel(selectedBranch) : null
