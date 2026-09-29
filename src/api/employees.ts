@@ -1,17 +1,21 @@
 import { apiRequest } from './client'
 
-/** Employee DTO fields confirmed from invite response + Postman capture. */
+/** Live `EmployeeResponseDto`. Empty `assignedBranchIds` means restaurant-wide scope. */
+export type EmployeeStatus = 'Invited' | 'Active' | 'Deactivated'
+
 export interface EmployeeDto {
   employeeId: string
-  restaurantId?: string
-  roleId?: string | null
+  restaurantId: string
+  roleId: string
+  userId?: string | null
   firstName: string
   lastName: string
   email: string
   phone?: string | null
-  status?: string
-  createdAt?: string
-  updatedAt?: string
+  status: EmployeeStatus
+  assignedBranchIds: string[]
+  createdAt: string
+  updatedAt: string
 }
 
 export interface InviteEmployeeRequest {
@@ -32,7 +36,7 @@ export interface AssignEmployeeBranchRequest {
 
 /**
  * Invites an employee (status Invited, no linked User until first login).
- * There is no list-employees endpoint in the Postman collection yet.
+ * There is no list-employees or role-catalog endpoint.
  */
 export async function inviteEmployee(
   restaurantId: string,
@@ -83,6 +87,38 @@ export async function removeEmployeeFromBranch(
     `/restaurants/${restaurantId}/employees/${employeeId}/branches/${branchId}`,
     { method: 'DELETE' },
   )
+}
+
+export interface InviteEmployeeForBranchInput extends InviteEmployeeRequest {
+  branchId: string
+}
+
+/**
+ * Invite, then assign the chosen branch so the employee can open that branch's bookings.
+ * If the assign call fails, the invited row is still returned.
+ */
+export async function inviteEmployeeForBranch(
+  restaurantId: string,
+  input: InviteEmployeeForBranchInput,
+): Promise<
+  | { employee: EmployeeDto; branchAssigned: true }
+  | { employee: EmployeeDto; branchAssigned: false; error: unknown }
+> {
+  const employee = await inviteEmployee(restaurantId, {
+    roleId: input.roleId,
+    firstName: input.firstName,
+    lastName: input.lastName,
+    email: input.email,
+    ...(input.phone ? { phone: input.phone } : {}),
+  })
+  try {
+    const assigned = await assignEmployeeToBranch(restaurantId, employee.employeeId, {
+      branchId: input.branchId,
+    })
+    return { employee: assigned, branchAssigned: true }
+  } catch (error) {
+    return { employee, branchAssigned: false, error }
+  }
 }
 
 /** Soft-delete. Returns 200. Rejected with 409 if last Manager. */
