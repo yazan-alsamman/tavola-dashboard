@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, type ReactNode } from 'react'
+import { useLocale } from '@/context/LocaleContext'
 import { cn } from '@/lib/utils'
 import { MaterialIcon } from '@/components/ui/Icon'
 import { Button } from '@/components/ui/Button'
@@ -33,6 +34,7 @@ export function Modal({
   footer,
   size = 'md',
 }: ModalProps) {
+  const { t } = useLocale()
   const panelRef = useRef<HTMLDivElement>(null)
   const restoreFocusRef = useRef<HTMLElement | null>(null)
   const onCloseRef = useRef(onClose)
@@ -123,7 +125,7 @@ export function Modal({
               </p>
             )}
           </div>
-          <Button variant="ghost" size="icon-sm" onClick={onClose} aria-label="Close">
+          <Button variant="ghost" size="icon-sm" onClick={onClose} aria-label={t.common.close}>
             <MaterialIcon name="close" size={18} />
           </Button>
         </div>

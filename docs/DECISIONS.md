@@ -21,6 +21,23 @@ Consequences:
 
 ---
 
+## ADR-022 — Operations screens lead with the next decision
+Date: 2026-09-29
+Status: Accepted
+
+Context:
+The home, booking list, booking ticket, and calendar showed the same weight of information. Staff could not see which number needed a decision, and reject, no-show, and cancel sat beside the primary action. Cancel is the only lifecycle call that accepts a reason.
+
+Decision:
+1. One home metric is loud: bookings waiting for a yes or no, then a high no-show rate, then unread notices, then arrivals still to come, then today's total. A zero stays quiet.
+2. The next-arrivals list is short and each row offers the next step: confirm a pending booking, or open an approved one. Walk-in stays the only primary action in the page header.
+3. A booking ticket shows guest, party, time, table, and status. The reference is the first eight characters; the full id is behind a disclosure and can be copied. Source uses the existing source labels.
+4. Lifecycle controls show one primary button. Reject, no-show, and cancel open `ConfirmDialog`. The reason field is shown and sent only for cancel.
+5. The booking list filters today, upcoming, and status on the loaded window, and can switch comfortable or compact cards. The calendar marks the current hour on today and caps how many bookings a single hour draws.
+
+Consequences:
+Reject and no-show stay without a reason because those endpoints take an empty body. A reason must not be added to those requests from the client. Compact cards hide the phone and notes; they do not drop the primary action.
+
 ## ADR-021 — One formatter and a small set of shell primitives
 Date: 2026-09-29
 Status: Accepted

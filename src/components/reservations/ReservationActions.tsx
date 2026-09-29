@@ -12,11 +12,14 @@ import {
 } from '@/api/reservations'
 import { isApiError } from '@/api/errors'
 import { Button } from '@/components/ui/Button'
+import { ConfirmDialog } from '@/components/ui/Modal'
+import { DropdownMenu, DropdownMenuItem } from '@/components/ui/DropdownMenu'
 import { useLocale } from '@/context/LocaleContext'
 import { useToast } from '@/context/ToastContext'
 import { reservationKeys } from '@/lib/queryKeys'
 
 type ActionKey = 'approve' | 'reject' | 'complete' | 'noshow' | 'arrived' | 'cancel'
+type DestructiveAction = 'reject' | 'noshow' | 'cancel'
 
 const arrivedIds = new Set<string>()
 const arrivedListeners = new Set<() => void>()
@@ -66,6 +69,7 @@ export function ReservationActions({
   const queryClient = useQueryClient()
   const [busy, setBusy] = useState<ActionKey | null>(null)
   const [reason, setReason] = useState('')
+  const [destructive, setDestructive] = useState<DestructiveAction | null>(null)
   const guestArrived = useGuestArrived(reservationId)
 
   const run = async (action: ActionKey, mutation: () => Promise<unknown>): Promise<void> => {
@@ -74,6 +78,10 @@ export function ReservationActions({
     try {
       await mutation()
       if (action === 'arrived') rememberArrived(reservationId)
+      if (action === 'reject' || action === 'noshow' || action === 'cancel') {
+        setDestructive(null)
+        setReason('')
+      }
       await queryClient.invalidateQueries({ queryKey: reservationKeys.all })
       const message =
         action === 'approve'
@@ -97,14 +105,50 @@ export function ReservationActions({
 
   const showConfirm = canConfirm(status)
   const showService = canFinish(status)
-  const showCancel = !compact && (status === 'Pending' || status === 'Approved')
+  const showCancel = status === 'Pending' || status === 'Approved'
   if (!showConfirm && !showService && !showCancel) return null
+
+  const closeDestructive = () => {
+    if (busy) return
+    setDestructive(null)
+    setReason('')
+  }
+
+  const confirmDestructive = () => {
+    if (destructive === 'reject') {
+      void run('reject', () => rejectReservation(reservationId, createIdempotencyKey()))
+    } else if (destructive === 'noshow') {
+      void run('noshow', () => markReservationNoShow(reservationId, createIdempotencyKey()))
+    } else if (destructive === 'cancel') {
+      const note = reason.trim()
+      void run('cancel', () =>
+        cancelReservation(
+          reservationId,
+          { reason: note || null },
+          createIdempotencyKey(),
+        ),
+      )
+    }
+  }
+
+  const dialogCopy =
+    destructive === 'reject'
+      ? { title: t.reservations.detail.rejectTitle, message: t.reservations.detail.rejectBody, confirm: t.reservations.reject }
+      : destructive === 'noshow'
+        ? { title: t.reservations.detail.noShowTitle, message: t.reservations.detail.noShowBody, confirm: t.reservations.track.noShow }
+        : {
+            title: t.reservations.detail.cancelTitle,
+            message: t.reservations.detail.cancelBody,
+            confirm: t.common.cancel,
+          }
 
   return (
     <div className="space-y-3" onClick={(event) => event.stopPropagation()}>
-      <p className="text-label-sm font-semibold text-on-surface">{t.reservations.track.update}</p>
-      {showConfirm && (
-        <div className="flex flex-wrap gap-2">
+      {!compact && (
+        <p className="text-label-sm font-semibold text-on-surface">{t.reservations.track.update}</p>
+      )}
+      <div className="flex flex-wrap items-center gap-2">
+        {showConfirm && (
           <Button
             size="sm"
             disabled={Boolean(busy)}
@@ -114,88 +158,81 @@ export function ReservationActions({
           >
             {t.reservations.confirm}
           </Button>
+        )}
+        {showService && !guestArrived && (
           <Button
             size="sm"
-            variant="outline"
             disabled={Boolean(busy)}
             onClick={() =>
-              void run('reject', () => rejectReservation(reservationId, createIdempotencyKey()))
+              void run('arrived', () =>
+                markReservationTableReady(reservationId, createIdempotencyKey()),
+              )
             }
           >
-            {t.reservations.reject}
+            {t.reservations.track.arrived}
           </Button>
-        </div>
-      )}
-      {showService && (
-        <div className="space-y-2">
-          <div className="flex flex-wrap gap-2">
-            <Button
-              size="sm"
-              variant={guestArrived ? 'outline' : 'primary'}
-              disabled={Boolean(busy) || guestArrived}
-              onClick={() =>
-                void run('arrived', () =>
-                  markReservationTableReady(reservationId, createIdempotencyKey()),
-                )
-              }
-            >
-              {guestArrived ? t.reservations.track.here : t.reservations.track.arrived}
-            </Button>
-            <Button
-              size="sm"
-              disabled={Boolean(busy)}
-              onClick={() =>
+        )}
+        {showService && guestArrived && (
+          <Button
+            size="sm"
+            disabled={Boolean(busy)}
+            onClick={() =>
+              void run('complete', () => completeReservation(reservationId, createIdempotencyKey()))
+            }
+          >
+            {t.reservations.track.finished}
+          </Button>
+        )}
+        {showService && guestArrived && (
+          <span className="text-label-sm text-on-surface-variant">{t.reservations.track.here}</span>
+        )}
+        <DropdownMenu label={t.common.moreActions}>
+          {showConfirm && (
+            <DropdownMenuItem destructive onSelect={() => setDestructive('reject')}>
+              {t.reservations.reject}
+            </DropdownMenuItem>
+          )}
+          {showService && !guestArrived && (
+            <DropdownMenuItem
+              onSelect={() =>
                 void run('complete', () =>
                   completeReservation(reservationId, createIdempotencyKey()),
                 )
               }
             >
               {t.reservations.track.finished}
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={Boolean(busy)}
-              onClick={() =>
-                void run('noshow', () =>
-                  markReservationNoShow(reservationId, createIdempotencyKey()),
-                )
-              }
-            >
-              {t.reservations.track.noShow}
-            </Button>
-          </div>
-          {!guestArrived && (
-            <p className="text-label-sm text-on-surface-variant">{t.reservations.track.arrivedHint}</p>
+            </DropdownMenuItem>
           )}
-        </div>
+          {showService && (
+            <DropdownMenuItem destructive onSelect={() => setDestructive('noshow')}>
+              {t.reservations.track.noShow}
+            </DropdownMenuItem>
+          )}
+          {showCancel && (
+            <DropdownMenuItem destructive onSelect={() => setDestructive('cancel')}>
+              {t.common.cancel}
+            </DropdownMenuItem>
+          )}
+        </DropdownMenu>
+      </div>
+      {showService && !guestArrived && !compact && (
+        <p className="text-label-sm text-on-surface-variant">{t.reservations.track.arrivedHint}</p>
       )}
-      {showCancel && (
-        <div className="flex flex-wrap items-center gap-2">
-          <input
-            value={reason}
-            onChange={(event) => setReason(event.target.value)}
-            placeholder={t.reservations.cancelReasonPlaceholder}
-            className="h-9 min-w-40 flex-1 rounded-lg border border-outline-variant bg-surface-container-lowest px-3 text-body-sm text-on-surface outline-none focus:border-primary"
-          />
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={Boolean(busy)}
-            onClick={() =>
-              void run('cancel', () =>
-                cancelReservation(
-                  reservationId,
-                  { reason: reason.trim() || null },
-                  createIdempotencyKey(),
-                ),
-              )
-            }
-          >
-            {t.common.cancel}
-          </Button>
-        </div>
-      )}
+      <ConfirmDialog
+        open={destructive != null}
+        onClose={closeDestructive}
+        onConfirm={confirmDestructive}
+        title={dialogCopy.title}
+        message={dialogCopy.message}
+        confirmLabel={dialogCopy.confirm}
+        cancelLabel={t.common.close}
+        variant="danger"
+        busy={Boolean(busy)}
+        closeOnConfirm={false}
+        reasonLabel={destructive === 'cancel' ? t.reservations.detail.reasonLabel : undefined}
+        reason={reason}
+        onReasonChange={setReason}
+      />
     </div>
   )
 }

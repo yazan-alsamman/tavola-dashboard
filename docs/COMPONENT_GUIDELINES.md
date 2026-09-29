@@ -2,7 +2,7 @@
 
 # Folder Meaning
 
-- `components/ui/` — generic, reusable, presentational primitives with no domain knowledge (`Button`, `Card`, `Modal`, `ConfirmDialog`, `Input`, `DataTable`, `StatCard`, `StatusBadge`, `EmptyState`, `Tooltip`, `DropdownMenu`, `Drawer`, `CopyButton`, `FilterChip`, `PageHeader`, `Icon`, `Num`). These must work in any context given the right props; they never know what a "Reservation" is. `CopyButton` is the exception that calls the toast context so the copied confirmation is the same everywhere. Dates and numbers go through `src/lib/format.ts`.
+- `components/ui/` — generic, reusable, presentational primitives with no domain knowledge (`Button`, `Card`, `Modal`, `ConfirmDialog`, `Input`, `DataTable`, `StatCard`, `StatusBadge`, `EmptyState`, `Tooltip`, `DropdownMenu`, `Drawer`, `CopyButton`, `FilterChip`, `PageHeader`, `Icon`, `Num`). These must work in any context given the right props; they never know what a "Reservation" is. `CopyButton` calls the toast context so the copied confirmation is the same everywhere. `Modal` reads the close label from the locale so the dismiss control is not stuck in English. Dates and numbers go through `src/lib/format.ts`.
 - `components/layout/` — app-shell composition (`Sidebar`, `Header`, `DashboardLayout`, `GlobalSearch`, `LiveServiceBar`, `NotificationPopover`). May use context (auth, sidebar, locale) since the shell is inherently cross-cutting. The signed-in notice sets `--logout-leave-banner-h` to its measured height; the sticky header and sidebar offset from that variable. Below the large breakpoint, search and the restaurant/branch switcher open from icon buttons in `Header` and reuse `GlobalSearch` and the same selects — they are not a separate primitive.
 - `components/floor/` — domain-specific floor-plan canvas tied to live table geometry. New domain areas get their own subfolder here (or under `features/<area>/components` once `ARCHITECTURE.md`'s `features/` threshold is hit) rather than growing flat inside `components/`.
 - `components/auth/` — route guards (`ProtectedRoute`, `PublicRoute`).
@@ -16,6 +16,10 @@
 Everything else (`layout/`, `dashboard/`, `floor/`, and page-level components) can be a container: fetch/derive data via a hook and pass it down to `ui/` primitives.
 
 ---
+
+# Operations screens
+
+The home page has one loud metric: the count that needs a decision. Zeros stay quiet through `StatCard`. Next arrivals stay short, and each row links to the next step. A booking ticket leads with guest, party, time, table, and status; the reference is short, and the full id sits behind a disclosure with `CopyButton`. `ReservationActions` shows one primary button. Reject, no-show, and cancel use `ConfirmDialog`. Only cancel collects a reason, because only that call accepts one.
 
 # Building New UI Primitives
 

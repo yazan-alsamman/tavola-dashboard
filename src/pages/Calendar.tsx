@@ -89,7 +89,7 @@ function BookingChip({
     <button
       type="button"
       onClick={onOpen}
-      className="group flex w-full items-center gap-2 rounded-xl border border-outline-variant/30 bg-surface-container-lowest px-3 py-2 text-start shadow-sm transition-all hover:border-primary/40 hover:shadow-md hover:-translate-y-0.5"
+      className="group flex w-full items-center gap-2 rounded-xl border border-outline-variant/30 bg-surface-container-lowest px-3 py-2 text-start shadow-sm transition-colors hover:border-primary/40"
     >
       <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
         <MaterialIcon name="event_seat" size={18} />
@@ -126,6 +126,7 @@ export function CalendarPage() {
   const today = getTodayISO()
   const [view, setView] = useState<CalendarView>('daily')
   const [anchorDate, setAnchorDate] = useState(() => toDateKey(new Date()))
+  const [now, setNow] = useState(() => new Date())
   const requestedDate = searchParams.get('date')
 
   useEffect(() => {
@@ -133,6 +134,11 @@ export function CalendarPage() {
       setAnchorDate(requestedDate)
     }
   }, [requestedDate])
+
+  useEffect(() => {
+    const id = window.setInterval(() => setNow(new Date()), 60_000)
+    return () => window.clearInterval(id)
+  }, [])
 
   const range = useMemo(() => {
     if (view === 'daily') {
@@ -435,10 +441,18 @@ export function CalendarPage() {
                             <div
                               key={hour}
                               className={cn(
-                                'grid grid-cols-[88px_1fr] border-b border-outline-variant/20 min-h-[72px]',
+                                'relative grid grid-cols-[88px_1fr] border-b border-outline-variant/20 min-h-[72px]',
                                 hourReservations.length > 0 && densityCellClass[level],
                               )}
                             >
+                              {anchorDate === today && hour === now.getHours() && (
+                                <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex items-center gap-2">
+                                  <span className="ms-2 rounded-full bg-primary px-2 py-0.5 text-[10px] font-semibold text-on-primary">
+                                    {t.calendar.now}
+                                  </span>
+                                  <span className="h-0.5 flex-1 bg-primary" />
+                                </div>
+                              )}
                               <div className="flex flex-col justify-center gap-1 border-e border-outline-variant/20 p-3">
                                 <span className="text-xs font-semibold text-on-surface-variant">
                                   {formatHour(hour, locale)}
@@ -449,8 +463,8 @@ export function CalendarPage() {
                                   </span>
                                 )}
                               </div>
-                              <div className="flex flex-wrap gap-2 p-2">
-                                {hourReservations.map((reservation) => (
+                              <div className="flex flex-col gap-2 p-2">
+                                {hourReservations.slice(0, 4).map((reservation) => (
                                   <div key={reservation.reservationId} className="w-full max-w-sm">
                                     <BookingChip
                                       reservation={reservation}
@@ -462,6 +476,11 @@ export function CalendarPage() {
                                     />
                                   </div>
                                 ))}
+                                {hourReservations.length > 4 && (
+                                  <p className="text-label-sm font-medium text-primary">
+                                    +<Num>{hourReservations.length - 4}</Num> {t.calendar.more}
+                                  </p>
+                                )}
                               </div>
                             </div>
                           )
@@ -489,7 +508,7 @@ export function CalendarPage() {
                         type="button"
                         onClick={() => openDay(day)}
                         className={cn(
-                          'flex min-h-[180px] flex-col rounded-2xl border p-3 text-start transition-all hover:-translate-y-0.5 hover:shadow-md',
+                          'flex min-h-[180px] flex-col rounded-2xl border p-3 text-start transition-colors hover:border-primary/40',
                           densityCellClass[level],
                           isSelected && 'ring-2 ring-primary/50',
                           isToday && 'outline outline-1 outline-offset-1 outline-tertiary/50',

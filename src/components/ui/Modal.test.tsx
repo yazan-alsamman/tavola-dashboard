@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { Modal } from '@/components/ui/Modal'
+import { LocaleProvider } from '@/context/LocaleContext'
 
 afterEach(() => {
   cleanup()
@@ -13,6 +14,7 @@ function TypingDialog() {
   const [city, setCity] = useState('')
   const [open, setOpen] = useState(true)
   return (
+    <LocaleProvider>
     <Modal open={open} onClose={() => setOpen(false)} title="Branch">
       <label>
         Name
@@ -23,6 +25,7 @@ function TypingDialog() {
         <input value={city} onChange={(e) => setCity(e.target.value)} />
       </label>
     </Modal>
+    </LocaleProvider>
   )
 }
 
@@ -44,15 +47,19 @@ describe('Modal text fields', () => {
   it('closes on Escape with the latest onClose', () => {
     const onClose = vi.fn()
     const { rerender } = render(
+      <LocaleProvider>
       <Modal open onClose={onClose} title="Branch">
         <input aria-label="Name" />
-      </Modal>,
+      </Modal>
+      </LocaleProvider>,
     )
     const nextClose = vi.fn()
     rerender(
+      <LocaleProvider>
       <Modal open onClose={nextClose} title="Branch">
         <input aria-label="Name" />
-      </Modal>,
+      </Modal>
+      </LocaleProvider>,
     )
 
     fireEvent.keyDown(document, { key: 'Escape' })

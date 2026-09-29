@@ -4,6 +4,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { MaterialIcon } from '@/components/ui/Icon'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
+import { CopyButton } from '@/components/ui/CopyButton'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Num } from '@/components/ui/Num'
@@ -23,7 +24,7 @@ import {
 } from '@/hooks/useReservationQueries'
 import { reservationKeys } from '@/lib/queryKeys'
 import { toReservationView, type ReservationView } from '@/lib/reservationView'
-import { formatDateTime } from '@/lib/format'
+import { formatDate, formatDateTime } from '@/lib/format'
 import { reservationStatusLabel } from '@/lib/statusLabel'
 
 function mergeReservation(
@@ -106,10 +107,13 @@ function ReservationInfo({ reservation, locale, t }: {
         {reservation.customerPhone && (
           <DetailField label={t.reservations.phone} value={reservation.customerPhone} ltr />
         )}
-        <DetailField label={t.reservations.source} value={reservation.source} />
+        <DetailField
+          label={t.reservations.source}
+          value={t.reservations.sources[reservation.source] ?? reservation.source}
+        />
         <DetailField
           label={t.reservations.date}
-          value={reservation.reservationDate}
+          value={formatDate(reservation.reservationDate, locale)}
         />
         <DetailField
           label={t.reservations.time}
@@ -119,11 +123,9 @@ function ReservationInfo({ reservation, locale, t }: {
           label={t.reservations.guests}
           value={String(reservation.guests)}
         />
-        <DetailField
-          label={t.reservations.table}
-          value={reservation.tableNumber ?? reservation.tableId}
-          mono={!reservation.tableNumber}
-        />
+        {reservation.tableNumber && (
+          <DetailField label={t.reservations.table} value={reservation.tableNumber} />
+        )}
         <DetailField
           label={t.reservations.created}
           value={formatInstant(reservation.createdAt, locale)}
@@ -137,12 +139,6 @@ function ReservationInfo({ reservation, locale, t }: {
             <DetailField label={t.reservations.notes} value={reservation.notes} />
           </div>
         )}
-        <DetailField
-          label={t.reservations.id}
-          value={reservation.reservationId}
-          mono
-          ltr
-        />
       </dl>
     </section>
   )
@@ -161,6 +157,7 @@ export function ReservationDetailPage() {
   )
 
   const [busy, setBusy] = useState(false)
+  const [referenceOpen, setReferenceOpen] = useState(false)
   const [reschedule, setReschedule] = useState({
     tableId: '',
     reservationStartTime: '',
@@ -223,7 +220,7 @@ export function ReservationDetailPage() {
           to="/app/reservations"
           className="inline-flex items-center gap-2 text-label-md text-on-surface-variant hover:text-primary mb-6"
         >
-          <MaterialIcon name="arrow_back" size={16} />
+          <MaterialIcon name="arrow_back" size={16} className="rtl:rotate-180" />
           {t.nav.reservations}
         </Link>
         <EmptyState
@@ -269,28 +266,74 @@ export function ReservationDetailPage() {
           to="/app/reservations"
           className="inline-flex items-center gap-2 text-label-md text-on-surface-variant hover:text-primary mb-4"
         >
-          <MaterialIcon name="arrow_back" size={16} />
+          <MaterialIcon name="arrow_back" size={16} className="rtl:rotate-180" />
           {t.nav.reservations}
         </Link>
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h1 className="text-headline-md text-on-surface mb-1">
-              {reservation.customerName ?? t.reservations.details}
-            </h1>
-            <p className="text-label-sm text-on-surface-variant font-mono break-all">
+        <div className="rounded-2xl border border-outline-variant/40 bg-surface-container-lowest p-4 sm:p-5">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-label-sm text-on-surface-variant">
+                {t.reservations.sources[reservation.source] ?? reservation.source}
+              </p>
+              <h1 className="text-headline-md text-on-surface mt-1">
+                {reservation.customerName ?? t.reservations.board.guest}
+              </h1>
+            </div>
+            <StatusBadge
+              type="custom"
+              status={reservation.status}
+              label={reservationStatusLabel(reservation.status, t.status)}
+            />
+          </div>
+          <dl className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+            <div>
+              <dt className="text-label-sm text-on-surface-variant">{t.reservations.guests}</dt>
+              <dd className="text-label-lg text-on-surface nums">
+                <Num>{reservation.guests}</Num>
+              </dd>
+            </div>
+            <div>
+              <dt className="text-label-sm text-on-surface-variant">{t.reservations.time}</dt>
+              <dd className="text-label-lg text-on-surface">
+                {formatInstant(reservation.reservationStartTime, locale)}
+              </dd>
+            </div>
+            {reservation.tableNumber && (
+              <div>
+                <dt className="text-label-sm text-on-surface-variant">{t.reservations.table}</dt>
+                <dd className="text-label-lg text-on-surface nums">
+                  <Num>{reservation.tableNumber}</Num>
+                </dd>
+              </div>
+            )}
+          </dl>
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            <span className="text-label-sm text-on-surface-variant">{t.common.reference}</span>
+            <span dir="ltr" className="font-mono text-label-md text-on-surface nums">
+              {reservation.reservationId.slice(0, 8).toUpperCase()}
+            </span>
+            <CopyButton
+              value={reservation.reservationId}
+              label={t.reservations.detail.copyReference}
+              copiedLabel={t.common.copied}
+            />
+            <button
+              type="button"
+              className="text-label-sm font-semibold text-primary"
+              aria-expanded={referenceOpen}
+              onClick={() => setReferenceOpen((open) => !open)}
+            >
+              {referenceOpen
+                ? t.reservations.detail.hideReference
+                : t.reservations.detail.showReference}
+            </button>
+          </div>
+          {referenceOpen && (
+            <p dir="ltr" className="mt-2 break-all font-mono text-label-sm text-on-surface-variant nums">
               {reservation.reservationId}
             </p>
-          </div>
-          <StatusBadge
-            type="custom"
-            status={reservation.status}
-            label={reservationStatusLabel(reservation.status, t.status)}
-          />
+          )}
         </div>
-        <p className="text-body-sm text-on-surface-variant mt-2">
-          <Num>{reservation.guests}</Num> {t.common.guests} ·{' '}
-          {formatInstant(reservation.reservationStartTime, locale)}
-        </p>
       </div>
 
       <ReservationInfo reservation={reservation} locale={locale} t={t} />

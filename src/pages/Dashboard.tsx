@@ -60,41 +60,45 @@ function ArrivalRow({
   const guest = reservation.customerName ?? `${reservation.guests} ${t.common.guests}`
   const table = reservation.tableNumber
 
+  const nextLabel =
+    reservation.status === 'Pending' ? t.reservations.confirm : t.dashboard.openBooking
+
   return (
-    <Link
-      to={`/app/reservations/${reservation.reservationId}`}
-      className="flex items-center gap-4 px-5 py-3.5 transition-colors duration-[var(--duration-fast)] hover:bg-surface-container-low/70"
-    >
-      <div className="w-16 shrink-0">
-        <p className="text-label-lg text-on-surface nums">
-          <Num>{formatTime(reservation.reservationStartTime, locale)}</Num>
-        </p>
-        {countdown && <p className="text-body-sm text-on-surface-variant">{countdown}</p>}
-      </div>
-
-      <div className="min-w-0 flex-1">
-        <p className="text-body-md text-on-surface truncate">{guest}</p>
-        <p className="text-body-sm text-on-surface-variant truncate">
-          {table ? (
-            <>
-              {t.reservations.table} <Num>{table}</Num>
-              {' · '}
-            </>
-          ) : null}
-          <Num>{reservation.guests}</Num> {t.common.guests}
-        </p>
-      </div>
-
-      <StatusBadge
-        status={reservation.status}
-        label={reservationStatusLabel(reservation.status, t.status)}
-      />
-      <MaterialIcon
-        name="chevron_right"
-        size={18}
-        className="shrink-0 text-outline rtl:rotate-180"
-      />
-    </Link>
+    <div className="flex items-center gap-3 px-5 py-3 transition-colors duration-[var(--duration-fast)] hover:bg-surface-container-low/70">
+      <Link
+        to={`/app/reservations/${reservation.reservationId}`}
+        className="flex min-w-0 flex-1 items-center gap-4"
+      >
+        <div className="w-16 shrink-0">
+          <p className="text-label-lg text-on-surface nums">
+            <Num>{formatTime(reservation.reservationStartTime, locale)}</Num>
+          </p>
+          {countdown && <p className="text-body-sm text-on-surface-variant">{countdown}</p>}
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-body-md text-on-surface truncate">{guest}</p>
+          <p className="text-body-sm text-on-surface-variant truncate">
+            {table ? (
+              <>
+                {t.reservations.table} <Num>{table}</Num>
+                {' · '}
+              </>
+            ) : null}
+            <Num>{reservation.guests}</Num> {t.common.guests}
+          </p>
+        </div>
+        <StatusBadge
+          status={reservation.status}
+          label={reservationStatusLabel(reservation.status, t.status)}
+        />
+      </Link>
+      <Link
+        to={`/app/reservations/${reservation.reservationId}`}
+        className="shrink-0 text-label-md font-semibold text-primary hover:underline underline-offset-2"
+      >
+        {nextLabel}
+      </Link>
+    </div>
   )
 }
 
@@ -172,8 +176,21 @@ export function DashboardPage() {
   )
 
   const unreadCount = unreadQuery.data ?? 0
+  const pendingCount = pending.length
   const noShowHigh =
     typeof summaryStats.noShowRate === 'number' && summaryStats.noShowRate >= 0.1
+  const focus =
+    pendingCount > 0
+      ? 'pending'
+      : noShowHigh
+        ? 'noshow'
+        : unreadCount > 0
+          ? 'unread'
+          : upcomingCount > 0
+            ? 'upcoming'
+            : (summaryStats.total ?? 0) > 0
+              ? 'today'
+              : null
 
   const statsLoading =
     summaryQuery.isLoading || (scopeStatus === 'ready' && monthSummaryQuery.isLoading)
@@ -234,39 +251,50 @@ export function DashboardPage() {
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <StatLink to="/app/reservations">
             <StatCard
-              emphasis="loud"
-              title={t.dashboard.todayReservations}
-              value={formatCount(summaryStats.total, locale)}
-              icon="calendar_today"
+              emphasis={focus === 'pending' || focus === 'today' ? 'loud' : 'default'}
+              title={
+                focus === 'pending' ? t.ops.needsAction : t.dashboard.todayReservations
+              }
+              value={
+                focus === 'pending'
+                  ? pendingCount
+                  : formatCount(summaryStats.total, locale)
+              }
+              icon={focus === 'pending' ? 'pending_actions' : 'calendar_today'}
               variant="primary"
-              subtitle={t.dashboard.liveSummary}
+              subtitle={
+                focus === 'pending' ? t.dashboard.pendingNeedsYou : t.dashboard.todayOnBooks
+              }
             />
           </StatLink>
           <StatLink to="/app/reservations">
             <StatCard
+              emphasis={focus === 'upcoming' ? 'loud' : 'default'}
               title={t.dashboard.upcomingReservations}
               value={upcomingCount}
               icon="login"
               variant="success"
-              subtitle={t.ops.arrivingSoon}
+              subtitle={t.dashboard.arrivalsLater}
             />
           </StatLink>
           <StatLink to="/app/reports">
             <StatCard
+              emphasis={focus === 'noshow' ? 'loud' : 'default'}
               title={t.dashboard.noShowRate}
               value={formatRate(summaryStats.noShowRate)}
               icon="trending_up"
               variant={noShowHigh ? 'danger' : 'default'}
-              subtitle={t.reports.noShowRate}
+              subtitle={noShowHigh ? t.dashboard.noShowLoud : t.dashboard.noShowCalm}
             />
           </StatLink>
           <StatLink to="/app/notifications">
             <StatCard
+              emphasis={focus === 'unread' ? 'loud' : 'default'}
               title={t.dashboard.unreadNotifications}
               value={unreadCount}
               icon="notifications"
               variant={unreadCount > 0 ? 'warning' : 'default'}
-              subtitle={unreadCount > 0 ? t.dashboard.unreadHint : t.header.notifications}
+              subtitle={unreadCount > 0 ? t.dashboard.unreadHint : t.dashboard.unreadQuiet}
             />
           </StatLink>
         </div>
@@ -307,13 +335,19 @@ export function DashboardPage() {
                 />
               ) : arrivingSoon.length === 0 ? (
                 <EmptyState
+                  size="compact"
                   icon="event_available"
                   title={t.ops.noArrivals}
                   description={t.dashboard.noArrivalsHint}
+                  action={
+                    <Link to="/app/walk-in" className="text-label-md font-semibold text-primary">
+                      {t.walkIn.title}
+                    </Link>
+                  }
                 />
               ) : (
                 <div className="divide-y divide-outline-variant/40">
-                  {arrivingSoon.slice(0, 6).map((r) => (
+                  {arrivingSoon.slice(0, 4).map((r) => (
                     <ArrivalRow key={r.reservationId} reservation={r} locale={locale} t={t} />
                   ))}
                 </div>

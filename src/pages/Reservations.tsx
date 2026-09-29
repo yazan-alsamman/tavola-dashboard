@@ -7,6 +7,7 @@ import { PageHeader } from '@/components/ui/PageHeader'
 import { MaterialIcon } from '@/components/ui/Icon'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Button } from '@/components/ui/Button'
+import { FilterChip } from '@/components/ui/FilterChip'
 import { Input, Select } from '@/components/ui/Input'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { Num } from '@/components/ui/Num'
@@ -57,15 +58,20 @@ function matchesSearch(reservation: ReservationView, query: string): boolean {
   return haystack.includes(q)
 }
 
+type WindowFilter = 'today' | 'upcoming' | 'all'
+type Density = 'comfortable' | 'compact'
+
 function ReservationCard({
   reservation,
   locale,
   t,
+  compact,
   onOpen,
 }: {
   reservation: ReservationView
   locale: string
   t: ReturnType<typeof useLocale>['t']
+  compact: boolean
   onOpen: () => void
 }) {
   const tableLabel = reservation.tableNumber
@@ -75,7 +81,12 @@ function ReservationCard({
       : null
 
   return (
-    <article className="rounded-2xl border border-outline-variant/30 bg-surface-container-lowest p-4 shadow-sm">
+    <article
+      className={cn(
+        'rounded-2xl border border-outline-variant/30 bg-surface-container-lowest shadow-sm',
+        compact ? 'p-3' : 'p-4',
+      )}
+    >
       <button
         type="button"
         onClick={onOpen}
@@ -104,10 +115,12 @@ function ReservationCard({
             {' · '}
             {sourceLabel(reservation.source, t)}
           </p>
-          {reservation.customerPhone && (
-            <p className="mt-1 text-label-sm text-on-surface">{reservation.customerPhone}</p>
+          {!compact && reservation.customerPhone && (
+            <p className="mt-1 text-label-sm text-on-surface" dir="ltr">
+              {reservation.customerPhone}
+            </p>
           )}
-          {reservation.notes && (
+          {!compact && reservation.notes && (
             <p className="mt-2 text-body-sm text-on-surface line-clamp-2">{reservation.notes}</p>
           )}
         </div>
@@ -132,12 +145,13 @@ export function ReservationsPage() {
   const navigate = useNavigate()
   const {
     selectedBranch,
-    selectedBranchId,
     status: scopeStatus,
     formatBranchLabel,
   } = useRestaurantScope()
 
   const [statusFilter, setStatusFilter] = useState<ReservationStatusDto | ''>('')
+  const [windowFilter, setWindowFilter] = useState<WindowFilter>('today')
+  const [density, setDensity] = useState<Density>('comfortable')
   const [searchText, setSearchText] = useState('')
   const [createOpen, setCreateOpen] = useState(false)
 
@@ -160,11 +174,19 @@ export function ReservationsPage() {
   const filteredItems = useMemo(() => {
     return (rows ?? [])
       .filter((reservation) => {
+        const day = reservation.reservationDate.slice(0, 10)
+        if (windowFilter === 'today' && day !== today) return false
+        if (
+          windowFilter === 'upcoming' &&
+          (day < today || (reservation.status !== 'Pending' && reservation.status !== 'Approved'))
+        ) {
+          return false
+        }
         if (statusFilter && reservation.status !== statusFilter) return false
         return matchesSearch(reservation, searchText)
       })
       .sort((a, b) => a.reservationStartTime.localeCompare(b.reservationStartTime))
-  }, [rows, searchText, statusFilter])
+  }, [rows, searchText, statusFilter, today, windowFilter])
 
   const groups = useMemo(() => {
     const map = new Map<string, ReservationView[]>()
@@ -194,6 +216,7 @@ export function ReservationsPage() {
     usingFallback &&
     serviceDays.length > 0 &&
     rowCount === 0 &&
+    windowFilter === 'all' &&
     !statusFilter &&
     !searchText.trim()
 
@@ -217,7 +240,6 @@ export function ReservationsPage() {
       {selectedBranch && (
         <p className="mb-4 text-label-sm text-on-surface-variant">
           {formatBranchLabel(selectedBranch)}
-          {selectedBranchId ? ` · ${selectedBranchId.slice(0, 8)}` : ''}
         </p>
       )}
 
@@ -271,6 +293,22 @@ export function ReservationsPage() {
 
       {listQuery.isSuccess && (
         <>
+          <div className="mb-3 flex flex-wrap gap-2" role="group" aria-label={t.reservations.list.filterStatus}>
+            {(
+              [
+                ['today', t.reservations.list.windowToday],
+                ['upcoming', t.reservations.list.windowUpcoming],
+                ['all', t.reservations.list.windowAll],
+              ] as const
+            ).map(([key, label]) => (
+              <FilterChip
+                key={key}
+                label={label}
+                active={windowFilter === key}
+                onClick={() => setWindowFilter(key)}
+              />
+            ))}
+          </div>
           <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center">
             <Input
               className="sm:max-w-xs"
@@ -292,8 +330,20 @@ export function ReservationsPage() {
                 </option>
               ))}
             </Select>
+            <div className="flex gap-2" role="group" aria-label={t.reservations.list.density}>
+              <FilterChip
+                label={t.reservations.list.densityComfortable}
+                active={density === 'comfortable'}
+                onClick={() => setDensity('comfortable')}
+              />
+              <FilterChip
+                label={t.reservations.list.densityCompact}
+                active={density === 'compact'}
+                onClick={() => setDensity('compact')}
+              />
+            </div>
             <p className="text-label-sm text-on-surface-variant sm:ms-auto">
-              <Num>{usingFallback ? Math.max(rowCount, branchTotal) : rowCount}</Num>{' '}
+              <Num>{usingFallback && windowFilter === 'all' ? Math.max(rowCount, branchTotal) : filteredItems.length}</Num>{' '}
               {t.reservations.board.bookings}
             </p>
           </div>
@@ -307,7 +357,7 @@ export function ReservationsPage() {
               )}
               {groups.map(([day, reservations]) => (
                 <section key={day}>
-                  <div className="mb-3 flex items-baseline justify-between gap-3">
+                  <div className="mb-3 flex items-baseline gap-3">
                     <h2 className="text-label-lg font-semibold text-on-surface">
                       {formatDateLabel(day, locale, {
                         weekday: 'long',
@@ -326,6 +376,7 @@ export function ReservationsPage() {
                         reservation={reservation}
                         locale={locale}
                         t={t}
+                        compact={density === 'compact'}
                         onOpen={() => navigate(`/app/reservations/${reservation.reservationId}`)}
                       />
                     ))}
