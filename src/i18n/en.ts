@@ -144,17 +144,17 @@ export const en = {
       rescheduleSuccess: 'Reservation rescheduled',
     },
     backendGap: {
-      title: 'Ownership-based list',
-      body: 'This list shows reservations owned by your signed-in account — not a branch-wide staff inbox. Phone and walk-in guest bookings created for other customers are not included.',
+      title: 'Your bookings',
+      body: 'These are bookings on your account. Bookings made for other guests are not in this list.',
       listTitle: 'No reservations on this page',
-      listBody: 'Try another page or adjust your filters. This is not a branch inbox view.',
+      listBody: 'Try another page or change the filters.',
       detailTitle: 'Reservation not found',
       detailBody: 'This reservation is not available for your account.',
       actionsUnavailable: 'No actions available for this status',
     },
     branchInbox: {
-      title: 'Branch reservation inbox',
-      body: 'Showing branch reservations for the selected restaurant and branch (last 30 days through next 60 days).',
+      title: 'Branch bookings',
+      body: 'Bookings for this restaurant and branch, from the last 30 days through the next 60 days.',
     },
     board: {
       guest: 'Guest',
@@ -217,7 +217,7 @@ export const en = {
     ownershipFallbackNote:
       'This login cannot open the branch calendar. Showing bookings on this account instead.',
     ownershipNote:
-      'Shows reservations owned by your signed-in account — not a branch-wide staff calendar.',
+      'This calendar shows bookings on your account.',
     ownershipNoteShort: 'Scope',
     emptyTitle: 'No reservations this day',
     emptyBody: 'Create a reservation or pick another date.',
@@ -1015,7 +1015,9 @@ export const en = {
     logoutCloseFlowHint:
       'Closing this tab signs you out. Use Log out and close if you want to end it yourself first.',
     logoutAutoOnCloseHint:
-      'Choosing Leave on the browser prompt logs you out and ends this session automatically.',
+      'Choosing Leave on the browser prompt signs you out.',
+    expandNotice: 'Show the full notice',
+    collapseNotice: 'Hide the full notice',
     signedOutCloseTitle: 'You are logged out',
     signedOutCloseBody:
       'Your session has ended. Close this tab now — the browser may require you to close it yourself.',

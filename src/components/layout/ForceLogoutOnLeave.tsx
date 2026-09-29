@@ -10,6 +10,18 @@ import {
 } from '@/lib/leaveGuard'
 import { Button } from '@/components/ui/Button'
 import { MaterialIcon } from '@/components/ui/Icon'
+import { cn } from '@/lib/utils'
+
+function useNarrowScreen() {
+  const [narrow, setNarrow] = useState(() => window.matchMedia('(max-width: 639px)').matches)
+  useEffect(() => {
+    const query = window.matchMedia('(max-width: 639px)')
+    const onChange = () => setNarrow(query.matches)
+    query.addEventListener('change', onChange)
+    return () => query.removeEventListener('change', onChange)
+  }, [])
+  return narrow
+}
 
 /**
  * Opens the styled logout dialog only after a close/leave attempt
@@ -25,7 +37,9 @@ export function ForceLogoutOnLeave() {
   const [signedOutAwaitingClose, setSignedOutAwaitingClose] = useState(() =>
     isAwaitingCloseAfterLogout(),
   )
+  const [noticeExpanded, setNoticeExpanded] = useState(false)
   const bannerRef = useRef<HTMLDivElement>(null)
+  const narrow = useNarrowScreen()
 
   const onDashboard = location.pathname.startsWith('/app')
 
@@ -124,20 +138,47 @@ export function ForceLogoutOnLeave() {
         ref={bannerRef}
         className="fixed inset-x-0 top-0 z-[60] border-b border-outline-variant bg-surface-container"
       >
-        <div className="mx-auto flex max-w-[1440px] flex-col gap-2 px-4 py-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
-          <p className="min-w-0 text-body-sm leading-snug text-on-surface-variant">
+        <div
+          className={cn(
+            'mx-auto flex max-w-[1440px] gap-2 px-4 py-2',
+            narrow && noticeExpanded
+              ? 'flex-col items-stretch'
+              : 'flex-row items-center justify-between',
+          )}
+        >
+          <p
+            className={cn(
+              'min-w-0 text-body-sm leading-snug text-on-surface-variant',
+              narrow && !noticeExpanded ? 'truncate' : 'flex-1',
+            )}
+          >
             {t.auth.logoutCloseFlowHint}
           </p>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="shrink-0 self-start sm:self-center"
-            disabled={signingOut}
-            onClick={() => setConfirmOpen(true)}
-          >
-            {t.auth.logoutBeforeLeaveAction}
-          </Button>
+          {narrow && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              className="shrink-0"
+              aria-expanded={noticeExpanded}
+              aria-label={noticeExpanded ? t.auth.collapseNotice : t.auth.expandNotice}
+              onClick={() => setNoticeExpanded((open) => !open)}
+            >
+              <MaterialIcon name={noticeExpanded ? 'expand_less' : 'expand_more'} size={18} />
+            </Button>
+          )}
+          {(!narrow || noticeExpanded) && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="shrink-0 self-start sm:self-center"
+              disabled={signingOut}
+              onClick={() => setConfirmOpen(true)}
+            >
+              {t.auth.logoutBeforeLeaveAction}
+            </Button>
+          )}
         </div>
       </div>
 
