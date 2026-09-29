@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { MaterialIcon } from '@/components/ui/Icon'
@@ -10,38 +10,38 @@ import { Num } from '@/components/ui/Num'
 import { useLocale } from '@/context/LocaleContext'
 import { useToast } from '@/context/ToastContext'
 import {
-  approveReservation,
-  cancelReservation,
-  completeReservation,
   createIdempotencyKey,
-  markReservationNoShow,
-  markReservationTableReady,
-  rejectReservation,
   rescheduleReservation,
   type ReservationDto,
   type ReservationStatusDto,
 } from '@/api/reservations'
 import { isApiError } from '@/api/errors'
-import { useMyReservationDetailQuery } from '@/hooks/useReservationQueries'
+import { ReservationActions } from '@/components/reservations/ReservationActions'
+import {
+  useCachedReservation,
+  useMyReservationDetailQuery,
+} from '@/hooks/useReservationQueries'
 import { reservationKeys } from '@/lib/queryKeys'
+import { toReservationView, type ReservationView } from '@/lib/reservationView'
+import { reservationStatusLabel } from '@/lib/statusLabel'
 
-type ActionKey =
-  | 'approve'
-  | 'reject'
-  | 'cancel'
-  | 'complete'
-  | 'noshow'
-  | 'tableReady'
-  | 'reschedule'
-
-function reservationStatusLabel(
-  status: ReservationStatusDto,
-  t: ReturnType<typeof useLocale>['t'],
-): string {
-  if (status in t.status) {
-    return t.status[status as keyof typeof t.status]
+function mergeReservation(
+  detail: ReservationDto | undefined,
+  cached: ReservationView | undefined,
+): ReservationView | null {
+  const fromDetail = detail ? toReservationView(detail) : null
+  if (!fromDetail) return cached ?? null
+  if (!cached) return fromDetail
+  return {
+    ...fromDetail,
+    tableNumber: fromDetail.tableNumber ?? cached.tableNumber,
+    customerName: fromDetail.customerName ?? cached.customerName,
+    customerPhone: fromDetail.customerPhone ?? cached.customerPhone,
+    customerKind: fromDetail.customerKind ?? cached.customerKind,
+    tableId: fromDetail.tableId || cached.tableId,
+    notes: fromDetail.notes ?? cached.notes,
+    guests: fromDetail.guests || cached.guests,
   }
-  return status
 }
 
 function formatInstant(iso: string, locale: string): string {
@@ -60,82 +60,27 @@ function isoToDatetimeLocal(iso: string): string {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
 }
 
-function canApprove(status: ReservationStatusDto): boolean {
-  return status === 'Pending'
-}
-
-function canReject(status: ReservationStatusDto): boolean {
-  return status === 'Pending'
-}
-
-function canComplete(status: ReservationStatusDto): boolean {
-  return status === 'Approved'
-}
-
-function canNoShow(status: ReservationStatusDto): boolean {
-  return status === 'Approved'
-}
-
-function canTableReady(status: ReservationStatusDto): boolean {
-  return status === 'Approved'
-}
-
-function canCancel(status: ReservationStatusDto): boolean {
-  return status === 'Pending' || status === 'Approved'
-}
-
 function canReschedule(status: ReservationStatusDto): boolean {
   return status === 'Pending' || status === 'Approved'
-}
-
-function hasAnyAction(status: ReservationStatusDto): boolean {
-  return (
-    canApprove(status) ||
-    canReject(status) ||
-    canComplete(status) ||
-    canNoShow(status) ||
-    canTableReady(status) ||
-    canCancel(status) ||
-    canReschedule(status)
-  )
-}
-
-function actionSuccessMessage(
-  action: ActionKey,
-  t: ReturnType<typeof useLocale>['t'],
-): string {
-  switch (action) {
-    case 'approve':
-      return t.reservations.actions.approveSuccess
-    case 'reject':
-      return t.reservations.actions.rejectSuccess
-    case 'cancel':
-      return t.reservations.actions.cancelSuccess
-    case 'complete':
-      return t.reservations.actions.completeSuccess
-    case 'noshow':
-      return t.reservations.actions.noShowSuccess
-    case 'tableReady':
-      return t.reservations.actions.tableReadySuccess
-    case 'reschedule':
-      return t.reservations.actions.rescheduleSuccess
-  }
 }
 
 function DetailField({
   label,
   value,
   mono = false,
+  ltr = false,
 }: {
   label: string
   value: string
   mono?: boolean
+  ltr?: boolean
 }) {
   return (
     <div>
       <dt className="text-label-sm text-on-surface-variant">{label}</dt>
       <dd
-        className={`text-body-md text-on-surface mt-0.5 break-all ${mono ? 'font-mono text-label-sm' : ''}`}
+        dir={ltr ? 'ltr' : undefined}
+        className={`text-body-md text-on-surface mt-0.5 break-all ${mono ? 'font-mono text-label-sm nums' : ''} ${ltr ? 'nums' : ''}`}
       >
         {value}
       </dd>
@@ -144,7 +89,7 @@ function DetailField({
 }
 
 function ReservationInfo({ reservation, locale, t }: {
-  reservation: ReservationDto
+  reservation: ReservationView
   locale: string
   t: ReturnType<typeof useLocale>['t']
 }) {
@@ -156,8 +101,15 @@ function ReservationInfo({ reservation, locale, t }: {
       <dl className="grid gap-4 sm:grid-cols-2">
         <DetailField
           label={t.reservations.status}
-          value={reservationStatusLabel(reservation.status, t)}
+          value={reservationStatusLabel(reservation.status, t.status)}
         />
+        <DetailField
+          label={t.reservations.customer}
+          value={reservation.customerName ?? t.reservations.board.guest}
+        />
+        {reservation.customerPhone && (
+          <DetailField label={t.reservations.phone} value={reservation.customerPhone} ltr />
+        )}
         <DetailField label={t.reservations.source} value={reservation.source} />
         <DetailField
           label={t.reservations.date}
@@ -173,8 +125,8 @@ function ReservationInfo({ reservation, locale, t }: {
         />
         <DetailField
           label={t.reservations.table}
-          value={reservation.tableId}
-          mono
+          value={reservation.tableNumber ?? reservation.tableId}
+          mono={!reservation.tableNumber}
         />
         <DetailField
           label={t.reservations.created}
@@ -193,6 +145,7 @@ function ReservationInfo({ reservation, locale, t }: {
           label={t.reservations.id}
           value={reservation.reservationId}
           mono
+          ltr
         />
       </dl>
     </section>
@@ -205,9 +158,13 @@ export function ReservationDetailPage() {
   const { toast } = useToast()
   const queryClient = useQueryClient()
   const detailQuery = useMyReservationDetailQuery(id)
+  const cached = useCachedReservation(id)
+  const reservation = useMemo(
+    () => mergeReservation(detailQuery.data, cached),
+    [cached, detailQuery.data],
+  )
 
-  const [busy, setBusy] = useState<ActionKey | null>(null)
-  const [reason, setReason] = useState('')
+  const [busy, setBusy] = useState(false)
   const [reschedule, setReschedule] = useState({
     tableId: '',
     reservationStartTime: '',
@@ -215,34 +172,29 @@ export function ReservationDetailPage() {
   })
 
   useEffect(() => {
-    if (!detailQuery.data) return
+    if (!reservation) return
     setReschedule({
-      tableId: detailQuery.data.tableId,
-      reservationStartTime: isoToDatetimeLocal(detailQuery.data.reservationStartTime),
-      guests: detailQuery.data.guests,
+      tableId: reservation.tableId,
+      reservationStartTime: isoToDatetimeLocal(reservation.reservationStartTime),
+      guests: reservation.guests,
     })
-  }, [detailQuery.data])
+  }, [reservation])
 
   const invalidateReservation = async (): Promise<void> => {
-    if (!id) return
-    await queryClient.invalidateQueries({ queryKey: reservationKeys.detail(id) })
-    await queryClient.invalidateQueries({ queryKey: reservationKeys.lists() })
+    await queryClient.invalidateQueries({ queryKey: reservationKeys.all })
   }
 
-  const run = async (
-    action: ActionKey,
-    mutation: () => Promise<unknown>,
-  ): Promise<void> => {
+  const run = async (mutation: () => Promise<unknown>): Promise<void> => {
     if (!id || busy) return
-    setBusy(action)
+    setBusy(true)
     try {
       await mutation()
       await invalidateReservation()
-      toast('success', actionSuccessMessage(action, t))
+      toast('success', t.reservations.actions.rescheduleSuccess)
     } catch (err) {
       toast('error', isApiError(err) ? err.message : t.reservations.errors.unknown)
     } finally {
-      setBusy(null)
+      setBusy(false)
     }
   }
 
@@ -259,7 +211,7 @@ export function ReservationDetailPage() {
     )
   }
 
-  if (detailQuery.isLoading) {
+  if (detailQuery.isLoading && !reservation) {
     return (
       <div className="max-w-2xl mx-auto py-16 px-4 text-center text-on-surface-variant">
         {t.common.loading}
@@ -267,7 +219,7 @@ export function ReservationDetailPage() {
     )
   }
 
-  if (detailQuery.isError) {
+  if (!reservation && detailQuery.isError) {
     const notFound = isApiError(detailQuery.error) && detailQuery.error.code === 'NOT_FOUND'
     return (
       <div className="max-w-2xl mx-auto py-8 px-4">
@@ -306,16 +258,13 @@ export function ReservationDetailPage() {
     )
   }
 
-  if (!detailQuery.data) {
+  if (!reservation) {
     return (
       <div className="max-w-2xl mx-auto py-16 px-4 text-center text-on-surface-variant">
         {t.common.loading}
       </div>
     )
   }
-
-  const reservation = detailQuery.data
-  const showActions = hasAnyAction(reservation.status)
 
   return (
     <div className="max-w-2xl mx-auto py-8 px-4 space-y-6">
@@ -330,7 +279,7 @@ export function ReservationDetailPage() {
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h1 className="text-headline-md text-on-surface mb-1">
-              {t.reservations.details}
+              {reservation.customerName ?? t.reservations.details}
             </h1>
             <p className="text-label-sm text-on-surface-variant font-mono break-all">
               {reservation.reservationId}
@@ -339,7 +288,7 @@ export function ReservationDetailPage() {
           <StatusBadge
             type="custom"
             status={reservation.status}
-            label={reservationStatusLabel(reservation.status, t)}
+            label={reservationStatusLabel(reservation.status, t.status)}
           />
         </div>
         <p className="text-body-sm text-on-surface-variant mt-2">
@@ -350,131 +299,20 @@ export function ReservationDetailPage() {
 
       <ReservationInfo reservation={reservation} locale={locale} t={t} />
 
-      {!showActions && (
-        <p className="text-body-sm text-on-surface-variant">
-          {t.reservations.backendGap.actionsUnavailable}
-        </p>
+      {(reservation.status === 'Pending' || reservation.status === 'Approved') && (
+        <section className="rounded-xl border border-outline-variant/30 bg-surface p-4">
+          <ReservationActions reservationId={reservation.reservationId} status={reservation.status} />
+        </section>
       )}
 
-      {showActions && (
-        <>
-          {(canApprove(reservation.status) || canReject(reservation.status)) && (
-            <section className="rounded-xl border border-outline-variant/30 bg-surface p-4 space-y-3">
-              <h2 className="text-label-lg font-semibold">{t.reservations.detail.actionsTitle}</h2>
-              <div className="flex flex-wrap gap-2">
-                {canApprove(reservation.status) && (
-                  <Button
-                    size="sm"
-                    disabled={Boolean(busy)}
-                    onClick={() =>
-                      void run('approve', () =>
-                        approveReservation(id, createIdempotencyKey()),
-                      )
-                    }
-                  >
-                    {t.reservations.approve}
-                  </Button>
-                )}
-                {canReject(reservation.status) && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={Boolean(busy)}
-                    onClick={() =>
-                      void run('reject', () =>
-                        rejectReservation(id, createIdempotencyKey()),
-                      )
-                    }
-                  >
-                    {t.reservations.reject}
-                  </Button>
-                )}
-              </div>
-            </section>
-          )}
-
-          {(canComplete(reservation.status) ||
-            canNoShow(reservation.status) ||
-            canTableReady(reservation.status)) && (
-            <section className="rounded-xl border border-outline-variant/30 bg-surface p-4 space-y-3">
-              <h2 className="text-label-lg font-semibold">{t.reservations.complete}</h2>
-              <div className="flex flex-wrap gap-2">
-                {canComplete(reservation.status) && (
-                  <Button
-                    size="sm"
-                    disabled={Boolean(busy)}
-                    onClick={() =>
-                      void run('complete', () =>
-                        completeReservation(id, createIdempotencyKey()),
-                      )
-                    }
-                  >
-                    {t.reservations.complete}
-                  </Button>
-                )}
-                {canNoShow(reservation.status) && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={Boolean(busy)}
-                    onClick={() =>
-                      void run('noshow', () =>
-                        markReservationNoShow(id, createIdempotencyKey()),
-                      )
-                    }
-                  >
-                    {t.reservations.noShow}
-                  </Button>
-                )}
-                {canTableReady(reservation.status) && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={Boolean(busy)}
-                    onClick={() =>
-                      void run('tableReady', () =>
-                        markReservationTableReady(id, createIdempotencyKey()),
-                      )
-                    }
-                  >
-                    {t.reservations.tableReady}
-                  </Button>
-                )}
-              </div>
-            </section>
-          )}
-
-          {canCancel(reservation.status) && (
-            <section className="rounded-xl border border-outline-variant/30 bg-surface p-4 space-y-3">
-              <h2 className="text-label-lg font-semibold">{t.common.cancel}</h2>
-              <Input
-                placeholder={t.reservations.cancelReasonPlaceholder}
-                value={reason}
-                onChange={(e) => setReason(e.target.value)}
-              />
-              <Button
-                size="sm"
-                variant="outline"
-                className="text-danger"
-                disabled={Boolean(busy)}
-                onClick={() =>
-                  void run('cancel', () =>
-                    cancelReservation(
-                      id,
-                      { reason: reason || null },
-                      createIdempotencyKey(),
-                    ),
-                  )
-                }
-              >
-                {t.common.cancel}
-              </Button>
-            </section>
-          )}
-
-          {canReschedule(reservation.status) && (
+      {canReschedule(reservation.status) && (
             <section className="rounded-xl border border-outline-variant/30 bg-surface p-4 space-y-3">
               <h2 className="text-label-lg font-semibold">{t.reservations.changeTime}</h2>
+              {reservation.tableNumber && (
+                <p className="text-body-sm text-on-surface-variant">
+                  {t.reservations.table} <Num>{reservation.tableNumber}</Num>
+                </p>
+              )}
               <Input
                 placeholder={t.reservations.table}
                 value={reschedule.tableId}
@@ -511,7 +349,7 @@ export function ReservationDetailPage() {
                   !reschedule.reservationStartTime
                 }
                 onClick={() =>
-                  void run('reschedule', () =>
+                  void run(() =>
                     rescheduleReservation(
                       id,
                       {
@@ -529,8 +367,6 @@ export function ReservationDetailPage() {
                 {t.reservations.changeTime}
               </Button>
             </section>
-          )}
-        </>
       )}
     </div>
   )

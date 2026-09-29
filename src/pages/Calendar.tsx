@@ -1,6 +1,5 @@
-import { useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import type { ReservationDto, ReservationStatusDto } from '@/api/reservations'
+import { useEffect, useMemo, useState } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { MaterialIcon } from '@/components/ui/Icon'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Button } from '@/components/ui/Button'
@@ -10,6 +9,9 @@ import { StatusBadge } from '@/components/ui/StatusBadge'
 import { Num } from '@/components/ui/Num'
 import { useLocale } from '@/context/LocaleContext'
 import { useCalendarRangeReservationsQuery } from '@/hooks/useReservationQueries'
+import { useReservationTrendsQuery } from '@/hooks/useAnalyticsQueries'
+import { extractTrendSeries } from '@/lib/analyticsPayload'
+import type { ReservationView } from '@/lib/reservationView'
 import {
   eachDateKey,
   endOfMonth,
@@ -22,13 +24,14 @@ import {
   startOfWeekMonday,
   toDateKey,
 } from '@/lib/calendarDates'
+import { reservationStatusLabel } from '@/lib/statusLabel'
 import { cn, getTodayISO } from '@/lib/utils'
 
 const HOURS = Array.from({ length: 14 }, (_, i) => i + 10)
 
 type CalendarView = 'daily' | 'weekly' | 'monthly'
 
-function hourOfReservation(reservation: ReservationDto): number {
+function hourOfReservation(reservation: ReservationView): number {
   const start = new Date(reservation.reservationStartTime)
   if (!Number.isNaN(start.getTime())) return start.getHours()
   const timePart = reservation.reservationStartTime.slice(11, 13)
@@ -52,21 +55,11 @@ function formatHourLabel(hour: number): string {
   return `${hour} AM`
 }
 
-function reservationStatusLabel(
-  status: ReservationStatusDto,
-  t: ReturnType<typeof useLocale>['t'],
-): string {
-  if (status in t.status) {
-    return t.status[status as keyof typeof t.status]
-  }
-  return status
-}
-
-function dayKeyOf(reservation: ReservationDto): string {
+function dayKeyOf(reservation: ReservationView): string {
   return reservation.reservationDate.slice(0, 10)
 }
 
-function sortByStartTime(a: ReservationDto, b: ReservationDto): number {
+function sortByStartTime(a: ReservationView, b: ReservationView): number {
   return a.reservationStartTime.localeCompare(b.reservationStartTime)
 }
 
@@ -102,7 +95,7 @@ function BookingChip({
   t,
   onOpen,
 }: {
-  reservation: ReservationDto
+  reservation: ReservationView
   locale: string
   t: ReturnType<typeof useLocale>['t']
   onOpen: () => void
@@ -118,20 +111,24 @@ function BookingChip({
       </span>
       <span className="min-w-0 flex-1">
         <span className="block text-sm font-semibold text-on-surface truncate">
-          {formatTime(reservation.reservationStartTime, locale)}
-          <span className="font-normal text-on-surface-variant">
-            {' '}
-            · {reservation.guests} {t.calendar.guests}
-          </span>
+          {reservation.customerName ?? formatTime(reservation.reservationStartTime, locale)}
         </span>
         <span className="block text-xs text-on-surface-variant truncate">
-          {t.calendar.table} {reservation.tableId.slice(0, 8)}
+          {reservation.customerName
+            ? `${formatTime(reservation.reservationStartTime, locale)} · `
+            : ''}
+          {reservation.guests} {t.calendar.guests}
+          {reservation.tableNumber
+            ? ` · ${t.calendar.table} ${reservation.tableNumber}`
+            : reservation.tableId
+              ? ` · ${t.calendar.table} ${reservation.tableId.slice(0, 8)}`
+              : ''}
         </span>
       </span>
       <StatusBadge
         type="custom"
         status={reservation.status}
-        label={reservationStatusLabel(reservation.status, t)}
+        label={reservationStatusLabel(reservation.status, t.status)}
       />
     </button>
   )
@@ -140,9 +137,17 @@ function BookingChip({
 export function CalendarPage() {
   const { t, locale } = useLocale()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const today = getTodayISO()
   const [view, setView] = useState<CalendarView>('daily')
   const [anchorDate, setAnchorDate] = useState(() => toDateKey(new Date()))
+  const requestedDate = searchParams.get('date')
+
+  useEffect(() => {
+    if (requestedDate && /^\d{4}-\d{2}-\d{2}$/.test(requestedDate)) {
+      setAnchorDate(requestedDate)
+    }
+  }, [requestedDate])
 
   const range = useMemo(() => {
     if (view === 'daily') {
@@ -162,9 +167,21 @@ export function CalendarPage() {
 
   const rangeQuery = useCalendarRangeReservationsQuery(range.from, range.to, true)
   const calendarSource = rangeQuery.data?.source
+  const usingFallback = calendarSource === 'ownership-fallback'
+  const trendsQuery = useReservationTrendsQuery(range.from, range.to, usingFallback)
+
+  const trendByDay = useMemo(() => {
+    const map = new Map<string, number>()
+    if (!usingFallback) return map
+    for (const point of extractTrendSeries(trendsQuery.data ?? {}).serviceDay) {
+      const day = point.label.slice(0, 10)
+      if (/^\d{4}-\d{2}-\d{2}$/.test(day)) map.set(day, point.value)
+    }
+    return map
+  }, [trendsQuery.data, usingFallback])
 
   const byDay = useMemo(() => {
-    const map = new Map<string, ReservationDto[]>()
+    const map = new Map<string, ReservationView[]>()
     for (const reservation of rangeQuery.data?.items ?? []) {
       const key = dayKeyOf(reservation)
       const list = map.get(key) ?? []
@@ -182,32 +199,40 @@ export function CalendarPage() {
     [range.from, range.to],
   )
 
+  const countOn = (day: string): number => {
+    const rows = byDay.get(day)?.length ?? 0
+    const trend = trendByDay.get(day) ?? 0
+    return Math.max(rows, trend)
+  }
+
   const maxDayCount = useMemo(() => {
     let max = 0
     for (const day of periodDays) {
-      max = Math.max(max, byDay.get(day)?.length ?? 0)
+      const rows = byDay.get(day)?.length ?? 0
+      const trend = trendByDay.get(day) ?? 0
+      max = Math.max(max, rows, trend)
     }
     return max
-  }, [byDay, periodDays])
+  }, [byDay, periodDays, trendByDay])
 
   const daysByBookingCount = useMemo(() => {
     return [...periodDays]
       .map((day) => ({
         day,
-        count: byDay.get(day)?.length ?? 0,
+        count: Math.max(byDay.get(day)?.length ?? 0, trendByDay.get(day) ?? 0),
         reservations: byDay.get(day) ?? [],
       }))
       .sort((a, b) => b.count - a.count || a.day.localeCompare(b.day))
-  }, [byDay, periodDays])
+  }, [byDay, periodDays, trendByDay])
 
-  const totalBookings = rangeQuery.data?.items.length ?? 0
+  const totalBookings = periodDays.reduce((sum, day) => sum + countOn(day), 0)
 
   const dayReservations = byDay.get(anchorDate) ?? []
 
   const byHour = useMemo(() => {
-    const map = new Map<number, ReservationDto[]>()
+    const map = new Map<number, ReservationView[]>()
     for (const hour of HOURS) map.set(hour, [])
-    for (const reservation of dayReservations) {
+    for (const reservation of byDay.get(anchorDate) ?? []) {
       const hour = hourOfReservation(reservation)
       if (!map.has(hour)) map.set(hour, [])
       map.get(hour)!.push(reservation)
@@ -216,7 +241,7 @@ export function CalendarPage() {
       list.sort(sortByStartTime)
     }
     return map
-  }, [dayReservations])
+  }, [anchorDate, byDay])
 
   const hoursRanked = useMemo(() => {
     const hours = [...byHour.entries()]
@@ -380,17 +405,29 @@ export function CalendarPage() {
                   <div>
                     <h2 className="text-lg font-semibold text-on-surface">{rangeLabel}</h2>
                     <p className="text-body-sm text-on-surface-variant">
-                      <Num>{dayReservations.length}</Num> {t.calendar.bookingsCount}
+                      <Num>{countOn(anchorDate)}</Num> {t.calendar.bookingsCount}
                     </p>
                   </div>
                 </div>
 
-                {dayReservations.length === 0 ? (
+                {dayReservations.length === 0 && countOn(anchorDate) === 0 ? (
                   <EmptyState
                     icon="event_busy"
                     title={t.calendar.emptyTitle}
                     description={t.calendar.emptyBody}
                   />
+                ) : dayReservations.length === 0 ? (
+                  <Card>
+                    <p className="text-2xl font-bold text-on-surface tabular-nums">
+                      <Num>{countOn(anchorDate)}</Num>
+                    </p>
+                    <p className="mt-1 text-body-sm text-on-surface-variant">
+                      {t.calendar.bookingsCount}
+                    </p>
+                    <p className="mt-3 text-body-sm text-on-surface">
+                      {t.calendar.detailUnavailable}
+                    </p>
+                  </Card>
                 ) : (
                   <Card padding="none" className="overflow-hidden">
                     <div className="overflow-x-auto">
@@ -457,7 +494,7 @@ export function CalendarPage() {
                 <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-7">
                   {weekDays.map((day) => {
                     const reservations = byDay.get(day) ?? []
-                    const count = reservations.length
+                    const count = countOn(day)
                     const level = densityLevel(count, maxDayCount)
                     const isToday = day === today
                     const isSelected = day === anchorDate
@@ -518,6 +555,11 @@ export function CalendarPage() {
                               {t.calendar.noBookings}
                             </p>
                           )}
+                          {reservations.length === 0 && count > 0 && (
+                            <p className="text-[11px] font-medium text-primary">
+                              <Num>{count}</Num> {t.calendar.bookingsCount}
+                            </p>
+                          )}
                         </div>
                       </button>
                     )
@@ -543,7 +585,7 @@ export function CalendarPage() {
                   <div className="grid grid-cols-7">
                     {monthCells.map((day) => {
                       const inMonth = day.startsWith(monthPrefix)
-                      const count = byDay.get(day)?.length ?? 0
+                      const count = countOn(day)
                       const level = inMonth ? densityLevel(count, maxDayCount) : 0
                       const isToday = day === today
                       return (

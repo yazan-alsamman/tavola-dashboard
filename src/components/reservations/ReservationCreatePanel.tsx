@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import {
   createReservation,
   createIdempotencyKey,
@@ -11,6 +12,7 @@ import { useLocale } from '@/context/LocaleContext'
 import { useRestaurantScope } from '@/context/RestaurantScopeContext'
 import { useToast } from '@/context/ToastContext'
 import { branchLocalDateTimeToUtcIso, formatInstantInTimeZone } from '@/lib/branchDateTime'
+import { reservationKeys } from '@/lib/queryKeys'
 import { MaterialIcon } from '@/components/ui/Icon'
 import { Button } from '@/components/ui/Button'
 import { Num } from '@/components/ui/Num'
@@ -47,6 +49,7 @@ function mapCreateError(
 export function ReservationCreatePanel() {
   const { t, locale } = useLocale()
   const { toast } = useToast()
+  const queryClient = useQueryClient()
   const {
     selectedRestaurantId,
     selectedBranch,
@@ -129,6 +132,7 @@ export function ReservationCreatePanel() {
         idempotencyKey,
       )
       setLastCreated(reservation)
+      await queryClient.invalidateQueries({ queryKey: reservationKeys.all })
       toast('success', t.reservations.create.successTitle, t.reservations.create.successBody)
       idempotencyKeyRef.current = null
       setSelectedTableId(null)

@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import {
   BarChart,
   Bar,
@@ -41,6 +42,7 @@ import {
   formatCount,
   formatRate,
 } from '@/lib/analyticsPayload'
+import { reservationStatusLabel } from '@/lib/statusLabel'
 
 const COLORS = ['#461599', '#5e35b1', '#6c45c0', '#ecdeee', '#7d5f9a', '#dc2626']
 
@@ -76,7 +78,14 @@ export function ReportsPage() {
 
   const peakHoursData = extractPeakHoursSeries(peakHoursQuery.data ?? {})
 
-  const statusBreakdown = extractStatusBreakdown(summaryQuery.data ?? {})
+  const statusBreakdown = useMemo(
+    () =>
+      extractStatusBreakdown(summaryQuery.data ?? {}).map((item) => ({
+        ...item,
+        label: reservationStatusLabel(item.label, t.status),
+      })),
+    [summaryQuery.data, t.status],
+  )
 
   const primaryError =
     summaryQuery.error && isApiError(summaryQuery.error)

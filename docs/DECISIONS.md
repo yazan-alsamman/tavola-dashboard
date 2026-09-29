@@ -21,6 +21,66 @@ Consequences:
 
 ---
 
+## ADR-020 — Session notice and mobile shell stay in view
+Date: 2026-09-29
+Status: Accepted
+
+Context:
+The signed-in notice was a fixed bar with a constant height. The sticky header used the viewport top, so it slid under the notice, and the notice truncated at a phone width. Below the large breakpoint, search and the restaurant/branch switcher were not in the header at all.
+
+Decision:
+1. Keep the notice visible. Measure its height and store it in `--logout-leave-banner-h`. The header sticks at that offset, and the sidebar already does. Logout and the confirm step are unchanged.
+2. Below the large breakpoint, a search icon opens the existing search field, and a location icon opens the same restaurant and branch selects. The desktop search owns the keyboard shortcut only while it is on screen.
+3. Reservation status names use `reservationStatusLabel` and `t.status`. Reports maps those labels before the chart.
+
+Consequences:
+Two search fields are not mounted with the shortcut at once. A new status still shows its raw value until a translation key exists. No new dialog or drawer primitive.
+
+## ADR-019 — Home and search use the branch booking list
+Date: 2026-09-29
+Status: Accepted
+
+Context:
+The organization Owner (and Admin) can list branch reservations and run lifecycle actions. The home screen and header search still called `GET /reservations`, which returns only bookings owned by the signed-in account, so guest arrivals never appeared. A local floor designer, a shortcut grid, and two shell bars were not mounted on any route and did not call an endpoint.
+
+Decision:
+1. The home "arriving" and "needs action" lists, and header search, use the branch date-window list. A 403 still falls back to the caller's own reservations.
+2. Remove the unmounted floor designer, the shortcut grid, and the unused shell bars.
+3. Keep Owner and Admin as the operators the API authorizes. Staff and Billing organization members stay read-limited by the server. Transfer of ownership remains Owner-only.
+
+Consequences:
+Searching loads the branch window only after the query has two characters. Guest detail still depends on the row already loaded in this session, because there is no staff get-by-id endpoint.
+
+## ADR-018 — Owner and Admin can read and update branch reservations
+Date: 2026-09-29
+Status: Accepted
+
+Context:
+Postman now allows the restaurant Owner or Admin to list a branch's reservations and to approve, reject, mark table-ready, complete, and mark no-show. Those calls were previously documented as Employee-only. ADR-016 kept the owner on day counts because the list returned 403.
+
+Decision:
+1. Keep calling the branch date-window list first. A successful response is the booking board, including guest, table, and the Arrived / Finished / Didn't come actions.
+2. Fall back to the caller's own reservations only when that list returns 403 (Staff or Billing organization members, or an Employee who is not assigned to the branch).
+3. Do not treat Owner/Admin as missing the `reservations:*` permission slugs. Those slugs remain the Employee gate.
+
+Consequences:
+Invite-employee still requires a restaurant role id. The collection did not add a role catalog. Guest name and status changes for the owner depend on the running API matching this Postman revision.
+
+## ADR-017 — Staff invite assigns the selected branch in the same action
+Date: 2026-09-28
+Status: Accepted
+
+Context:
+An Owner cannot open guest bookings. Only an Employee assigned to the branch can. The staff page asked for raw role, employee, and branch ids, and there is still no `GET` employees list and no role catalog. Invite alone leaves `assignedBranchIds` empty, which the server treats as restaurant-wide scope rather than the branch the owner had selected.
+
+Decision:
+1. The staff form takes the person's name, email, phone, a branch from the loaded scope, and the restaurant role id the server requires.
+2. Submit calls invite, then assign-branch. If assign fails, the invited person stays visible and the error is shown.
+3. People returned by those calls are kept for the browser visit only. Do not invent a roster endpoint.
+
+Consequences:
+Previously invited employees are not listed after a new visit. The role id remains a manual field until the server publishes a role catalog.
+
 ## ADR-015 — Restaurant cover is a staff upload, not the gallery
 Date: 2026-09-28
 Status: Accepted
@@ -35,6 +95,21 @@ Decision:
 
 Consequences:
 Replacing the cover deletes the previous object on the server. An employee sees the cover and cannot upload one.
+
+## ADR-016 — Owner sees branch booking counts when the staff inbox is forbidden
+Date: 2026-09-28
+Status: Accepted
+
+Context:
+`GET /restaurants/:id/branches/:id/reservations` is Employee-only. An Owner/Admin token receives 403, and the previous fallback listed `GET /reservations`, which never includes guest bookings. The reservations page and calendar then looked empty even when the branch had bookings. Owner/Admin can read `GET /restaurants/:id/analytics/reservations/summary` and `GET …/analytics/branches/:id/reservations/trends`.
+
+Decision:
+1. Map branch rows (`partySize`, `reservationSource`, `table`, `customer`, `specialRequest`) and ownership rows onto one view before rendering.
+2. When the branch list returns 403, keep the ownership rows that do exist, and fill the gap with the analytics day counts and status totals. Do not invent a guest-level list.
+3. The reservations board leads with those bookings. Creating a reservation stays behind an explicit action and refreshes the list.
+
+Consequences:
+Guest name, phone, and table stay hidden until the signed-in actor is an Employee assigned to the branch. The owner still sees which days have bookings and how they break down by status.
 
 ## ADR-012 — Platform Owner console is a separate Vite app
 Date: 2026-09-14

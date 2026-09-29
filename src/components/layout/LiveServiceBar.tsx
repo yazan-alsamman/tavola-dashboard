@@ -1,15 +1,17 @@
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { format } from 'date-fns'
 import { useLocale } from '@/context/LocaleContext'
+import { useRestaurantScope } from '@/context/RestaurantScopeContext'
 import { useUnreadNotificationCount } from '@/hooks/useNotificationQueries'
 import { getServicePeriod } from '@/lib/utils'
+import { MaterialIcon } from '@/components/ui/Icon'
 import { Num } from '@/components/ui/Num'
 
 export function LiveServiceBar() {
-  const { t } = useLocale()
+  const { t, locale } = useLocale()
+  const { selectedBranch, formatBranchLabel, status } = useRestaurantScope()
   const unreadQuery = useUnreadNotificationCount()
-  const [now, setNow] = useState(new Date())
+  const [now, setNow] = useState(() => new Date())
 
   useEffect(() => {
     const interval = setInterval(() => setNow(new Date()), 30000)
@@ -17,36 +19,50 @@ export function LiveServiceBar() {
   }, [])
 
   const period = getServicePeriod()
-  const timeStr = format(now, 'h:mm')
-  const suffix = now.getHours() >= 12 ? 'م' : 'ص'
+  const timeLabel = new Intl.DateTimeFormat(locale, {
+    hour: 'numeric',
+    minute: '2-digit',
+  }).format(now)
+  const dateLabel = new Intl.DateTimeFormat(locale, {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+  }).format(now)
   const unreadCount = unreadQuery.data ?? 0
+  const branchLabel =
+    status === 'ready' && selectedBranch ? formatBranchLabel(selectedBranch) : null
 
   return (
-    <div className="flex flex-wrap items-center gap-x-6 gap-y-3 px-5 py-4 bg-surface border border-border rounded-2xl shadow-card mb-6">
-      <div>
-        <p className="text-xs text-text-muted font-semibold">{t.ops.liveNow}</p>
-        <p className="text-xl font-bold text-text-primary">
-          <Num>{timeStr}</Num> {suffix}
+    <div className="flex flex-wrap items-center gap-x-5 gap-y-3 rounded-xl border border-outline-variant/60 bg-surface-container-lowest px-4 py-3">
+      <div className="min-w-0">
+        <p className="text-overline text-on-surface-variant">{t.ops.liveNow}</p>
+        <p className="text-headline-md text-on-surface nums">
+          <Num>{timeLabel}</Num>
         </p>
+        <p className="text-body-sm text-on-surface-variant">{dateLabel}</p>
       </div>
-      <div className="h-10 w-px bg-border hidden sm:block" />
-      <div>
-        <p className="text-xs text-text-muted">{t.ops.service}</p>
-        <p className="text-sm font-bold text-primary">{t.servicePeriods[period]}</p>
+
+      <div className="hidden h-10 w-px bg-outline-variant/60 sm:block" />
+
+      <div className="min-w-0">
+        <p className="text-overline text-on-surface-variant">{t.ops.service}</p>
+        <p className="text-label-lg text-primary">{t.servicePeriods[period]}</p>
+        {branchLabel && (
+          <p className="text-body-sm text-on-surface-variant truncate">{branchLabel}</p>
+        )}
       </div>
+
       {unreadCount > 0 && (
-        <>
-          <div className="h-10 w-px bg-border hidden sm:block" />
-          <Link
-            to="/app/notifications"
-            className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-warning-light hover:bg-warning/20 transition-colors"
-          >
-            <span className="w-2 h-2 rounded-full bg-warning animate-pulse" />
-            <p className="text-sm font-bold text-warning">
-              <Num>{unreadCount}</Num> {t.dashboard.unreadNotifications}
-            </p>
-          </Link>
-        </>
+        <Link
+          to="/app/notifications"
+          className="ms-auto inline-flex items-center gap-2 rounded-full bg-warning-subtle px-3 py-1.5 text-label-md text-on-warning-subtle transition-colors duration-[var(--duration-fast)] hover:bg-warning-subtle/80"
+        >
+          <span className="h-2 w-2 rounded-full bg-warning" />
+          <MaterialIcon name="notifications" size={16} />
+          <span>
+            <Num>{unreadCount}</Num> {t.dashboard.unreadNotifications}
+          </span>
+        </Link>
       )}
     </div>
   )

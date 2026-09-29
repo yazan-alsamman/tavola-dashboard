@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { Num } from '@/components/ui/Num'
 import { Button } from '@/components/ui/Button'
@@ -11,31 +11,21 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { ErrorState } from '@/components/ui/ErrorState'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { SkeletonStats, SkeletonText } from '@/components/ui/Skeleton'
-import { HomeShortcuts } from '@/components/dashboard/HomeShortcuts'
 import { LiveServiceBar } from '@/components/layout/LiveServiceBar'
 import { useLocale } from '@/context/LocaleContext'
 import { useAuth } from '@/context/AuthContext'
 import { useRestaurantScope } from '@/context/RestaurantScopeContext'
-import type { ReservationDto, ReservationStatusDto } from '@/api/reservations'
 import {
   useReservationSummaryQuery,
   useOrgReservationSummaryQuery,
 } from '@/hooks/useAnalyticsQueries'
 import { useUnreadNotificationCount } from '@/hooks/useNotificationQueries'
-import { useMyReservationsQuery } from '@/hooks/useReservationQueries'
+import { useCalendarRangeReservationsQuery } from '@/hooks/useReservationQueries'
 import { extractReservationSummaryStats, formatCount, formatRate } from '@/lib/analyticsPayload'
 import { defaultAnalyticsRange } from '@/lib/dateRange'
+import type { ReservationView } from '@/lib/reservationView'
+import { reservationStatusLabel } from '@/lib/statusLabel'
 import { getTodayISO } from '@/lib/utils'
-
-function reservationStatusLabel(
-  status: ReservationStatusDto,
-  t: ReturnType<typeof useLocale>['t'],
-): string {
-  if (status in t.status) {
-    return t.status[status as keyof typeof t.status]
-  }
-  return status
-}
 
 function formatReservationTime(iso: string, locale: string): string {
   const date = new Date(iso)
@@ -43,47 +33,40 @@ function formatReservationTime(iso: string, locale: string): string {
   return new Intl.DateTimeFormat(locale, { timeStyle: 'short' }).format(date)
 }
 
-/** "in 25 min" reads faster than a clock time when staff are triaging arrivals. */
 function formatCountdown(iso: string, locale: string): string | null {
   const start = new Date(iso).getTime()
   if (Number.isNaN(start)) return null
   const minutes = Math.round((start - Date.now()) / 60000)
-  if (minutes < 0 || minutes > 240) return null
+  if (minutes < -30 || minutes > 240) return null
   const rtf = new Intl.RelativeTimeFormat(locale, { numeric: 'auto', style: 'short' })
-  return minutes >= 60
+  return minutes >= 60 || minutes <= -60
     ? rtf.format(Math.round(minutes / 60), 'hour')
     : rtf.format(minutes, 'minute')
 }
 
-/** Backend ids are UUIDs; a short suffix is enough to match against a ticket. */
-function shortRef(id: string): string {
-  return id.slice(0, 6).toUpperCase()
+function isServiceBooking(reservation: ReservationView): boolean {
+  return reservation.status === 'Approved' || reservation.status === 'Pending'
 }
 
-function isUpcomingReservation(reservation: ReservationDto, windowMinutes = 90): boolean {
-  const start = new Date(reservation.reservationStartTime)
-  const diffMin = (start.getTime() - Date.now()) / 60000
-  return (
-    diffMin >= 0 &&
-    diffMin <= windowMinutes &&
-    (reservation.status === 'Approved' || reservation.status === 'Pending')
-  )
+function isArriving(reservation: ReservationView): boolean {
+  const start = new Date(reservation.reservationStartTime).getTime()
+  if (Number.isNaN(start)) return false
+  const diffMin = (start - Date.now()) / 60000
+  return diffMin >= -20 && diffMin <= 90 && isServiceBooking(reservation)
 }
 
-/**
- * Time leads because it is what staff scan for; identity and status follow.
- * The whole row is a link so the target area is generous on touch.
- */
 function ArrivalRow({
   reservation,
   locale,
   t,
 }: {
-  reservation: ReservationDto
+  reservation: ReservationView
   locale: string
   t: ReturnType<typeof useLocale>['t']
 }) {
   const countdown = formatCountdown(reservation.reservationStartTime, locale)
+  const guest = reservation.customerName ?? `${reservation.guests} ${t.common.guests}`
+  const table = reservation.tableNumber
 
   return (
     <Link
@@ -98,17 +81,21 @@ function ArrivalRow({
       </div>
 
       <div className="min-w-0 flex-1">
-        <p className="text-body-md text-on-surface truncate">
-          <Num>{reservation.guests}</Num> {t.common.guests}
-        </p>
+        <p className="text-body-md text-on-surface truncate">{guest}</p>
         <p className="text-body-sm text-on-surface-variant truncate">
-          {t.common.reference} {shortRef(reservation.reservationId)}
+          {table ? (
+            <>
+              {t.reservations.table} <Num>{table}</Num>
+              {' · '}
+            </>
+          ) : null}
+          <Num>{reservation.guests}</Num> {t.common.guests}
         </p>
       </div>
 
       <StatusBadge
         status={reservation.status}
-        label={reservationStatusLabel(reservation.status, t)}
+        label={reservationStatusLabel(reservation.status, t.status)}
       />
       <MaterialIcon
         name="chevron_right"
@@ -119,10 +106,26 @@ function ArrivalRow({
   )
 }
 
+function StatLink({ to, children }: { to: string; children: ReactNode }) {
+  return (
+    <Link
+      to={to}
+      className="block rounded-xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+    >
+      {children}
+    </Link>
+  )
+}
+
 export function DashboardPage() {
   const { t, locale } = useLocale()
   const { user } = useAuth()
-  const { status: scopeStatus } = useRestaurantScope()
+  const {
+    status: scopeStatus,
+    selectedRestaurant,
+    selectedBranch,
+    formatBranchLabel,
+  } = useRestaurantScope()
 
   const today = getTodayISO()
   const monthRange = defaultAnalyticsRange()
@@ -147,13 +150,13 @@ export function DashboardPage() {
   }
 
   const unreadQuery = useUnreadNotificationCount()
-  const reservationsQuery = useMyReservationsQuery(1, 20)
-  const reservationItems = reservationsQuery.data?.items
+  const bookingsQuery = useCalendarRangeReservationsQuery(today, today)
+  const reservationItems = bookingsQuery.data?.items
 
   const arrivingSoon = useMemo(
     () =>
       (reservationItems ?? [])
-        .filter((r) => isUpcomingReservation(r))
+        .filter(isArriving)
         .sort(
           (a, b) =>
             new Date(a.reservationStartTime).getTime() -
@@ -169,9 +172,10 @@ export function DashboardPage() {
 
   const upcomingCount = useMemo(
     () =>
-      (reservationItems ?? []).filter(
-        (r) => new Date(r.reservationStartTime).getTime() >= Date.now(),
-      ).length,
+      (reservationItems ?? []).filter((reservation) => {
+        const start = new Date(reservation.reservationStartTime).getTime()
+        return isServiceBooking(reservation) && start >= Date.now()
+      }).length,
     [reservationItems],
   )
 
@@ -185,17 +189,17 @@ export function DashboardPage() {
     summaryQuery.isError || (scopeStatus === 'ready' && monthSummaryQuery.isError)
 
   const firstName = user?.displayName?.split(' ')[0] ?? ''
+  const place = selectedBranch
+    ? formatBranchLabel(selectedBranch)
+    : selectedRestaurant?.name
+  const usingFallback = bookingsQuery.data?.source === 'ownership-fallback'
 
   return (
     <div className="space-y-6">
       <PageHeader
         className="mb-0"
         title={t.ops.operationsTitle}
-        subtitle={
-          firstName
-            ? `${t.login.title}, ${firstName}. ${t.dashboard.subtitle}`
-            : t.dashboard.subtitle
-        }
+        subtitle={[firstName, place, t.dashboard.subtitle].filter(Boolean).join(' · ')}
         actions={
           <>
             <Link to="/app/reservations">
@@ -215,7 +219,10 @@ export function DashboardPage() {
       />
 
       <LiveServiceBar />
-      <HomeShortcuts />
+
+      {usingFallback && (
+        <p className="text-body-sm text-on-surface-variant">{t.calendar.ownershipFallbackNote}</p>
+      )}
 
       {statsLoading ? (
         <SkeletonStats count={4} label={t.common.loading} />
@@ -233,35 +240,43 @@ export function DashboardPage() {
         </Card>
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <StatCard
-            emphasis
-            title={t.dashboard.todayReservations}
-            value={formatCount(summaryStats.total)}
-            icon="calendar_today"
-            variant="primary"
-            subtitle={t.dashboard.liveSummary}
-          />
-          <StatCard
-            title={t.dashboard.upcomingReservations}
-            value={upcomingCount}
-            icon="login"
-            variant="success"
-            subtitle={t.ops.arrivingSoon}
-          />
-          <StatCard
-            title={t.dashboard.noShowRate}
-            value={formatRate(summaryStats.noShowRate)}
-            icon="trending_up"
-            variant={noShowHigh ? 'danger' : 'default'}
-            subtitle={t.reports.noShowRate}
-          />
-          <StatCard
-            title={t.dashboard.unreadNotifications}
-            value={unreadCount}
-            icon="notifications"
-            variant={unreadCount > 0 ? 'warning' : 'default'}
-            subtitle={unreadCount > 0 ? t.dashboard.unreadHint : t.header.notifications}
-          />
+          <StatLink to="/app/reservations">
+            <StatCard
+              emphasis
+              title={t.dashboard.todayReservations}
+              value={formatCount(summaryStats.total)}
+              icon="calendar_today"
+              variant="primary"
+              subtitle={t.dashboard.liveSummary}
+            />
+          </StatLink>
+          <StatLink to="/app/reservations">
+            <StatCard
+              title={t.dashboard.upcomingReservations}
+              value={upcomingCount}
+              icon="login"
+              variant="success"
+              subtitle={t.ops.arrivingSoon}
+            />
+          </StatLink>
+          <StatLink to="/app/reports">
+            <StatCard
+              title={t.dashboard.noShowRate}
+              value={formatRate(summaryStats.noShowRate)}
+              icon="trending_up"
+              variant={noShowHigh ? 'danger' : 'default'}
+              subtitle={t.reports.noShowRate}
+            />
+          </StatLink>
+          <StatLink to="/app/notifications">
+            <StatCard
+              title={t.dashboard.unreadNotifications}
+              value={unreadCount}
+              icon="notifications"
+              variant={unreadCount > 0 ? 'warning' : 'default'}
+              subtitle={unreadCount > 0 ? t.dashboard.unreadHint : t.header.notifications}
+            />
+          </StatLink>
         </div>
       )}
 
@@ -287,8 +302,17 @@ export function DashboardPage() {
             </CardHeader>
 
             <div className="-mx-5 -mb-5">
-              {reservationsQuery.isLoading ? (
+              {bookingsQuery.isLoading ? (
                 <SkeletonText lines={4} label={t.common.loading} className="px-5 pb-5" />
+              ) : bookingsQuery.isError ? (
+                <ErrorState
+                  title={t.reservations.list.errorTitle}
+                  description={t.reservations.list.errorBody}
+                  retryLabel={t.common.retry}
+                  onRetry={() => {
+                    void bookingsQuery.refetch()
+                  }}
+                />
               ) : arrivingSoon.length === 0 ? (
                 <EmptyState
                   icon="event_available"
@@ -297,7 +321,7 @@ export function DashboardPage() {
                 />
               ) : (
                 <div className="divide-y divide-outline-variant/40">
-                  {arrivingSoon.slice(0, 5).map((r) => (
+                  {arrivingSoon.slice(0, 6).map((r) => (
                     <ArrivalRow key={r.reservationId} reservation={r} locale={locale} t={t} />
                   ))}
                 </div>
@@ -312,7 +336,7 @@ export function DashboardPage() {
                 {t.ops.needsAction}
               </CardTitle>
               <Link
-                to="/app/notifications"
+                to="/app/reservations"
                 className="text-label-md text-primary hover:underline underline-offset-2"
               >
                 {t.common.viewAll}
@@ -352,7 +376,7 @@ export function DashboardPage() {
                   </Link>
                 )}
 
-                {pending.slice(0, 3).map((r) => (
+                {pending.slice(0, 4).map((r) => (
                   <Link
                     key={r.reservationId}
                     to={`/app/reservations/${r.reservationId}`}
@@ -361,23 +385,26 @@ export function DashboardPage() {
                     <div className="flex min-w-0 items-center gap-3">
                       <span className="flex h-9 w-11 shrink-0 flex-col items-center justify-center rounded-lg bg-surface-container-high">
                         <span className="text-label-md text-on-surface nums leading-none">
-                          <Num>{r.guests}</Num>
-                        </span>
-                        <span className="text-[10px] text-on-surface-variant leading-none mt-0.5">
-                          {t.common.guests}
+                          <Num>{formatReservationTime(r.reservationStartTime, locale)}</Num>
                         </span>
                       </span>
                       <div className="min-w-0">
-                        <p className="text-label-lg text-on-surface nums">
-                          <Num>{formatReservationTime(r.reservationStartTime, locale)}</Num>
+                        <p className="text-label-lg text-on-surface truncate">
+                          {r.customerName ?? t.reservations.board.guest}
                         </p>
                         <p className="text-body-sm text-on-surface-variant truncate">
-                          {t.common.reference} {shortRef(r.reservationId)}
+                          <Num>{r.guests}</Num> {t.common.guests}
+                          {r.tableNumber ? (
+                            <>
+                              {' · '}
+                              {t.reservations.table} <Num>{r.tableNumber}</Num>
+                            </>
+                          ) : null}
                         </p>
                       </div>
                     </div>
                     <div className="flex shrink-0 items-center gap-3">
-                      <StatusBadge status={r.status} label={reservationStatusLabel(r.status, t)} />
+                      <StatusBadge status={r.status} label={reservationStatusLabel(r.status, t.status)} />
                       <MaterialIcon
                         name="chevron_right"
                         size={18}
@@ -391,7 +418,7 @@ export function DashboardPage() {
           </Card>
         </div>
 
-        <div className="space-y-6 lg:col-span-5">
+        <div className="lg:col-span-5">
           <Card padding="md">
             <CardHeader>
               <CardTitle>
@@ -447,24 +474,6 @@ export function DashboardPage() {
                 </div>
               )}
             </dl>
-          </Card>
-
-          <Card padding="md">
-            <CardHeader>
-              <CardTitle>
-                <MaterialIcon name="grid_view" size={17} className="text-primary" />
-                {t.floorPlan.title}
-              </CardTitle>
-            </CardHeader>
-            <p className="text-body-md text-on-surface-variant leading-relaxed">
-              {t.dashboard.floorPlanHint}
-            </p>
-            <Link to="/app/floor-plan" className="mt-4 inline-block">
-              <Button variant="outline">
-                <MaterialIcon name="map" size={16} />
-                {t.dashboard.floorPlanLink}
-              </Button>
-            </Link>
           </Card>
         </div>
       </div>

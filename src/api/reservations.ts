@@ -212,7 +212,8 @@ export async function getMyReservation(
 /**
  * Branch calendar / staff inbox (Postman: List Branch Reservations).
  * Required `dateFrom`/`dateTo` (inclusive `reservationDate`, max 366 days).
- * Actor: Employee (branch-scoped). OrganizationMember Owner/Admin may receive 403.
+ * Actor: restaurant Owner/Admin, or a branch-scoped Employee.
+ * Staff/Billing organization members are rejected with 403.
  */
 export interface ListBranchReservationsParams {
   restaurantId: string

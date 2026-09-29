@@ -1,4 +1,5 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query'
+import { useSyncExternalStore } from 'react'
 import {
   getMyReservation,
   listBranchReservations,
@@ -9,13 +10,19 @@ import { isApiError } from '@/api/errors'
 import { useRestaurantScope } from '@/context/RestaurantScopeContext'
 import { normalizePaginated } from '@/lib/pagination'
 import { reservationKeys } from '@/lib/queryKeys'
+import { toReservationViews, type ReservationView } from '@/lib/reservationView'
+
+function asViews(items: ReservationDto[]): ReservationView[] {
+  return toReservationViews(items)
+}
 
 export function useMyReservationsQuery(page: number, pageSize: number) {
   return useQuery({
     queryKey: reservationKeys.list(page, pageSize),
     queryFn: async ({ signal }) => {
       const data = await listMyReservations({ page, pageSize }, signal)
-      return normalizePaginated(data)
+      const normalized = normalizePaginated(data)
+      return { ...normalized, items: asViews(normalized.items) }
     },
   })
 }
@@ -23,15 +30,15 @@ export function useMyReservationsQuery(page: number, pageSize: number) {
 async function fetchOwnedReservations(
   signal: AbortSignal | undefined,
   selectedRestaurantId: string | null,
-): Promise<ReservationDto[]> {
+): Promise<ReservationView[]> {
   const pageSize = 50
   const maxPages = 8
-  const items: ReservationDto[] = []
+  const items: ReservationView[] = []
 
   for (let page = 1; page <= maxPages; page += 1) {
     const data = await listMyReservations({ page, pageSize }, signal)
     const normalized = normalizePaginated(data)
-    items.push(...normalized.items)
+    items.push(...asViews(normalized.items))
     if (
       normalized.items.length === 0 ||
       items.length >= normalized.total ||
@@ -51,10 +58,10 @@ async function fetchAllBranchReservations(
   branchId: string,
   dateFrom: string,
   dateTo: string,
-): Promise<ReservationDto[]> {
+): Promise<ReservationView[]> {
   const pageSize = 100
   const maxPages = 20
-  const items: ReservationDto[] = []
+  const items: ReservationView[] = []
 
   for (let page = 1; page <= maxPages; page += 1) {
     const data = await listBranchReservations(
@@ -69,7 +76,7 @@ async function fetchAllBranchReservations(
       signal,
     )
     const normalized = normalizePaginated(data)
-    items.push(...normalized.items)
+    items.push(...asViews(normalized.items))
     if (
       normalized.items.length === 0 ||
       items.length >= normalized.total ||
@@ -82,15 +89,15 @@ async function fetchAllBranchReservations(
   return items
 }
 
-function reservationDayKey(reservation: ReservationDto): string {
+function reservationDayKey(reservation: ReservationView): string {
   return reservation.reservationDate.slice(0, 10)
 }
 
 function filterOwnedByRange(
-  items: ReservationDto[],
+  items: ReservationView[],
   from: string,
   to: string,
-): ReservationDto[] {
+): ReservationView[] {
   return items.filter((reservation) => {
     const day = reservationDayKey(reservation)
     return day >= from && day <= to
@@ -100,11 +107,11 @@ function filterOwnedByRange(
 export type CalendarReservationsSource = 'branch' | 'ownership-fallback'
 
 export interface CalendarReservationsResult {
-  items: ReservationDto[]
+  items: ReservationView[]
   source: CalendarReservationsSource
 }
 
-/** Branch calendar API with ownership fallback when Employee actor is required (403). */
+/** Branch calendar. Owner/Admin and assigned Employees receive rows. 403 falls back to the caller's own reservations. */
 export function useCalendarRangeReservationsQuery(
   from: string,
   to: string,
@@ -195,8 +202,10 @@ export function useBranchReservationsWindowQuery(
           },
           signal,
         )
+        const normalized = normalizePaginated(data)
         return {
-          ...normalizePaginated(data),
+          ...normalized,
+          items: asViews(normalized.items),
           source: 'branch' as const,
         }
       } catch (err) {
@@ -209,7 +218,7 @@ export function useBranchReservationsWindowQuery(
 
         const data = await listMyReservations({ page, pageSize }, signal)
         const normalized = normalizePaginated(data)
-        const items = normalized.items.filter((r) => {
+        const items = asViews(normalized.items).filter((r) => {
           const day = reservationDayKey(r)
           return (
             r.restaurantId === selectedRestaurantId &&
@@ -227,6 +236,32 @@ export function useBranchReservationsWindowQuery(
       }
     },
   })
+}
+
+function readCachedReservation(
+  client: QueryClient,
+  reservationId: string,
+): ReservationView | undefined {
+  const entries = client.getQueriesData<{ items?: ReservationView[] }>({
+    queryKey: reservationKeys.all,
+  })
+  for (const [, data] of entries) {
+    const match = data?.items?.find((item) => item?.reservationId === reservationId)
+    if (match) return match
+  }
+  return undefined
+}
+
+/** Branch-list row already loaded in this session, including guest name and table. */
+export function useCachedReservation(
+  reservationId: string | undefined,
+): ReservationView | undefined {
+  const client = useQueryClient()
+  return useSyncExternalStore(
+    (onStoreChange) => client.getQueryCache().subscribe(onStoreChange),
+    () => (reservationId ? readCachedReservation(client, reservationId) : undefined),
+    () => undefined,
+  )
 }
 
 export function useMyReservationDetailQuery(reservationId: string | undefined) {
