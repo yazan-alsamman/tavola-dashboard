@@ -83,7 +83,7 @@ Floor plans & tables (Phases 5–6) — inventory reads + mutations:
 - Tables page and Floor Plan visualization are backend-driven (Owner/Admin).
 - Mutations: create/activate FloorPlan; create/update/delete/move/status Table.
 - Domain boundaries: Move ≠ Update; Status ≠ Update; selected FloorPlan ≠ active FloorPlan.
-- Geometry: save-on-drop via Update Table (no PATCH per pointer move). `FloorDesigner` is not production authority.
+- Geometry: save-on-drop via Update Table (no PATCH per pointer move). The production editor is the floor plan page.
 - Structural `TableStatus` ≠ reservation availability.
 - Legacy mock tables remain for Dashboard / Walk-In / Waitlist only.
 

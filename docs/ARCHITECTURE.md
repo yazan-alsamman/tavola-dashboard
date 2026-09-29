@@ -25,10 +25,9 @@ src/
 ├── assets/         # static images
 ├── components/
 │   ├── auth/       # ProtectedRoute / PublicRoute (restaurant)
-│   ├── dashboard/  # dashboard-page-specific composite components
-│   ├── floor/      # floor plan canvas/spatial components
+│   ├── floor/      # floor plan canvas tied to live table geometry
 │   ├── landing/    # public landing page: R3F scene, GSAP entrance/scroll timelines, sections
-│   ├── layout/      # Sidebar, Header, DashboardLayout, ContextBar, etc.
+│   ├── layout/      # Sidebar, Header, DashboardLayout, GlobalSearch, LiveServiceBar
 │   └── ui/         # generic, reusable, presentational primitives
 ├── context/        # Theme, Locale, Sidebar, Auth, RestaurantScope, Restaurant (legacy mock), Toast
 ├── data/           # mock data — feature demos only; shell scope is not mock
