@@ -3,8 +3,8 @@
 # Folder Meaning
 
 - `components/ui/` — generic, reusable, presentational primitives with no domain knowledge (`Button`, `Card`, `Modal`, `Input`, `DataTable`, `StatCard`, `StatusBadge`, `EmptyState`, `FilterChip`, `PageHeader`, `Icon`, `Num`). These must work in any context given the right props; they never know what a "Reservation" is.
-- `components/layout/` — app-shell composition (`Sidebar`, `Header`, `DashboardLayout`, `ContextBar`, `GlobalSearch`, `LiveServiceBar`, `NotificationPopover`, `QuickActionsBar`). May use context (auth, sidebar, locale) since the shell is inherently cross-cutting.
-- `components/dashboard/`, `components/floor/` — domain-specific composite components tied to one feature area (dashboard home shortcuts, floor plan canvas/spatial rendering). New domain areas get their own subfolder here (or under `features/<area>/components` once `ARCHITECTURE.md`'s `features/` threshold is hit) rather than growing flat inside `components/`.
+- `components/layout/` — app-shell composition (`Sidebar`, `Header`, `DashboardLayout`, `GlobalSearch`, `LiveServiceBar`, `NotificationPopover`). May use context (auth, sidebar, locale) since the shell is inherently cross-cutting. The signed-in notice sets `--logout-leave-banner-h` to its measured height; the sticky header and sidebar offset from that variable. Below the large breakpoint, search and the restaurant/branch switcher open from icon buttons in `Header` and reuse `GlobalSearch` and the same selects — they are not a separate primitive.
+- `components/floor/` — domain-specific floor-plan canvas tied to live table geometry. New domain areas get their own subfolder here (or under `features/<area>/components` once `ARCHITECTURE.md`'s `features/` threshold is hit) rather than growing flat inside `components/`.
 - `components/auth/` — route guards (`ProtectedRoute`, `PublicRoute`).
 
 ---

@@ -98,7 +98,11 @@ export function Sidebar() {
       <SidebarAccount
         initials={user?.initials}
         name={user?.displayName ?? ''}
-        meta={user?.organization?.role ?? user?.actorType}
+        meta={
+          user?.organization?.role
+            ? t.orgRoles[user.organization.role]
+            : user?.actorType
+        }
         isCollapsed={isCollapsed}
       >
         <SidebarAction

@@ -17,7 +17,7 @@ export function DashboardLayout() {
     { path: '/app', end: true, icon: 'dashboard', label: t.nav.dashboard },
     { path: '/app/reservations', end: false, icon: 'event', label: t.nav.reservations },
     { path: '/app/floor-plan', end: false, icon: 'layers', label: t.nav.floorPlan },
-    { path: '/app/waitlist', end: false, icon: 'hourglass_empty', label: t.nav.waitlist },
+    { path: '/app/walk-in', end: false, icon: 'directions_walk', label: t.nav.walkIn },
   ]
 
   return (

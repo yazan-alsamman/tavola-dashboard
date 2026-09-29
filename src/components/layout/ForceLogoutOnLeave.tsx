@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/context/AuthContext'
 import { useLocale } from '@/context/LocaleContext'
@@ -25,6 +25,7 @@ export function ForceLogoutOnLeave() {
   const [signedOutAwaitingClose, setSignedOutAwaitingClose] = useState(() =>
     isAwaitingCloseAfterLogout(),
   )
+  const bannerRef = useRef<HTMLDivElement>(null)
 
   const onDashboard = location.pathname.startsWith('/app')
 
@@ -39,15 +40,25 @@ export function ForceLogoutOnLeave() {
   }, [isAuthenticated])
 
   useEffect(() => {
-    if (!(isAuthenticated && onDashboard)) {
+    const banner = bannerRef.current
+    if (!(isAuthenticated && onDashboard && !signedOutAwaitingClose) || !banner) {
       document.documentElement.style.removeProperty('--logout-leave-banner-h')
       return
     }
-    document.documentElement.style.setProperty('--logout-leave-banner-h', '2.75rem')
+    const apply = () => {
+      document.documentElement.style.setProperty(
+        '--logout-leave-banner-h',
+        `${banner.offsetHeight}px`,
+      )
+    }
+    apply()
+    const observer = new ResizeObserver(apply)
+    observer.observe(banner)
     return () => {
+      observer.disconnect()
       document.documentElement.style.removeProperty('--logout-leave-banner-h')
     }
-  }, [isAuthenticated, onDashboard])
+  }, [isAuthenticated, onDashboard, signedOutAwaitingClose])
 
   const handleLogoutAndClose = async (): Promise<void> => {
     if (signingOut) return
@@ -109,16 +120,19 @@ export function ForceLogoutOnLeave() {
 
   return (
     <>
-      <div className="fixed inset-x-0 top-0 z-[60] border-b border-primary/15 bg-primary-light/90 px-3 py-1.5 backdrop-blur-sm">
-        <div className="mx-auto flex max-w-[1400px] items-center justify-between gap-3">
-          <p className="min-w-0 truncate text-xs text-on-surface-variant">
+      <div
+        ref={bannerRef}
+        className="fixed inset-x-0 top-0 z-[60] border-b border-outline-variant bg-surface-container"
+      >
+        <div className="mx-auto flex max-w-[1440px] flex-col gap-2 px-4 py-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+          <p className="min-w-0 text-body-sm leading-snug text-on-surface-variant">
             {t.auth.logoutCloseFlowHint}
           </p>
           <Button
             type="button"
-            variant="primary"
+            variant="outline"
             size="sm"
-            className="shrink-0 rounded-full"
+            className="shrink-0 self-start sm:self-center"
             disabled={signingOut}
             onClick={() => setConfirmOpen(true)}
           >
