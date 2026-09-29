@@ -1,5 +1,6 @@
 import { cn } from '@/lib/utils'
 import { MaterialIcon } from '@/components/ui/Icon'
+import { Skeleton } from '@/components/ui/Skeleton'
 
 interface DataTableProps {
   children: React.ReactNode
@@ -12,8 +13,13 @@ interface DataTableProps {
  * Separation comes from whitespace and hairlines rather than a grid of borders.
  * The scroll container owns the rounding so sticky headers clip correctly.
  */
-export function DataTable({ children, className, bare = false }: DataTableProps) {
-  return (
+export function DataTable({
+  children,
+  className,
+  bare = false,
+  cards,
+}: DataTableProps & { cards?: React.ReactNode }) {
+  const table = (
     <div
       className={cn(
         'overflow-x-auto',
@@ -24,6 +30,13 @@ export function DataTable({ children, className, bare = false }: DataTableProps)
     >
       <table className="w-full text-body-md border-separate border-spacing-0">{children}</table>
     </div>
+  )
+  if (!cards) return table
+  return (
+    <>
+      <div className="md:hidden">{cards}</div>
+      <div className="hidden md:block">{table}</div>
+    </>
   )
 }
 
@@ -156,6 +169,47 @@ export function DataTableCell({
     >
       {children}
     </td>
+  )
+}
+
+/** Primary action plus an overflow menu for the rest of a row. */
+export function DataTableRowActions({
+  primary,
+  menu,
+}: {
+  primary?: React.ReactNode
+  menu?: React.ReactNode
+}) {
+  return (
+    <div className="flex items-center justify-end gap-1">
+      {primary}
+      {menu}
+    </div>
+  )
+}
+
+export function DataTableSkeleton({
+  columns,
+  rows = 5,
+  label = 'Loading',
+}: {
+  columns: number
+  rows?: number
+  label?: string
+}) {
+  return (
+    <div role="status" aria-live="polite" aria-busy="true">
+      <span className="sr-only">{label}</span>
+      <div className="space-y-2 p-4">
+        {Array.from({ length: rows }, (_, row) => (
+          <div key={row} className="flex gap-3">
+            {Array.from({ length: columns }, (_, column) => (
+              <Skeleton key={column} className="h-8 flex-1" />
+            ))}
+          </div>
+        ))}
+      </div>
+    </div>
   )
 }
 

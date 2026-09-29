@@ -13,7 +13,7 @@ const controlBase = cn(
   'placeholder:text-outline/70',
   'transition-[border-color,box-shadow,background-color] duration-[var(--duration-fast)] ease-[var(--ease-standard)]',
   'hover:border-outline',
-  'focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/25',
+  'focus-visible:border-primary',
   'disabled:cursor-not-allowed disabled:bg-surface-container-low disabled:text-on-surface-variant disabled:hover:border-outline-variant',
   'read-only:bg-surface-container-low/60 read-only:hover:border-outline-variant',
 )

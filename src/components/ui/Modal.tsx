@@ -153,6 +153,10 @@ interface ConfirmDialogProps {
   busy?: boolean
   /** Defaults true. Set false for async confirm flows that close after success. */
   closeOnConfirm?: boolean
+  reasonLabel?: string
+  reason?: string
+  onReasonChange?: (value: string) => void
+  reasonRequired?: boolean
 }
 
 export function ConfirmDialog({
@@ -166,7 +170,12 @@ export function ConfirmDialog({
   variant = 'primary',
   busy = false,
   closeOnConfirm = true,
+  reasonLabel,
+  reason = '',
+  onReasonChange,
+  reasonRequired = false,
 }: ConfirmDialogProps) {
+  const confirmBlocked = reasonRequired && reason.trim().length === 0
   return (
     <Modal
       open={open}
@@ -181,6 +190,7 @@ export function ConfirmDialog({
           <Button
             variant={variant === 'danger' ? 'danger' : 'primary'}
             loading={busy}
+            disabled={confirmBlocked}
             onClick={() => {
               onConfirm()
               if (closeOnConfirm) onClose()
@@ -192,6 +202,17 @@ export function ConfirmDialog({
       }
     >
       <p className="text-body-md text-on-surface-variant leading-relaxed">{message}</p>
+      {reasonLabel && (
+        <label className="mt-4 block space-y-1">
+          <span className="text-label-sm text-on-surface-variant">{reasonLabel}</span>
+          <textarea
+            value={reason}
+            onChange={(event) => onReasonChange?.(event.target.value)}
+            rows={3}
+            className="w-full rounded-lg border border-outline-variant bg-surface-container-lowest px-3 py-2 text-body-md text-on-surface"
+          />
+        </label>
+      )}
     </Modal>
   )
 }

@@ -51,6 +51,9 @@ export const ar: TranslationKeys = {
     seats: 'مقاعد',
     all: 'الكل',
     close: 'إغلاق',
+    undo: 'تراجع',
+    copied: 'تم النسخ',
+    moreActions: 'المزيد من الإجراءات',
   },
   dashboard: {
     title: 'لوحة التحكم',

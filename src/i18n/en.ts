@@ -49,6 +49,9 @@ export const en = {
     seats: 'seats',
     all: 'All',
     close: 'Close',
+    undo: 'Undo',
+    copied: 'Copied',
+    moreActions: 'More actions',
   },
   dashboard: {
     title: 'Dashboard',

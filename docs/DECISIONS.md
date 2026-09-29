@@ -21,6 +21,22 @@ Consequences:
 
 ---
 
+## ADR-021 — One formatter and a small set of shell primitives
+Date: 2026-09-29
+Status: Accepted
+
+Context:
+Dates, times, and numbers were formatted in each page, and the calendar axis wrote English "10 AM". Icon buttons, overflow actions, confirmations, and side panels were being reinvented per screen.
+
+Decision:
+1. Staff-facing dates, times, ranges, relative times, and numbers go through `src/lib/format.ts` with the active locale. Tabular numerals stay on `.nums`.
+2. `Tooltip`, `DropdownMenu`, `Drawer`, and `CopyButton` are the shared primitives. `ConfirmDialog` stays on `Modal` and can ask for a reason. Toasts accept an optional undo action.
+3. `StatCard` uses quiet / default / loud. A zero is quiet unless the card is loud. `EmptyState` has a compact size. `DataTable` can swap to caller-provided cards below `md` and can render skeleton rows.
+4. Focus uses the single `:focus-visible` outline in `index.css`.
+
+Consequences:
+A new status or a new screen should not add another date helper or another menu. Pages adopt the row-action and card patterns as they are rebuilt.
+
 ## ADR-020 — Session notice and mobile shell stay in view
 Date: 2026-09-29
 Status: Accepted

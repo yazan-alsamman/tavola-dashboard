@@ -8,8 +8,8 @@ interface EmptyStateProps {
   action?: React.ReactNode
   /** Secondary escape hatch, e.g. "Clear filters". */
   secondaryAction?: React.ReactNode
-  /** `inline` for empty table bodies, `page` for a whole blank screen. */
-  size?: 'inline' | 'page'
+  /** `compact` sits inside a card. `inline` fills a table. `page` is a blank screen. */
+  size?: 'compact' | 'inline' | 'page'
   className?: string
 }
 
@@ -31,7 +31,9 @@ export function EmptyState({
     <div
       className={cn(
         'flex flex-col items-center justify-center text-center px-6',
-        size === 'page' ? 'py-20' : 'py-14',
+        size === 'page' && 'py-20',
+        size === 'inline' && 'py-14',
+        size === 'compact' && 'py-6',
         className,
       )}
     >
@@ -39,16 +41,20 @@ export function EmptyState({
         className={cn(
           'flex items-center justify-center rounded-2xl bg-primary-subtle text-primary',
           'ring-1 ring-primary-border/60',
-          size === 'page' ? 'h-16 w-16' : 'h-12 w-12',
+          size === 'page' && 'h-16 w-16',
+          size === 'inline' && 'h-12 w-12',
+          size === 'compact' && 'h-8 w-8',
         )}
       >
-        <MaterialIcon name={icon} size={size === 'page' ? 28 : 22} />
+        <MaterialIcon name={icon} size={size === 'page' ? 28 : size === 'compact' ? 16 : 22} />
       </div>
 
       <h3
         className={cn(
-          'text-on-surface mt-5',
-          size === 'page' ? 'text-headline-md' : 'text-headline-sm',
+          'text-on-surface',
+          size === 'page' && 'text-headline-md mt-5',
+          size === 'inline' && 'text-headline-sm mt-5',
+          size === 'compact' && 'text-label-lg mt-3',
         )}
       >
         {title}

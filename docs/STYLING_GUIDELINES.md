@@ -33,6 +33,10 @@ Dark mode is a `.dark` class toggle (`@custom-variant dark (&:where(.dark, .dark
 
 ---
 
+# Focus
+
+One focus ring for every interactive control: `src/index.css` sets `:focus-visible` to a 2px primary outline. Do not add a second ring on buttons. Form controls may change border color on focus, and they must not set `outline: none`.
+
 # RTL
 
 Arabic is a fully supported, mirrored layout, not just translated text. Use logical Tailwind properties (`ps-*`/`pe-*`, `ms-*`/`me-*`, `start-*`/`end-*`) instead of physical ones (`pl-*`/`pr-*`, `left-*`/`right-*`) wherever a value should flip between LTR and RTL. See `I18N_AND_RTL.md` for the direction-switching mechanism and what still needs manual handling (icons implying direction, charts, the floor-plan canvas).
