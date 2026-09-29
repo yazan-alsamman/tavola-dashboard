@@ -24,6 +24,9 @@ function galleryKeys(restaurantId: string) {
   return ['restaurants', restaurantId, 'gallery'] as const
 }
 
+const ACCEPTED_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp'])
+const MAX_GALLERY_BYTES = 5 * 1024 * 1024
+
 export function GalleryPage() {
   const { t } = useLocale()
   const { toast } = useToast()
@@ -32,6 +35,8 @@ export function GalleryPage() {
     useRestaurantScope()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [removeTarget, setRemoveTarget] = useState<GalleryItemDto | null>(null)
+  const [dragOver, setDragOver] = useState(false)
+  const [uploadError, setUploadError] = useState<string | null>(null)
 
   const enabled = scopeStatus === 'ready' && Boolean(selectedRestaurantId)
 
@@ -45,13 +50,16 @@ export function GalleryPage() {
     mutationFn: (file: File) =>
       addRestaurantGalleryImage(selectedRestaurantId!, file),
     onSuccess: async () => {
+      setUploadError(null)
       await queryClient.invalidateQueries({
         queryKey: galleryKeys(selectedRestaurantId!),
       })
       toast('success', t.gallery.uploadSuccess)
     },
     onError: (err) => {
-      toast('error', isApiError(err) ? err.message : t.gallery.errors.unknown)
+      const message = isApiError(err) ? err.message : t.gallery.errors.unknown
+      setUploadError(message)
+      toast('error', message)
     },
   })
 
@@ -70,11 +78,24 @@ export function GalleryPage() {
     },
   })
 
+  const acceptFile = (file: File | undefined): void => {
+    if (!file || !selectedRestaurantId) return
+    if (!ACCEPTED_TYPES.has(file.type)) {
+      setUploadError(t.gallery.unsupportedType)
+      return
+    }
+    if (file.size > MAX_GALLERY_BYTES) {
+      setUploadError(t.gallery.fileTooLarge)
+      return
+    }
+    setUploadError(null)
+    uploadMutation.mutate(file)
+  }
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
     const file = e.target.files?.[0]
     e.target.value = ''
-    if (!file || !selectedRestaurantId) return
-    uploadMutation.mutate(file)
+    acceptFile(file)
   }
 
   if (!enabled) {
@@ -125,9 +146,55 @@ export function GalleryPage() {
 
       <RestaurantCoverSection restaurantId={selectedRestaurantId!} />
 
-      <p className="text-body-sm text-on-surface-variant mb-6 max-w-2xl">
+      <p className="text-body-sm text-on-surface-variant mb-4 max-w-2xl">
         {t.gallery.hint}
       </p>
+
+      <div
+        className={cn(
+          'mb-6 rounded-xl border-2 border-dashed px-4 py-6 text-center transition-colors',
+          dragOver
+            ? 'border-primary bg-primary/5'
+            : 'border-outline-variant/50 bg-surface-container-low',
+          uploadMutation.isPending && 'opacity-80',
+        )}
+        onDragOver={(event) => {
+          event.preventDefault()
+          setDragOver(true)
+        }}
+        onDragLeave={() => setDragOver(false)}
+        onDrop={(event) => {
+          event.preventDefault()
+          setDragOver(false)
+          acceptFile(event.dataTransfer.files?.[0])
+        }}
+      >
+        <MaterialIcon name="add_a_photo" size={28} className="mx-auto text-on-surface-variant" />
+        <p className="mt-2 text-body-md text-on-surface">{t.gallery.dropTitle}</p>
+        <p className="mt-1 text-body-sm text-on-surface-variant">{t.gallery.dropHint}</p>
+        <Button
+          type="button"
+          variant="outline"
+          className="mt-3"
+          disabled={uploadMutation.isPending}
+          onClick={() => fileInputRef.current?.click()}
+        >
+          {t.gallery.upload}
+        </Button>
+        {uploadMutation.isPending && (
+          <div className="mx-auto mt-4 max-w-xs" role="status" aria-live="polite">
+            <p className="text-label-sm text-on-surface-variant">{t.gallery.uploading}</p>
+            <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-surface-container-high">
+              <div className="h-full w-1/3 animate-pulse bg-primary" />
+            </div>
+          </div>
+        )}
+        {uploadError && (
+          <p className="mt-3 text-label-sm text-error" role="alert">
+            {uploadError}
+          </p>
+        )}
+      </div>
 
       {galleryQuery.isLoading && (
         <p className="text-body-md text-on-surface-variant py-16 text-center">
@@ -199,38 +266,17 @@ export function GalleryPage() {
                     <MaterialIcon name="image" size={32} />
                   </div>
                 )}
-                <div className="absolute inset-x-0 bottom-0 p-2 bg-gradient-to-t from-black/55 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
-                  <Button
-                    size="sm"
-                    variant="danger"
-                    className="w-full"
-                    disabled={removeMutation.isPending}
-                    onClick={() => setRemoveTarget(item)}
-                  >
-                    <MaterialIcon name="delete" size={16} className="me-1" />
-                    {t.common.delete}
-                  </Button>
-                </div>
+                <button
+                  type="button"
+                  className="absolute top-2 end-2 inline-flex h-11 w-11 items-center justify-center rounded-lg bg-surface-container-lowest/90 text-error shadow-sm"
+                  aria-label={t.common.delete}
+                  disabled={removeMutation.isPending}
+                  onClick={() => setRemoveTarget(item)}
+                >
+                  <MaterialIcon name="delete" size={18} />
+                </button>
               </div>
             ))}
-
-            <button
-              type="button"
-              disabled={uploadMutation.isPending}
-              onClick={() => fileInputRef.current?.click()}
-              className={cn(
-                'aspect-square rounded-xl border-2 border-dashed border-outline-variant/50',
-                'flex flex-col items-center justify-center gap-2',
-                'text-on-surface-variant hover:border-primary/50 hover:text-primary',
-                'hover:bg-primary/5 transition-colors',
-                uploadMutation.isPending && 'opacity-60 pointer-events-none',
-              )}
-            >
-              <MaterialIcon name="add_a_photo" size={28} />
-              <span className="text-label-sm font-medium px-3 text-center">
-                {t.gallery.upload}
-              </span>
-            </button>
           </div>
         </>
       )}

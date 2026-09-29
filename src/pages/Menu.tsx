@@ -1034,6 +1034,7 @@ export function MenuPage() {
   const uploadCategoryImage = useUploadMenuCategoryImageMutation()
   const removeCategoryImage = useRemoveMenuCategoryImageMutation()
   const createItem = useCreateMenuItemMutation()
+  const updateItem = useUpdateMenuItemMutation()
   const reorderItems = useReorderMenuItemsMutation()
   const deleteItem = useDeleteMenuItemMutation()
 
@@ -1111,6 +1112,7 @@ export function MenuPage() {
     uploadCategoryImage.isPending ||
     removeCategoryImage.isPending ||
     createItem.isPending ||
+    updateItem.isPending ||
     reorderItems.isPending ||
     deleteItem.isPending
 
@@ -1128,6 +1130,57 @@ export function MenuPage() {
         menuId,
         body: { orderedIds: ordered.map((c) => c.categoryId) },
       })
+    } catch (err) {
+      toast('error', mapMenuError(err, t))
+    }
+  }
+
+  const itemAvailability = (item: MenuItemDto) =>
+    canManage ? (
+      <button
+        type="button"
+        role="switch"
+        aria-checked={item.availabilityMode !== 'scheduled'}
+        aria-label={t.menu.items.availability}
+        disabled={anyMutationPending}
+        onClick={() => void toggleAvailability(item)}
+        className="inline-flex min-h-11 items-center gap-2 rounded-lg text-label-sm text-on-surface"
+      >
+        <span
+          className={cn(
+            'relative h-5 w-9 shrink-0 rounded-full',
+            item.availabilityMode === 'scheduled' ? 'bg-outline-variant/50' : 'bg-primary',
+          )}
+        >
+          <span
+            className={cn(
+              'absolute top-0.5 h-4 w-4 rounded-full bg-surface-container-lowest',
+              item.availabilityMode === 'scheduled' ? 'start-0.5' : 'end-0.5',
+            )}
+          />
+        </span>
+        {item.availabilityMode === 'scheduled'
+          ? t.menu.items.scheduled
+          : t.menu.items.alwaysAvailable}
+      </button>
+    ) : (
+      <span className="text-label-sm text-on-surface-variant">
+        {item.availabilityMode === 'scheduled'
+          ? t.menu.items.scheduled
+          : t.menu.items.alwaysAvailable}
+      </span>
+    )
+
+  const toggleAvailability = async (item: MenuItemDto): Promise<void> => {
+    if (!canManage || !categoryScope) return
+    const next = item.availabilityMode === 'scheduled' ? 'always' : 'scheduled'
+    try {
+      await updateItem.mutateAsync({
+        ...categoryScope,
+        itemId: item.itemId,
+        body: { availabilityMode: next },
+      })
+      toast('success', t.menu.items.saveSuccess)
     } catch (err) {
       toast('error', mapMenuError(err, t))
     }
@@ -1413,9 +1466,11 @@ export function MenuPage() {
                 {t.menu.categories.selectMenu}
               </p>
             ) : categories.length === 0 ? (
-              <p className="text-body-sm text-on-surface-variant px-2 py-4 text-center">
-                {t.menu.categories.empty}
-              </p>
+              <EmptyState
+                size="compact"
+                icon="category"
+                title={t.menu.categories.empty}
+              />
             ) : (
               categories.map((category, index) => {
                 const active = category.categoryId === resolvedCategoryId
@@ -1446,7 +1501,7 @@ export function MenuPage() {
                             <MaterialIcon name="image" size={16} />
                           </div>
                         )}
-                        <div className="min-w-0">
+                        <div className="min-w-0 flex-1">
                           <span className="text-body-md font-medium text-on-surface block truncate">
                             {category.name}
                           </span>
@@ -1456,6 +1511,9 @@ export function MenuPage() {
                             </p>
                           )}
                         </div>
+                        <Num className="text-label-sm text-on-surface-variant shrink-0">
+                          {category.items?.length ?? 0}
+                        </Num>
                       </div>
                     </button>
                     {active && canManage && (
@@ -1578,14 +1636,53 @@ export function MenuPage() {
               {t.menu.items.selectCategory}
             </p>
           ) : items.length === 0 ? (
-            <p className="text-body-sm text-on-surface-variant px-5 py-8 text-center">
-              {t.menu.items.empty}
-            </p>
+            <EmptyState
+              size="compact"
+              icon="restaurant"
+              title={t.menu.items.empty}
+            />
           ) : (
-            <DataTable className="border-0 rounded-none shadow-none">
+            <DataTable
+              className="border-0 rounded-none shadow-none"
+              cards={
+                <div className="grid gap-3 p-3">
+                  {items.map((item) => (
+                    <article
+                      key={item.itemId}
+                      className="rounded-xl border border-outline-variant/40 p-4 space-y-3"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <p className="font-medium text-on-surface">{item.name}</p>
+                        <p className="text-label-md text-on-surface">
+                          <Num>{item.price ?? 0}</Num>
+                          {item.currency ? ` ${item.currency}` : ''}
+                        </p>
+                      </div>
+                      {itemAvailability(item)}
+                      <div className="flex justify-end gap-1">
+                        <Button size="sm" variant="outline" onClick={() => setEditItem(item)}>
+                          {canManage ? t.common.edit : t.common.view}
+                        </Button>
+                        {canManage && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            disabled={anyMutationPending}
+                            onClick={() => setDeleteItemTarget(item)}
+                          >
+                            {t.common.delete}
+                          </Button>
+                        )}
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              }
+            >
               <DataTableHead>
                 <DataTableHeader>{t.menu.items.name}</DataTableHeader>
                 <DataTableHeader>{t.menu.items.price}</DataTableHeader>
+                <DataTableHeader>{t.menu.items.availability}</DataTableHeader>
                 <DataTableHeader className="text-end">
                   {t.common.actions}
                 </DataTableHeader>
@@ -1625,6 +1722,7 @@ export function MenuPage() {
                       <Num>{item.price ?? 0}</Num>
                       {item.currency ? ` ${item.currency}` : ''}
                     </DataTableCell>
+                    <DataTableCell>{itemAvailability(item)}</DataTableCell>
                     <DataTableCell className="text-end">
                       <div className="flex justify-end gap-1">
                         {canManage && (

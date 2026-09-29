@@ -21,6 +21,24 @@ Consequences:
 
 ---
 
+## ADR-024 — Menu and marketing lead with the next publish
+Date: 2026-09-29
+Status: Accepted
+
+Context:
+Offers, gallery, menu, and reviews were live, but each row showed every action at once. Gallery upload was a file button with a hover-only delete wash. Menu items hid availability inside the editor. Reviews had no summary, and the reply was an icon beside delete.
+
+Decision:
+1. A draft offer’s primary action is Publish. Edit and delete move to the overflow. Delete stays behind confirmation. The period is one compact range. Offers, reviews, and menu items use cards below `md` so that action stays on screen.
+2. The cover is a capped card. Replace sits on the image and still calls the cover upload. Gallery photos are added from a drop zone. Progress is the pending upload, and a rejected file or a failed call stays on the zone. The grid no longer uses a dark wash.
+3. Categories show how many items they hold. The item switch sets `availabilityMode` to `always` or `scheduled` through the existing item update. It does not invent an on/off flag.
+4. The reviews page shows the reviews-summary average and count when that call returns them. Star filters apply to the loaded page, because the list endpoint accepts page and limit only. Reply is the labeled primary action. A photo and delete stay in the overflow, and delete still confirms.
+
+Consequences:
+A scheduled item with no windows still follows the availability windows already stored on the item. A star filter does not ask the server for that rating, so another page can still hold matching reviews.
+
+---
+
 ## ADR-023 — The service floor keeps the map in front
 Date: 2026-09-29
 Status: Accepted

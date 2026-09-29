@@ -21,7 +21,9 @@ import {
   DataTableBody,
   DataTableRow,
   DataTableCell,
+  DataTableRowActions,
 } from '@/components/ui/DataTable'
+import { DropdownMenu, DropdownMenuItem } from '@/components/ui/DropdownMenu'
 import { useLocale } from '@/context/LocaleContext'
 import { useRestaurantScope } from '@/context/RestaurantScopeContext'
 import { useToast } from '@/context/ToastContext'
@@ -33,7 +35,7 @@ import {
   useUpdateOfferMutation,
 } from '@/hooks/useOfferMutations'
 import { useCanManageOffers } from '@/hooks/usePermissions'
-import { formatDateTime } from '@/lib/format'
+import { formatDate, formatDateRange } from '@/lib/format'
 
 const PAGE_SIZE = 20
 
@@ -96,9 +98,13 @@ function formToRequest(form: OfferFormState): CreateOfferRequest {
   }
 }
 
-function formatInstant(iso: string | undefined, locale: string): string {
-  if (!iso) return '—'
-  return formatDateTime(iso, locale)
+function offerPeriod(offer: OfferDto, locale: string): string {
+  if (offer.startsAt && offer.endsAt) {
+    return formatDateRange(offer.startsAt, offer.endsAt, locale)
+  }
+  if (offer.startsAt) return formatDate(offer.startsAt, locale)
+  if (offer.endsAt) return formatDate(offer.endsAt, locale)
+  return '—'
 }
 
 function offerStatusLabel(
@@ -209,6 +215,38 @@ export function OffersPage() {
     }
   }
 
+  const offerActions = (offer: OfferDto) => {
+    if (!canManage) return null
+    const isDraft = offer.status === 'Draft'
+    return (
+      <DataTableRowActions
+        primary={
+          isDraft ? (
+            <Button
+              size="sm"
+              disabled={publishMutation.isPending}
+              onClick={() => void handlePublish(offer)}
+            >
+              {t.offers.publish}
+            </Button>
+          ) : undefined
+        }
+        menu={
+          <DropdownMenu label={t.common.moreActions}>
+            {isDraft && (
+              <DropdownMenuItem onSelect={() => openEdit(offer)}>
+                {t.common.edit}
+              </DropdownMenuItem>
+            )}
+            <DropdownMenuItem destructive onSelect={() => setDeleteTarget(offer)}>
+              {t.common.delete}
+            </DropdownMenuItem>
+          </DropdownMenu>
+        }
+      />
+    )
+  }
+
   const confirmDelete = async (): Promise<void> => {
     if (!deleteTarget || !selectedRestaurantId) return
     try {
@@ -305,7 +343,36 @@ export function OffersPage() {
 
       {listQuery.isSuccess && offers.length > 0 && (
         <>
-          <DataTable className="mb-4">
+          <DataTable
+            className="mb-4"
+            cards={
+              <div className="mb-4 grid gap-3">
+                {offers.map((offer) => (
+                  <article
+                    key={offer.offerId}
+                    className="rounded-xl border border-outline-variant/40 bg-surface-container-lowest p-4"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="font-medium text-on-surface truncate">
+                          {offer.title ?? '—'}
+                        </p>
+                        <p className="text-label-sm text-on-surface-variant">
+                          {discountLabel(offer, t)} · {offerPeriod(offer, locale)}
+                        </p>
+                      </div>
+                      <StatusBadge
+                        type="custom"
+                        status={offer.status ?? ''}
+                        label={offerStatusLabel(offer.status, t)}
+                      />
+                    </div>
+                    {canManage && <div className="mt-3 flex justify-end">{offerActions(offer)}</div>}
+                  </article>
+                ))}
+              </div>
+            }
+          >
             <DataTableHead>
               <DataTableHeader>{t.offers.columns.title}</DataTableHeader>
               <DataTableHeader>{t.offers.columns.discount}</DataTableHeader>
@@ -321,7 +388,6 @@ export function OffersPage() {
             </DataTableHead>
             <DataTableBody>
               {offers.map((offer) => {
-                const isDraft = offer.status === 'Draft'
                 return (
                   <DataTableRow key={offer.offerId}>
                     <DataTableCell>
@@ -335,13 +401,8 @@ export function OffersPage() {
                       </div>
                     </DataTableCell>
                     <DataTableCell>{discountLabel(offer, t)}</DataTableCell>
-                    <DataTableCell className="hidden md:table-cell">
-                      <div className="flex flex-col text-label-sm">
-                        <span>{formatInstant(offer.startsAt, locale)}</span>
-                        <span className="text-on-surface-variant">
-                          {formatInstant(offer.endsAt, locale)}
-                        </span>
-                      </div>
+                    <DataTableCell className="hidden md:table-cell text-label-sm">
+                      {offerPeriod(offer, locale)}
                     </DataTableCell>
                     <DataTableCell>
                       <StatusBadge
@@ -352,37 +413,7 @@ export function OffersPage() {
                     </DataTableCell>
                     {canManage && (
                       <DataTableCell className="text-end">
-                        <div className="flex justify-end gap-1">
-                          {isDraft && (
-                            <>
-                              <button
-                                type="button"
-                                className="p-2 rounded-lg text-on-surface-variant hover:bg-surface-container-high"
-                                title={t.common.edit}
-                                onClick={() => openEdit(offer)}
-                              >
-                                <MaterialIcon name="edit" size={18} />
-                              </button>
-                              <button
-                                type="button"
-                                className="p-2 rounded-lg text-primary hover:bg-primary/10"
-                                title={t.offers.publish}
-                                disabled={publishMutation.isPending}
-                                onClick={() => void handlePublish(offer)}
-                              >
-                                <MaterialIcon name="publish" size={18} />
-                              </button>
-                            </>
-                          )}
-                          <button
-                            type="button"
-                            className="p-2 rounded-lg text-error hover:bg-error/10"
-                            title={t.common.delete}
-                            onClick={() => setDeleteTarget(offer)}
-                          >
-                            <MaterialIcon name="delete" size={18} />
-                          </button>
-                        </div>
+                        {offerActions(offer)}
                       </DataTableCell>
                     )}
                   </DataTableRow>

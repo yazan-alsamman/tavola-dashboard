@@ -66,27 +66,23 @@ export function RestaurantCoverSection({ restaurantId }: { restaurantId: string 
           </p>
         </div>
         {canUpload && (
-          <>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              className="hidden"
-              onChange={handleFile}
-            />
-            <Button
-              type="button"
-              disabled={uploadMutation.isPending}
-              onClick={() => fileInputRef.current?.click()}
-            >
-              <MaterialIcon name="add_a_photo" size={18} className="me-2" />
-              {uploadMutation.isPending
-                ? t.common.loading
-                : coverUrl
-                  ? copy.replace
-                  : copy.upload}
-            </Button>
-          </>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            className="hidden"
+            onChange={handleFile}
+          />
+        )}
+        {canUpload && coverQuery.isSuccess && !coverUrl && (
+          <Button
+            type="button"
+            disabled={uploadMutation.isPending}
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <MaterialIcon name="add_a_photo" size={18} className="me-2" />
+            {uploadMutation.isPending ? t.common.loading : copy.upload}
+          </Button>
         )}
       </div>
 
@@ -110,11 +106,24 @@ export function RestaurantCoverSection({ restaurantId }: { restaurantId: string 
       )}
 
       {coverQuery.isSuccess && coverUrl && (
-        <img
-          src={coverUrl}
-          alt=""
-          className="max-h-72 w-full rounded-xl border border-outline-variant/30 object-cover"
-        />
+        <div className="relative max-h-72 overflow-hidden rounded-xl border border-outline-variant/30">
+          <img
+            src={coverUrl}
+            alt=""
+            className="h-72 w-full object-cover"
+          />
+          {canUpload && (
+            <div className="absolute inset-x-0 bottom-0 flex justify-end bg-surface-container-lowest/85 p-3">
+              <Button
+                type="button"
+                disabled={uploadMutation.isPending}
+                onClick={() => fileInputRef.current?.click()}
+              >
+                {uploadMutation.isPending ? t.common.loading : copy.replace}
+              </Button>
+            </div>
+          )}
+        </div>
       )}
 
       {coverQuery.isSuccess && !coverUrl && (
