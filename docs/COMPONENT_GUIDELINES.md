@@ -19,7 +19,7 @@ Everything else (`layout/`, `dashboard/`, `floor/`, and page-level components) c
 
 # Menu and marketing
 
-Draft offers lead with Publish. Edit and delete sit in the overflow, and delete still confirms. The period is one date range. Offers, reviews, and menu items are cards below `md`. The gallery cover is a card with a max height and Replace on the image. New gallery photos go through a drop zone that shows upload progress and the error on the zone. Menu categories show a count. An item’s availability switch writes `availabilityMode` (`always` or `scheduled`). Reviews show the reviews-summary average when the analytics call returns one. Star filters apply to the current page, because the list call has no rating query. Reply is the row’s primary action.
+Draft offers lead with Publish. Edit and delete sit in the overflow, and delete still confirms. The period is one date range. Offers, reviews, and menu items are cards below `md`. The gallery cover is a card with a max height and Replace on the image. New gallery photos go through a drop zone that shows upload progress and the error on the zone. Menu categories show a count. An item’s availability switch writes `availabilityMode` (`Always` or `Unavailable`). Saving a description sends that mode too, because the item update requires it. Windows are saved only after the mode is `Scheduled`. Reviews show the reviews-summary average when the analytics call returns one. Star filters apply to the current page, because the list call has no rating query. Reply is the row’s primary action.
 
 # Service floor
 

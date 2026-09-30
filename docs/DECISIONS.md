@@ -21,6 +21,21 @@ Consequences:
 
 ---
 
+## ADR-025 — A branch pin is the restaurant’s place on the map
+Date: 2026-09-29
+Status: Accepted
+
+Context:
+Guest discovery finds restaurants with `GET /discovery/restaurants/nearby`. The coordinates live on the branch (`latitude`, `longitude`) in create and update. The branch form saved those fields as null because it never asked for them.
+
+Decision:
+The branch form includes a map. A click, typed coordinates, or this device’s location sets the pin. Save sends both numbers on the existing branch create or update body. One number without the other is rejected in the form. The nearby endpoint is not called to store a location.
+
+Consequences:
+Each branch has its own pin. A branch left without coordinates stays off the guest map. The map tiles come from OpenStreetMap.
+
+---
+
 ## ADR-024 — Menu and marketing lead with the next publish
 Date: 2026-09-29
 Status: Accepted
@@ -31,7 +46,7 @@ Offers, gallery, menu, and reviews were live, but each row showed every action a
 Decision:
 1. A draft offer’s primary action is Publish. Edit and delete move to the overflow. Delete stays behind confirmation. The period is one compact range. Offers, reviews, and menu items use cards below `md` so that action stays on screen.
 2. The cover is a capped card. Replace sits on the image and still calls the cover upload. Gallery photos are added from a drop zone. Progress is the pending upload, and a rejected file or a failed call stays on the zone. The grid no longer uses a dark wash.
-3. Categories show how many items they hold. The item switch sets `availabilityMode` to `always` or `scheduled` through the existing item update. It does not invent an on/off flag.
+3. Categories show how many items they hold. The item switch sets `availabilityMode` to `Always` or `Unavailable` through the existing item update. Saving the item sends the current mode, because the update rejects a body that omits it. The accepted values are `Always`, `Unavailable`, and `Scheduled`. Windows are written only after the mode is `Scheduled`.
 4. The reviews page shows the reviews-summary average and count when that call returns them. Star filters apply to the loaded page, because the list endpoint accepts page and limit only. Reply is the labeled primary action. A photo and delete stay in the overflow, and delete still confirms.
 
 Consequences:

@@ -33,7 +33,16 @@ export interface MenuCategoryDto {
   [key: string]: unknown
 }
 
-export type MenuItemAvailabilityMode = 'always' | 'scheduled' | (string & {})
+/** Live enum on item update. Lowercase values are rejected. */
+export type MenuItemAvailabilityMode = 'Always' | 'Unavailable' | 'Scheduled'
+
+export function menuItemAvailabilityMode(value: unknown): MenuItemAvailabilityMode {
+  if (typeof value !== 'string') return 'Always'
+  const normalized = value.trim().toLowerCase()
+  if (normalized === 'unavailable') return 'Unavailable'
+  if (normalized === 'scheduled') return 'Scheduled'
+  return 'Always'
+}
 
 export interface MenuItemDto {
   itemId: string
@@ -196,6 +205,7 @@ function normalizeItem(raw: unknown): MenuItemDto {
     addOns: Array.isArray(record.addOns)
       ? record.addOns.map(normalizeAddOn)
       : undefined,
+    availabilityMode: menuItemAvailabilityMode(record.availabilityMode),
     availabilityWindows: Array.isArray(record.availabilityWindows)
       ? (record.availabilityWindows as AvailabilityWindowDto[])
       : undefined,
@@ -677,7 +687,7 @@ export async function updateMenuItem(
         ...(body.calories !== undefined ? { calories: body.calories } : {}),
         ...(body.allergens !== undefined ? { allergens: body.allergens } : {}),
         ...(body.availabilityMode !== undefined
-          ? { availabilityMode: body.availabilityMode }
+          ? { availabilityMode: menuItemAvailabilityMode(body.availabilityMode) }
           : {}),
       },
     },

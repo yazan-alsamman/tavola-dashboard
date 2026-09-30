@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { isApiError } from '@/api/errors'
+import { menuItemAvailabilityMode } from '@/api/menus'
 import type {
   MenuCategoryDto,
   MenuDto,
@@ -72,7 +73,11 @@ function sortByDisplayOrder<T extends { displayOrder?: number }>(items: T[]): T[
 }
 
 function mapMenuError(err: unknown, t: ReturnType<typeof useLocale>['t']): string {
-  if (isApiError(err)) return err.message
+  if (isApiError(err)) {
+    const detail = err.errors.find((entry) => typeof entry === 'string')
+    if (typeof detail === 'string' && detail.trim()) return detail
+    return err.message
+  }
   return t.menu.errors.unknown
 }
 
@@ -207,6 +212,7 @@ function ItemEditModal({
           name: name.trim(),
           description: description.trim() || null,
           price: parsedPrice,
+          availabilityMode: menuItemAvailabilityMode(item.availabilityMode),
         },
       })
       toast('success', t.menu.items.saveSuccess)
@@ -313,6 +319,12 @@ function ItemEditModal({
   const handleSaveAvailability = async (): Promise<void> => {
     if (!canManage || busy) return
     try {
+      if (menuItemAvailabilityMode(item.availabilityMode) !== 'Scheduled') {
+        await updateItem.mutateAsync({
+          ...itemScope,
+          body: { availabilityMode: 'Scheduled' },
+        })
+      }
       await replaceAvailability.mutateAsync({
         ...itemScope,
         body: { windows },
@@ -1135,12 +1147,20 @@ export function MenuPage() {
     }
   }
 
-  const itemAvailability = (item: MenuItemDto) =>
-    canManage ? (
+  const availabilityLabel = (item: MenuItemDto): string => {
+    const mode = menuItemAvailabilityMode(item.availabilityMode)
+    if (mode === 'Scheduled') return t.menu.items.scheduled
+    if (mode === 'Unavailable') return t.menu.items.unavailable
+    return t.menu.items.alwaysAvailable
+  }
+
+  const itemAvailability = (item: MenuItemDto) => {
+    const available = menuItemAvailabilityMode(item.availabilityMode) === 'Always'
+    return canManage ? (
       <button
         type="button"
         role="switch"
-        aria-checked={item.availabilityMode !== 'scheduled'}
+        aria-checked={available}
         aria-label={t.menu.items.availability}
         disabled={anyMutationPending}
         onClick={() => void toggleAvailability(item)}
@@ -1149,31 +1169,29 @@ export function MenuPage() {
         <span
           className={cn(
             'relative h-5 w-9 shrink-0 rounded-full',
-            item.availabilityMode === 'scheduled' ? 'bg-outline-variant/50' : 'bg-primary',
+            available ? 'bg-primary' : 'bg-outline-variant/50',
           )}
         >
           <span
             className={cn(
               'absolute top-0.5 h-4 w-4 rounded-full bg-surface-container-lowest',
-              item.availabilityMode === 'scheduled' ? 'start-0.5' : 'end-0.5',
+              available ? 'end-0.5' : 'start-0.5',
             )}
           />
         </span>
-        {item.availabilityMode === 'scheduled'
-          ? t.menu.items.scheduled
-          : t.menu.items.alwaysAvailable}
+        {availabilityLabel(item)}
       </button>
     ) : (
-      <span className="text-label-sm text-on-surface-variant">
-        {item.availabilityMode === 'scheduled'
-          ? t.menu.items.scheduled
-          : t.menu.items.alwaysAvailable}
-      </span>
+      <span className="text-label-sm text-on-surface-variant">{availabilityLabel(item)}</span>
     )
+  }
 
   const toggleAvailability = async (item: MenuItemDto): Promise<void> => {
     if (!canManage || !categoryScope) return
-    const next = item.availabilityMode === 'scheduled' ? 'always' : 'scheduled'
+    const next =
+      menuItemAvailabilityMode(item.availabilityMode) === 'Always'
+        ? 'Unavailable'
+        : 'Always'
     try {
       await updateItem.mutateAsync({
         ...categoryScope,

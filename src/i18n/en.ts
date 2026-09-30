@@ -599,6 +599,7 @@ export const en = {
       deleteSuccess: 'Item deleted',
       availability: 'Availability',
       alwaysAvailable: 'Always available',
+      unavailable: 'Unavailable',
       scheduled: 'Scheduled',
     },
     optionGroups: {
@@ -873,6 +874,18 @@ export const en = {
       phone: 'Phone',
       timezone: 'Timezone',
       currency: 'Currency',
+    },
+    location: {
+      title: 'Map pin',
+      hint: 'Guests find this branch on the map from this pin. Click the map, or use this device.',
+      latitude: 'Latitude',
+      longitude: 'Longitude',
+      useDevice: 'Use this device’s location',
+      onMap: 'On the map',
+      missing: 'Not on the map yet',
+      invalid: 'Set both latitude and longitude, or leave both empty.',
+      denied: 'Location access was denied.',
+      unsupported: 'This browser cannot read this device’s location.',
     },
   },
   settings: {
