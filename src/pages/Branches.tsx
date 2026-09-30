@@ -20,6 +20,7 @@ import {
 } from '@/api/branches'
 import type { WorkingHoursEntry } from '@/api/restaurants'
 import { isApiError } from '@/api/errors'
+import { BranchLocationField } from '@/components/branches/BranchLocationField'
 
 const emptyForm: BranchWriteRequest = {
   city: '',
@@ -29,6 +30,17 @@ const emptyForm: BranchWriteRequest = {
   currency: 'SYP',
   timezone: 'Asia/Damascus',
   phone: '',
+}
+
+function branchPinIsValid(
+  latitude: number | null | undefined,
+  longitude: number | null | undefined,
+): boolean {
+  const hasLat = latitude != null
+  const hasLng = longitude != null
+  if (!hasLat && !hasLng) return true
+  if (!hasLat || !hasLng) return false
+  return latitude >= -90 && latitude <= 90 && longitude >= -180 && longitude <= 180
 }
 
 const DAY_LABELS = [
@@ -137,13 +149,20 @@ export function BranchesPage() {
     e.preventDefault()
     if (!restaurantId || submitting) return
     setSubmitting(true)
+    const latitude = form.latitude ?? null
+    const longitude = form.longitude ?? null
+    if (!branchPinIsValid(latitude, longitude)) {
+      toast('error', t.branches.location.invalid)
+      setSubmitting(false)
+      return
+    }
     const body: BranchWriteRequest = {
       ...form,
       district: form.district?.trim() || null,
       phone: form.phone?.trim() || null,
       currency: form.currency?.trim() || null,
-      latitude: form.latitude ?? null,
-      longitude: form.longitude ?? null,
+      latitude,
+      longitude,
     }
     try {
       if (editingBranch) {
@@ -267,6 +286,14 @@ export function BranchesPage() {
                     <dd className="text-on-surface">{branch.currency}</dd>
                   </div>
                 )}
+                <div className="flex justify-between gap-2">
+                  <dt>{t.branches.location.title}</dt>
+                  <dd className="text-on-surface text-end">
+                    {branch.latitude != null && branch.longitude != null
+                      ? t.branches.location.onMap
+                      : t.branches.location.missing}
+                  </dd>
+                </div>
               </dl>
               <div className="flex flex-wrap gap-2 mt-auto pt-2">
                 <Button
@@ -349,6 +376,14 @@ export function BranchesPage() {
               onChange={(v) => setForm({ ...form, currency: v })}
             />
           </div>
+          <BranchLocationField
+            latitude={form.latitude ?? null}
+            longitude={form.longitude ?? null}
+            disabled={submitting}
+            onChange={(latitude, longitude) =>
+              setForm((current) => ({ ...current, latitude, longitude }))
+            }
+          />
           <div className="flex justify-end gap-3 pt-2">
             <Button type="button" variant="outline" onClick={closeForm}>
               {t.common.cancel}

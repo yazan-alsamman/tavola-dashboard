@@ -168,6 +168,7 @@ Confirmed against Swagger / Postman / backend docs:
 
 - Same pagination shape
 - DTO: `branchId`, `restaurantId`, `city`, `district`, `address`, `latitude`, `longitude`, `countryCode`, `currency`, `timezone`, `phone`, `createdAt`, `updatedAt`
+- Create and update send `latitude` and `longitude` on the same branch body. Nearby search (`GET /discovery/restaurants/nearby`) uses that pin. A branch with both values null is not on the map. The dashboard does not call the nearby endpoint to save a location.
 - **No** dedicated `name` or `status` — UI label via `formatBranchLabel` (`city — district`)
 - Path `:restaurantId` is **resource addressing**, not a tenant override header
 
