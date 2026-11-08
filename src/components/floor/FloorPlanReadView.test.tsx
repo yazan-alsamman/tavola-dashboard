@@ -101,6 +101,7 @@ describe('FloorPlanReadView RTL geometry', () => {
 
     fireEvent.pointerUp(canvas, { clientX: 140, clientY: 130, pointerId: 1 })
     expect(onReposition).toHaveBeenCalledTimes(1)
-    expect(onReposition).toHaveBeenCalledWith(table.tableId, 160, 75)
+    // Positions always snap to the 16px floor grid (75 → 80).
+    expect(onReposition).toHaveBeenCalledWith(table.tableId, 160, 80)
   })
 })

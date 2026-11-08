@@ -59,6 +59,24 @@ function matchesSearch(reservation: ReservationView, query: string): boolean {
 }
 
 type WindowFilter = 'today' | 'upcoming' | 'all'
+
+/**
+ * No reservation can predate the platform itself (its first database
+ * migration ran in July 2026), so this is a safe lower bound for "all dates".
+ */
+const RESERVATIONS_EPOCH = '2026-07-01'
+/** How far ahead "upcoming" and "all dates" look. */
+const FUTURE_HORIZON_DAYS = 365
+
+function reservationListRange(
+  windowFilter: WindowFilter,
+  today: string,
+): { from: string; to: string } {
+  if (windowFilter === 'today') return { from: today, to: today }
+  const to = shiftDateKey(today, FUTURE_HORIZON_DAYS)
+  if (windowFilter === 'upcoming') return { from: today, to }
+  return { from: today < RESERVATIONS_EPOCH ? today : RESERVATIONS_EPOCH, to }
+}
 type Density = 'comfortable' | 'compact'
 
 function ReservationCard({
@@ -156,12 +174,14 @@ export function ReservationsPage() {
   const [createOpen, setCreateOpen] = useState(false)
 
   const today = getTodayISO()
+  // Analytics summaries keep their bounded window (the analytics API caps the range).
   const dateFrom = shiftDateKey(today, -30)
   const dateTo = shiftDateKey(today, 60)
+  const listRange = reservationListRange(windowFilter, today)
 
   const listQuery = useCalendarRangeReservationsQuery(
-    dateFrom,
-    dateTo,
+    listRange.from,
+    listRange.to,
     scopeStatus === 'ready',
   )
   const usingFallback = listQuery.data?.source === 'ownership-fallback'

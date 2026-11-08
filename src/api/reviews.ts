@@ -17,11 +17,31 @@ export interface ReviewDto {
   rating?: number
   comment?: string | null
   reviewerUsername?: string | null
+  /**
+   * The restaurant's reply text. The API sends `reply` as an object
+   * `{ comment, createdAt }`; {@link normalizeReview} flattens it here so the
+   * UI never renders an object (which crashes React).
+   */
   reply?: string | null
+  replyCreatedAt?: string | null
   images?: ReviewImageDto[]
   createdAt?: string
   updatedAt?: string
   [key: string]: unknown
+}
+
+/** Flattens the API's `reply: { comment, createdAt } | null` into display fields. */
+export function normalizeReview(raw: ReviewDto): ReviewDto {
+  const reply: unknown = raw.reply
+  if (reply && typeof reply === 'object') {
+    const record = reply as { comment?: unknown; createdAt?: unknown }
+    return {
+      ...raw,
+      reply: typeof record.comment === 'string' ? record.comment : null,
+      replyCreatedAt: typeof record.createdAt === 'string' ? record.createdAt : null,
+    }
+  }
+  return { ...raw, reply: typeof reply === 'string' ? reply : null }
 }
 
 export interface ListRestaurantReviewsParams {
@@ -41,7 +61,7 @@ export async function listRestaurantReviews(
   signal?: AbortSignal,
 ): Promise<PaginatedData<ReviewDto>> {
   const limit = params.limit ?? params.pageSize ?? 20
-  return apiRequest<PaginatedData<ReviewDto>>(
+  const data = await apiRequest<PaginatedData<ReviewDto>>(
     `/restaurants/${restaurantId}/reviews`,
     {
       query: {
@@ -51,13 +71,14 @@ export async function listRestaurantReviews(
       signal,
     },
   )
+  return { ...data, items: (data.items ?? []).map(normalizeReview) }
 }
 
 export async function getReview(
   reviewId: string,
   signal?: AbortSignal,
 ): Promise<ReviewDto> {
-  return apiRequest<ReviewDto>(`/reviews/${reviewId}`, { signal })
+  return normalizeReview(await apiRequest<ReviewDto>(`/reviews/${reviewId}`, { signal }))
 }
 
 /** Domain Action — Organization Owner/Admin only. */
@@ -65,10 +86,12 @@ export async function replyToReview(
   reviewId: string,
   body: ReplyToReviewRequest,
 ): Promise<ReviewDto> {
-  return apiRequest<ReviewDto>(`/reviews/${reviewId}/reply`, {
-    method: 'POST',
-    body,
-  })
+  return normalizeReview(
+    await apiRequest<ReviewDto>(`/reviews/${reviewId}/reply`, {
+      method: 'POST',
+      body,
+    }),
+  )
 }
 
 /** Soft-delete (Domain Action). */

@@ -215,6 +215,7 @@ export const en = {
       notesPlaceholder: 'Optional notes',
       missingFields: 'Choose a start time and party size.',
       noTables: 'No tables matched this search.',
+      searchFailed: 'Search failed. Please try again.',
       successTitle: 'Reservation created',
       successBody: 'Created as Online / Pending for the signed-in account.',
       createdLabel: 'Latest created reservation',
@@ -736,6 +737,7 @@ export const en = {
       forbidden: 'You do not have permission to create walk-in reservations.',
       missingFields: 'Fill in guest details, date/time, and search availability.',
       noTables: 'No tables match this party size for the selected date.',
+      searchFailed: 'Search failed. Please try again.',
     },
   },
   notifications: {

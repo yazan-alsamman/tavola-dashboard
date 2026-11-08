@@ -33,14 +33,17 @@ export interface TableAvailabilityDto {
   isAvailable: boolean
 }
 
+/**
+ * Mirrors the backend `SearchAvailabilityQueryDto` exactly. The API rejects
+ * any undeclared query field (`forbidNonWhitelisted`), so nothing else may be sent.
+ */
 export interface SearchAvailabilityParams {
-  restaurantId: string
   branchId: string
-  /** Calendar date YYYY-MM-DD (Postman SearchAvailabilityQueryDto). */
-  date: string
+  /** Window start, UTC ISO 8601 (e.g. from `branchLocalDateTimeToUtcIso`). */
+  reservationStartTime: string
+  /** Optional window end; the restaurant's default duration applies when omitted. */
+  reservationEndTime?: string | null
   partySize: number
-  page?: number
-  pageSize?: number
 }
 
 /** Confirmed `CreateReservationRequestDto` from live OpenAPI / Postman. */
@@ -91,7 +94,7 @@ export interface ReservationDto {
 }
 
 /**
- * Informational table availability for a branch + date (Postman contract).
+ * Informational table availability for a branch + time window.
  * Does not reserve anything.
  */
 export async function searchAvailability(
@@ -102,12 +105,12 @@ export async function searchAvailability(
     TableAvailabilityDto[] | PaginatedData<TableAvailabilityDto>
   >('/reservations/availability', {
     query: {
-      restaurantId: params.restaurantId,
       branchId: params.branchId,
-      date: params.date,
+      reservationStartTime: params.reservationStartTime,
+      ...(params.reservationEndTime
+        ? { reservationEndTime: params.reservationEndTime }
+        : {}),
       partySize: params.partySize,
-      page: params.page ?? 1,
-      limit: params.pageSize ?? 20,
     },
     signal,
   })

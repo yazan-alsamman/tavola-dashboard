@@ -69,6 +69,7 @@ export function WalkInPage() {
   const [selectedTableId, setSelectedTableId] = useState<string | null>(null)
   const [searching, setSearching] = useState(false)
   const [searched, setSearched] = useState(false)
+  const [searchFailed, setSearchFailed] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [formError, setFormError] = useState('')
   const [lastCreated, setLastCreated] = useState<ReservationDto | null>(null)
@@ -91,25 +92,26 @@ export function WalkInPage() {
     setFormError('')
     setSearching(true)
     setSearched(true)
+    setSearchFailed(false)
     setSelectedTableId(null)
     setLastCreated(null)
     idempotencyKeyRef.current = null
 
     try {
-      const date = localStart.slice(0, 10)
       const result = await searchAvailability({
-        restaurantId: selectedRestaurantId,
         branchId: selectedBranchId,
-        date,
+        reservationStartTime: branchLocalDateTimeToUtcIso(localStart, branchTimezone),
         partySize,
       })
       setTables(result)
       if (result.length === 0) {
         setFormError(t.walkIn.errors.noTables)
       }
-    } catch (err) {
+    } catch {
+      // A failed search must never read as "no tables": say it failed.
       setTables([])
-      setFormError(mapWalkInError(err, t))
+      setSearchFailed(true)
+      setFormError(t.walkIn.errors.searchFailed)
     } finally {
       setSearching(false)
     }
@@ -159,9 +161,8 @@ export function WalkInPage() {
     setLocalStart(start)
     setSearching(true)
     void searchAvailability({
-      restaurantId: selectedRestaurantId,
       branchId: selectedBranchId,
-      date: start.slice(0, 10),
+      reservationStartTime: branchLocalDateTimeToUtcIso(start, branchTimezone),
       partySize: 2,
     })
       .then((result) => {
@@ -170,7 +171,10 @@ export function WalkInPage() {
         if (result.length === 0) setFormError(t.walkIn.errors.noTables)
       })
       .catch(() => {
+        setSearched(true)
+        setSearchFailed(true)
         setTables([])
+        setFormError(t.walkIn.errors.searchFailed)
       })
       .finally(() => setSearching(false))
   }, [canOperate, selectedBranchId, selectedRestaurantId])
@@ -323,8 +327,20 @@ export function WalkInPage() {
           {tables.length === 0 ? (
             <EmptyState
               icon="restaurant"
-              title={searched ? t.walkIn.errors.noTables : t.walkIn.searchFirstTitle}
-              description={searched ? t.walkIn.errors.noTables : t.walkIn.searchFirstBody}
+              title={
+                searchFailed
+                  ? t.walkIn.errors.searchFailed
+                  : searched
+                    ? t.walkIn.errors.noTables
+                    : t.walkIn.searchFirstTitle
+              }
+              description={
+                searchFailed
+                  ? t.walkIn.errors.searchFailed
+                  : searched
+                    ? t.walkIn.errors.noTables
+                    : t.walkIn.searchFirstBody
+              }
               className="py-10"
             />
           ) : (

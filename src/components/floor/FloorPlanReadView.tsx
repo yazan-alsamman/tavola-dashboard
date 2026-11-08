@@ -6,6 +6,7 @@ import { FloorTableGlyph } from '@/components/floor/FloorTableGlyph'
 import { Num } from '@/components/ui/Num'
 import { useLocale } from '@/context/LocaleContext'
 import {
+  boxesOverlap,
   clampTableSize,
   clampZoom,
   floorWorldSize,
@@ -20,6 +21,7 @@ import {
 } from '@/lib/floorGeometry'
 import { areaFill, visiblePartitions } from '@/lib/floorPartitions'
 import { tableShapeKind } from '@/lib/tableShape'
+import { effectiveCapacity } from '@/lib/tableCapacity'
 import { cn } from '@/lib/utils'
 
 interface FloorPlanReadViewProps {
@@ -35,8 +37,6 @@ interface FloorPlanReadViewProps {
     positionY: number,
   ) => void
   onResize?: (tableId: string, width: number, height: number) => void
-  snapEnabled?: boolean
-  onSnapChange?: (enabled: boolean) => void
   placePreset?: TablePreset | null
   onPlacePreset?: (preset: TablePreset | null) => void
   /** When true, an empty-canvas tap calls onPlaceAt (preset or unplaced table). */
@@ -91,8 +91,6 @@ export function FloorPlanReadView({
   repositionBusyTableId = null,
   onReposition,
   onResize,
-  snapEnabled: snapProp,
-  onSnapChange,
   placePreset = null,
   onPlacePreset,
   placeEnabled = false,
@@ -115,7 +113,6 @@ export function FloorPlanReadView({
   const [hallDraw, setHallDraw] = useState<HallDraw | null>(null)
   const hallDrawRef = useRef<HallDraw | null>(null)
   const [zoom, setZoom] = useState(1)
-  const [internalSnap, setInternalSnap] = useState(false)
   const dragMoved = useRef(false)
   const emptyPointer = useRef(false)
 
@@ -123,11 +120,8 @@ export function FloorPlanReadView({
     onDragActiveChange?.(drag !== null)
   }, [drag, onDragActiveChange])
 
-  const snapEnabled = snapProp ?? internalSnap
-  const setSnap = (next: boolean) => {
-    onSnapChange?.(next)
-    if (snapProp === undefined) setInternalSnap(next)
-  }
+  // Positions always snap to the floor grid; the old snap/free toggle had no visible effect.
+  const snapEnabled = true
 
   const placed = tables.filter(isTablePlaced)
   const unplaced = tables.filter((tb) => !isTablePlaced(tb))
@@ -286,7 +280,10 @@ export function FloorPlanReadView({
       const point = worldPointFromClient(e.clientX, e.clientY)
       const x = snapCoord(point.x - size.width / 2, snapEnabled)
       const y = snapCoord(point.y - size.height / 2, snapEnabled)
-      onPlaceAt?.(x, y)
+      const target = { x, y, width: size.width, height: size.height }
+      // Never drop a new table on top of one that is already there.
+      const covered = placed.some((tb) => boxesOverlap(target, tableBox(tb)))
+      if (!covered) onPlaceAt?.(x, y)
     } else if (emptyPointer.current && !dragMoved.current && !placePreset) {
       onSelectTable(null)
     }
@@ -309,8 +306,6 @@ export function FloorPlanReadView({
       {(
         <FloorLayoutToolbar
           canManage={repositionEnabled}
-          snapEnabled={snapEnabled}
-          onSnapToggle={() => setSnap(!snapEnabled)}
           zoomPercent={Math.round(zoom * 100)}
           onZoomIn={() => setZoom((z) => clampZoom(z + ZOOM_STEP))}
           onZoomOut={() => setZoom((z) => clampZoom(z - ZOOM_STEP))}
@@ -325,23 +320,27 @@ export function FloorPlanReadView({
         />
       )}
 
-      {overlapping.size > 0 && (
-        <p className="text-label-sm text-warning" role="status">
-          {t.floorPlan.overlapWarning}
-        </p>
-      )}
-
-      {drawHall && (
-        <p className="text-label-sm text-primary font-medium">
-          {t.floorPlan.drawHallHint}
-        </p>
-      )}
-
-      {repositionEnabled && !drawHall && (placePreset || placeEnabled) && (
-        <p className="text-label-sm text-primary font-medium">
-          {t.floorPlan.placeHint}
-        </p>
-      )}
+      {/*
+        One status line with a reserved height: hints appearing or disappearing
+        must never push the canvas down between a click and the next one.
+      */}
+      <p
+        className={cn(
+          'min-h-5 truncate text-label-sm',
+          drawHall || (repositionEnabled && (placePreset || placeEnabled))
+            ? 'text-primary font-medium'
+            : 'text-warning',
+        )}
+        role="status"
+      >
+        {drawHall
+          ? t.floorPlan.drawHallHint
+          : repositionEnabled && (placePreset || placeEnabled)
+            ? t.floorPlan.placeHint
+            : overlapping.size > 0
+              ? t.floorPlan.overlapWarning
+              : null}
+      </p>
 
       <div
         ref={viewportRef}
@@ -508,6 +507,7 @@ export function FloorPlanReadView({
                       height={box.height}
                       selected={selected}
                       overlapping={overlapping.has(tb.tableId)}
+                      seats={effectiveCapacity(tb, tables)}
                     />
                   </button>
                   {selected && repositionEnabled && onResize && !busy && (

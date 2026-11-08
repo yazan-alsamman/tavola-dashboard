@@ -21,6 +21,7 @@ import {
   DataTableRowActions,
 } from '@/components/ui/DataTable'
 import { useLocale } from '@/context/LocaleContext'
+import { effectiveCapacity } from '@/lib/tableCapacity'
 import { useRestaurantScope } from '@/context/RestaurantScopeContext'
 import { useToast } from '@/context/ToastContext'
 import {
@@ -320,7 +321,7 @@ export function TablesPage() {
                         {table.tableNumber}
                       </p>
                       <p className="text-body-sm text-on-surface-variant">
-                        <Num>{table.capacity}</Num> {t.common.seats} · {t.tables.shapes[table.shape]}
+                        <Num>{effectiveCapacity(table, tables)}</Num> {t.common.seats} · {t.tables.shapes[table.shape]}
                       </p>
                     </div>
                     <StatusBadge
@@ -389,7 +390,7 @@ export function TablesPage() {
                   ) : null}
                 </DataTableCell>
                 <DataTableCell>
-                  <Num>{table.capacity}</Num>
+                  <Num>{effectiveCapacity(table, tables)}</Num>
                 </DataTableCell>
                 <DataTableCell>{t.tables.shapes[table.shape]}</DataTableCell>
                 <DataTableCell>

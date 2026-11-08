@@ -215,6 +215,7 @@ export const ar: TranslationKeys = {
       notesPlaceholder: 'ملاحظات اختيارية',
       missingFields: 'اختر وقت البداية وعدد الضيوف.',
       noTables: 'لا توجد طاولات مطابقة لهذا البحث.',
+      searchFailed: 'تعذّر البحث، حاول مجدداً.',
       successTitle: 'تم إنشاء الحجز',
       successBody: 'تم إنشاؤه كحجز عبر الإنترنت / قيد الانتظار لحساب المستخدم المسجّل.',
       createdLabel: 'آخر حجز تم إنشاؤه',
@@ -731,6 +732,7 @@ export const ar: TranslationKeys = {
       forbidden: 'ليس لديك صلاحية إنشاء حجوزات زيارة مباشرة.',
       missingFields: 'أكمل بيانات الضيف والتاريخ/الوقت وابحث عن التوفر.',
       noTables: 'لا توجد طاولات تناسب هذا العدد في التاريخ المحدد.',
+      searchFailed: 'تعذّر البحث، حاول مجدداً.',
     },
   },
   notifications: {
