@@ -16,20 +16,21 @@ import { NotificationBroadcastPanel } from '@/components/notifications/Notificat
 import { Num } from '@/components/ui/Num'
 
 const defaultTypeIcon = 'notifications'
+/** Keyed by the backend Notification `type` (restaurant-side types, ADR-041). */
 const typeIcons: Record<string, string> = {
-  new_reservation: 'event_available',
-  updated: 'sync',
-  cancelled: 'cancel',
-  arrived: 'how_to_reg',
-  occasion: 'cake',
+  StaffReservationCreated: 'event_available',
+  StaffReservationCancelled: 'cancel',
+  StaffWaitlistEntryCreated: 'hourglass_top',
+  OrganizationMemberBroadcast: 'campaign',
+  PlatformAdminBroadcast: 'campaign',
 }
 
 const typeColors: Record<string, string> = {
-  new_reservation: 'bg-info-light text-info',
-  updated: 'bg-mauve-100 text-mauve-700',
-  cancelled: 'bg-danger-light text-danger',
-  arrived: 'bg-success-light text-success',
-  occasion: 'bg-primary-light text-primary',
+  StaffReservationCreated: 'bg-info-light text-info',
+  StaffReservationCancelled: 'bg-danger-light text-danger',
+  StaffWaitlistEntryCreated: 'bg-success-light text-success',
+  OrganizationMemberBroadcast: 'bg-primary-light text-primary',
+  PlatformAdminBroadcast: 'bg-primary-light text-primary',
 }
 
 function notificationIcon(type: string | null | undefined): string {
@@ -116,7 +117,7 @@ export function NotificationsPage() {
                   <MaterialIcon
                     name={notificationIcon(n.type)}
                     size={16}
-                    filled={n.type === 'occasion'}
+                    filled={n.type === 'StaffReservationCreated'}
                   />
                 </div>
                 <div className="flex-1 min-w-0">
