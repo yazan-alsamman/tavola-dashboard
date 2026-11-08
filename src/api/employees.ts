@@ -34,10 +34,38 @@ export interface AssignEmployeeBranchRequest {
   branchId: string
 }
 
-/**
- * Invites an employee (status Invited, no linked User until first login).
- * There is no list-employees or role-catalog endpoint.
- */
+/** A role an employee of this restaurant can hold (seeded, restaurant-scoped). */
+export interface RoleDto {
+  roleId: string
+  name: string
+  slug: string
+  description: string
+}
+
+/** Owner/Admin. Every non-removed employee, oldest first. */
+export async function listEmployees(
+  restaurantId: string,
+  signal?: AbortSignal,
+): Promise<EmployeeDto[]> {
+  const data = await apiRequest<{ items: EmployeeDto[] }>(
+    `/restaurants/${restaurantId}/employees`,
+    { signal },
+  )
+  return data.items
+}
+
+/** Owner/Admin. Restaurant-scoped roles, ordered by name. */
+export async function listRestaurantRoles(
+  restaurantId: string,
+  signal?: AbortSignal,
+): Promise<RoleDto[]> {
+  const data = await apiRequest<{ items: RoleDto[] }>(`/restaurants/${restaurantId}/roles`, {
+    signal,
+  })
+  return data.items
+}
+
+/** Invites an employee (status Invited, no linked User until first login). */
 export async function inviteEmployee(
   restaurantId: string,
   body: InviteEmployeeRequest,

@@ -53,10 +53,10 @@ Supporting modules:
 | `src/api/reservations.ts` | availability, Online + staff Phone/Walk-In create, list/get, approve/reject/cancel/reschedule/complete/no-show/table-ready |
 | `src/api/floorPlans.ts` | `listFloorPlans`, `createFloorPlan`, `activateFloorPlan` |
 | `src/api/tables.ts` | list/get + CRUD + move/status + merge/split |
-| `src/api/employees.ts` | `inviteEmployee`, `assignEmployeeRole`, `assignEmployeeToBranch`, `removeEmployeeFromBranch`, `removeEmployee` |
+| `src/api/employees.ts` | `listEmployees`, `listRestaurantRoles`, `inviteEmployee`, `assignEmployeeRole`, `assignEmployeeToBranch`, `removeEmployeeFromBranch`, `removeEmployee` |
 | `src/api/taxonomy.ts` | `listCuisineCategories`, `listOccasionCategories` |
 | `src/api/notifications.ts` | list, unread-count, identity-token, mark read / read-all |
-| `src/api/waitlist.ts` | join, cancel, promote |
+| `src/api/waitlist.ts` | `listBranchWaitlist` (branch day board), join, cancel, promote |
 | `src/api/health.ts` | health / liveness / readiness (non-envelope) |
 | `src/api/analytics.ts` | customers, reservation summary, branch trends/peak-hours, waitlist, reviews-summary, org reservation summary |
 | `src/api/organizations.ts` | subscription + usage + members/invitations/transfer + accept invitation |
@@ -75,8 +75,8 @@ See `docs/API_COMPATIBILITY_REPORT.md` for the full Postman ↔ client ↔ UI ma
 | Surface | Reality | UI approach |
 |---|---|---|
 | Staff reservation inbox | Branch `GET …/branches/:bid/reservations?dateFrom&dateTo`. Owner/Admin or a branch Employee. Row fields are `partySize`, `reservationSource`, nested `table`, and `customer`. Staff/Billing members receive 403. Ownership `GET /reservations` is the account's own rows only. | Calendar + Reservations map branch rows to guest, table number, and party size, with Arrived / Finished / Didn't come. On 403, the board falls back to that account's own rows plus owner-visible day counts. |
-| Waitlist board | No GET list | Session-tracked entries + join/promote/cancel |
-| Employee directory | No GET list and no role catalog. Invite requires a restaurant `roleId`. | Staff page collects name, email, phone, and a branch from scope, then `POST` invite and `POST` assign-branch. People returned by those calls stay on the page for the visit. |
+| Waitlist board | `GET /restaurants/:rid/branches/:bid/waitlist?date=YYYY-MM-DD[&status]` → `{ items }`, ordered by position, each with `customer { type: User\|Guest, name, phone }`. Owner/Admin or Employee `reservations:waitlist`. | Day picker over the server board (refetch every 30 s). Staff joins always send `reservationGuest` (name, country code, phone). Waiting and Notified entries are shown. |
+| Employee directory | `GET /restaurants/:rid/employees` and `GET /restaurants/:rid/roles` → `{ items }`. Owner/Admin. | Staff page lists every employee with role name and branches, and picks the role from the role list. Invite then `POST` assign-branch, then the list refetches. |
 | Org team | Members + invitations live | Settings → Team (Owner/Admin) |
 ---
 
@@ -414,7 +414,9 @@ Grouped by Postman folder. `{base}` = `VITE_API_BASE_URL` (i.e. `/api/v1`). All 
 
 | Method | Path | Notes |
 |---|---|---|
-| POST | `/restaurants/:restaurantId/employees` | Invite. Body: `roleId`, `firstName`, `lastName`, `email`, optional `phone`. Status `Invited` until first login. No list route. |
+| GET | `/restaurants/:restaurantId/employees` | List non-removed employees, oldest first → `{ items: Employee[] }` |
+| GET | `/restaurants/:restaurantId/roles` | Restaurant-scoped roles by name → `{ items: [{ roleId, name, slug, description }] }` |
+| POST | `/restaurants/:restaurantId/employees` | Invite. Body: `roleId` (from the roles list), `firstName`, `lastName`, `email`, optional `phone`. Status `Invited` until first login. |
 | POST | `/restaurants/:restaurantId/employees/:employeeId/role` | Assign role |
 | POST | `/restaurants/:restaurantId/employees/:employeeId/branches` | Assign to branch. Empty `assignedBranchIds` means restaurant-wide scope. The staff page assigns the branch chosen in the form so that employee can open that branch's bookings. |
 | DELETE | `/restaurants/:restaurantId/employees/:employeeId/branches/:branchId` | Remove from one branch |

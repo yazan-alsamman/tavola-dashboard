@@ -689,10 +689,11 @@ export const ar: TranslationKeys = {
     preferredDate: 'التاريخ المفضل',
     preferredTimeFrom: 'من',
     preferredTimeTo: 'إلى (اختياري)',
-    noServerBoardTitle: 'هذه القائمة تبقى على هذا الجهاز',
-    noServerBoardBody:
-      'الضيوف الذين تضيفهم هنا يبقون حتى تغلق هذه العلامة. هذه ليست قائمة الانتظار الكاملة للفرع.',
-    sessionEmpty: 'لا أحد ينتظر بعد.',
+    day: 'اليوم',
+    guestName: 'اسم الضيف',
+    empty: 'لا أحد ينتظر في هذا اليوم.',
+    fromApp: 'من التطبيق',
+    addedByStaff: 'أضافه الموظفون',
     waiting: 'الانتظار',
     statuses: {
       Waiting: 'ينتظر',
@@ -708,6 +709,7 @@ export const ar: TranslationKeys = {
     converted: 'الحجز',
     errors: {
       unknown: 'تعذر إكمال إجراء قائمة الانتظار. حاول مرة أخرى.',
+      loadFailed: 'تعذّر تحميل قائمة الانتظار.',
     },
   },
   walkIn: {
@@ -794,7 +796,9 @@ export const ar: TranslationKeys = {
     intro:
       'هذا الشخص يعمل على الفرع الذي تختاره. بعد أن يسجّل ذلك البريد دخوله، تعرض صفحة الحجوزات اسم الحاجز والساعة والطاولة، مع أزرار وصل وخلص وما وصل على كل حجز.',
     role: 'دور المطعم',
-    roleHint: 'اكتب رمز الدور الذي أُعطي لك. قائمة الأدوار غير متاحة هنا بعد.',
+    roleHint: 'ما يستطيع هذا الموظف فعله في اللوحة.',
+    rolesLoading: 'جارٍ تحميل الأدوار…',
+    rolesFailed: 'تعذّر تحميل الأدوار.',
     addStaff: 'إضافة موظف',
     firstName: 'الاسم الأول',
     lastName: 'اسم العائلة',
@@ -803,10 +807,9 @@ export const ar: TranslationKeys = {
     branch: 'الفرع',
     branchHint: 'سيرى حجوزات هذا الفرع.',
     invite: 'موظف جديد',
-    sessionTitle: 'أُضيفوا في هذه الزيارة',
-    sessionEmpty: 'لم يُضف أحد من هذه الصفحة بعد.',
-    sessionHint:
-      'من تضيفهم يبقون على هذه الصفحة حتى تغادرها. الإضافات السابقة لا تظهر مرة أخرى.',
+    listTitle: 'الموظفون',
+    listEmpty: 'لا يوجد موظفون بعد.',
+    listFailed: 'تعذّر تحميل الموظفين.',
     statusInvited: 'مدعو',
     statusActive: 'سجّل الدخول',
     statusDeactivated: 'متوقف',
@@ -820,7 +823,7 @@ export const ar: TranslationKeys = {
     removeEmployeeSuccess: 'تمت إزالة الموظف',
     errors: {
       unknown: 'تعذر إكمال إجراء الموظفين. حاول مرة أخرى.',
-      role: 'أدخل معرّف دور المطعم.',
+      role: 'اختر دوراً.',
       branch: 'اختر فرعاً.',
     },
   },

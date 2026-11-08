@@ -65,13 +65,15 @@ export const notificationKeys = {
 
 export const waitlistKeys = {
   all: ['waitlist'] as const,
-  session: () => [...waitlistKeys.all, 'session'] as const,
+  branchDay: (restaurantId: string, branchId: string, date: string) =>
+    [...waitlistKeys.all, restaurantId, branchId, date] as const,
 }
 
 export const employeeKeys = {
   all: ['employees'] as const,
   restaurant: (restaurantId: string) =>
     [...employeeKeys.all, restaurantId] as const,
+  roles: (restaurantId: string) => [...employeeKeys.all, restaurantId, 'roles'] as const,
 }
 
 export const menuKeys = {

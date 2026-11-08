@@ -498,3 +498,20 @@ Decision:
 
 Consequences:
 Guests still see the active floor plan only. A hall with no placed tables has a chip and no outline until tables join it.
+
+## ADR-015 — Waitlist and staff come from the server
+Date: 2026-11-08
+Status: Accepted
+Supersedes: the session-storage boards described for the Waitlist and Staff pages.
+
+Context:
+The backend now lists a branch's waitlist for one day and a restaurant's employees and roles. Before that, both pages kept what this browser tab had created, so another device or another staff member saw nothing, and an invite needed a role UUID typed by hand.
+
+Decision:
+1. The Waitlist page reads `GET …/branches/:bid/waitlist?date=` through React Query (`waitlistKeys.branchDay`) and refetches every 30 seconds. Join, promote, and cancel invalidate it.
+2. A staff join always sends `reservationGuest`. Without it the backend queues the signed-in owner as the customer.
+3. The Staff page reads `GET …/employees` and `GET …/roles` (`employeeKeys`). Role is a select. Nothing is stored in `sessionStorage`.
+
+Consequences:
+Both pages need the backend release that adds these routes. Against an older backend they show the load-error state.
+
