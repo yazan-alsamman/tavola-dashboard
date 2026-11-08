@@ -4,7 +4,13 @@ import { setupServer } from 'msw/node'
 import { __resetApiClientForTests } from './client'
 import { tokenStore } from './tokenStore'
 import { isApiError } from './errors'
-import { inviteEmployeeForBranch, type EmployeeDto } from './employees'
+import {
+  inviteEmployeeForBranch,
+  listEmployees,
+  listRestaurantRoles,
+  type EmployeeDto,
+} from './employees'
+import { listBranchWaitlist } from './waitlist'
 
 const BASE = 'http://127.0.0.1:3999/api/v1'
 const server = setupServer()
@@ -130,5 +136,60 @@ describe('inviteEmployeeForBranch', () => {
       expect(result.employee.employeeId).toBe(employeeId)
       expect(result.employee.assignedBranchIds).toEqual([])
     }
+  })
+})
+
+describe('server lists', () => {
+  it('unwraps the employees and roles lists', async () => {
+    server.use(
+      http.get(`${BASE}/restaurants/${restaurantId}/employees`, () =>
+        HttpResponse.json({ success: true, message: 'ok', data: { items: [employee()] }, meta: {} }),
+      ),
+      http.get(`${BASE}/restaurants/${restaurantId}/roles`, () =>
+        HttpResponse.json({
+          success: true,
+          message: 'ok',
+          data: {
+            items: [{ roleId, name: 'Receptionist', slug: 'receptionist', description: 'Front desk' }],
+          },
+          meta: {},
+        }),
+      ),
+    )
+    await expect(listEmployees(restaurantId)).resolves.toEqual([employee()])
+    await expect(listRestaurantRoles(restaurantId)).resolves.toEqual([
+      { roleId, name: 'Receptionist', slug: 'receptionist', description: 'Front desk' },
+    ])
+  })
+
+  it('asks for one branch day of the waitlist', async () => {
+    let seenDate: string | null = null
+    let seenStatus: string | null = 'unset'
+    server.use(
+      http.get(`${BASE}/restaurants/${restaurantId}/branches/${branchId}/waitlist`, ({ request }) => {
+        const url = new URL(request.url)
+        seenDate = url.searchParams.get('date')
+        seenStatus = url.searchParams.get('status')
+        return HttpResponse.json({
+          success: true,
+          message: 'ok',
+          data: {
+            items: [
+              {
+                entryId: 'w1',
+                partySize: 2,
+                status: 'Waiting',
+                customer: { type: 'Guest', name: 'Rami', phone: '+963900000001' },
+              },
+            ],
+          },
+          meta: {},
+        })
+      }),
+    )
+    const items = await listBranchWaitlist(restaurantId, branchId, { date: '2026-11-08' })
+    expect(seenDate).toBe('2026-11-08')
+    expect(seenStatus).toBeNull()
+    expect(items[0].customer.name).toBe('Rami')
   })
 })

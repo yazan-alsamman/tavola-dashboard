@@ -694,10 +694,11 @@ export const en = {
     preferredDate: 'Preferred date',
     preferredTimeFrom: 'From',
     preferredTimeTo: 'To (optional)',
-    noServerBoardTitle: 'This list stays on this device',
-    noServerBoardBody:
-      'Guests you add here are kept until you close this tab. They are not the full waiting list for the branch.',
-    sessionEmpty: 'No one is waiting yet.',
+    day: 'Day',
+    guestName: 'Guest name',
+    empty: 'No one is waiting for this day.',
+    fromApp: 'From the app',
+    addedByStaff: 'Added by staff',
     waiting: 'Wait',
     statuses: {
       Waiting: 'Waiting',
@@ -713,6 +714,7 @@ export const en = {
     converted: 'Reservation',
     errors: {
       unknown: 'Could not complete waitlist action. Please try again.',
+      loadFailed: 'Could not load the waiting list.',
     },
   },
   walkIn: {
@@ -799,7 +801,9 @@ export const en = {
     intro:
       'This person works the branch you choose. After that email signs in, Reservations shows the guest, time, and table, with Arrived, Finished, and Didn’t come on each booking.',
     role: 'Restaurant role',
-    roleHint: 'Type the role code you were given. A list of roles is not available here yet.',
+    roleHint: 'What this employee can do in the dashboard.',
+    rolesLoading: 'Loading roles…',
+    rolesFailed: 'Could not load roles.',
     addStaff: 'Add employee',
     firstName: 'First name',
     lastName: 'Last name',
@@ -808,10 +812,9 @@ export const en = {
     branch: 'Branch',
     branchHint: 'They will see bookings for this branch.',
     invite: 'New employee',
-    sessionTitle: 'Added this visit',
-    sessionEmpty: 'No one has been added on this page yet.',
-    sessionHint:
-      'People you add stay on this page until you leave it. Earlier additions are not shown again.',
+    listTitle: 'Employees',
+    listEmpty: 'No employees yet.',
+    listFailed: 'Could not load employees.',
     statusInvited: 'Invited',
     statusActive: 'Signed in',
     statusDeactivated: 'Deactivated',
@@ -825,7 +828,7 @@ export const en = {
     removeEmployeeSuccess: 'Employee removed',
     errors: {
       unknown: 'Could not complete staff action. Please try again.',
-      role: 'Enter the restaurant role id.',
+      role: 'Choose a role.',
       branch: 'Choose a branch.',
     },
   },

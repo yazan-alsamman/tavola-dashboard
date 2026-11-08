@@ -1,11 +1,6 @@
-import { useCallback, useEffect, useState } from 'react'
-import {
-  cancelWaitlistEntry,
-  joinWaitlist,
-  promoteWaitlistEntry,
-  type WaitlistEntryDto,
-} from '@/api/waitlist'
+import { useState } from 'react'
 import { isApiError } from '@/api/errors'
+import type { BranchWaitlistItemDto } from '@/api/waitlist'
 import { Drawer } from '@/components/ui/Drawer'
 import { MaterialIcon } from '@/components/ui/Icon'
 import { PageHeader } from '@/components/ui/PageHeader'
@@ -14,16 +9,22 @@ import { Card } from '@/components/ui/Card'
 import { ConfirmDialog } from '@/components/ui/Modal'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Input } from '@/components/ui/Input'
+import { Skeleton } from '@/components/ui/Skeleton'
 import { useLocale } from '@/context/LocaleContext'
 import { useRestaurantScope } from '@/context/RestaurantScopeContext'
 import { useToast } from '@/context/ToastContext'
+import {
+  useBranchWaitlistQuery,
+  useCancelWaitlistEntryMutation,
+  useJoinWaitlistMutation,
+  usePromoteWaitlistEntryMutation,
+} from '@/hooks/useWaitlistQueries'
 import { formatDate, formatRelative, formatTime } from '@/lib/format'
 import { cn, getTodayISO } from '@/lib/utils'
 import { Num } from '@/components/ui/Num'
 
-const SESSION_STORAGE_KEY = 'tavola-waitlist-session'
-
-type SessionWaitlistEntry = WaitlistEntryDto & { entryId: string; joinedAt?: string }
+/** Still in the queue: everything else (seated, cancelled, expired) has left it. */
+const ACTIVE_STATUSES = new Set(['Waiting', 'Notified'])
 
 function clockLabel(value: string, locale: string): string {
   const match = /^(\d{2}):(\d{2})/.exec(value)
@@ -31,113 +32,93 @@ function clockLabel(value: string, locale: string): string {
   return formatTime(new Date(2000, 0, 1, Number(match[1]), Number(match[2])), locale)
 }
 
-function loadSessionEntries(): SessionWaitlistEntry[] {
-  try {
-    const raw = sessionStorage.getItem(SESSION_STORAGE_KEY)
-    if (!raw) return []
-    const parsed = JSON.parse(raw) as SessionWaitlistEntry[]
-    return Array.isArray(parsed) ? parsed : []
-  } catch {
-    return []
-  }
-}
-
-function persistSessionEntries(entries: SessionWaitlistEntry[]): void {
-  sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(entries))
-}
-
 export function WaitlistPage() {
   const { t, locale } = useLocale()
   const { toast } = useToast()
-  const { selectedBranchId, status: scopeStatus } = useRestaurantScope()
+  const { selectedRestaurantId, selectedBranchId, status: scopeStatus } = useRestaurantScope()
 
-  const [entries, setEntries] = useState<SessionWaitlistEntry[]>(loadSessionEntries)
+  const [day, setDay] = useState(getTodayISO)
+  const [fullName, setFullName] = useState('')
+  const [countryCode, setCountryCode] = useState('SY')
+  const [phoneNumber, setPhoneNumber] = useState('')
   const [partySize, setPartySize] = useState('2')
   const [preferredDate, setPreferredDate] = useState(getTodayISO)
   const [preferredTimeFrom, setPreferredTimeFrom] = useState('')
   const [preferredTimeTo, setPreferredTimeTo] = useState('')
   const [notes, setNotes] = useState('')
-  const [submitting, setSubmitting] = useState(false)
   const [actionEntryId, setActionEntryId] = useState<string | null>(null)
   const [cancelEntryId, setCancelEntryId] = useState<string | null>(null)
-  const [promoting, setPromoting] = useState(false)
   const [joinOpen, setJoinOpen] = useState(false)
 
-  const canOperate = scopeStatus === 'ready' && Boolean(selectedBranchId)
+  const canOperate = scopeStatus === 'ready' && Boolean(selectedRestaurantId && selectedBranchId)
 
-  useEffect(() => {
-    persistSessionEntries(entries)
-  }, [entries])
+  const waitlistQuery = useBranchWaitlistQuery(
+    canOperate ? selectedRestaurantId : null,
+    canOperate ? selectedBranchId : null,
+    day,
+  )
+  const joinMutation = useJoinWaitlistMutation()
+  const promoteMutation = usePromoteWaitlistEntryMutation()
+  const cancelMutation = useCancelWaitlistEntryMutation()
 
-  const updateEntry = useCallback((entryId: string, patch: Partial<SessionWaitlistEntry>) => {
-    setEntries((prev) =>
-      prev.map((entry) => (entry.entryId === entryId ? { ...entry, ...patch } : entry)),
-    )
-  }, [])
+  const errorMessage = (err: unknown): string =>
+    isApiError(err) ? err.message : t.waitlist.errors.unknown
 
   const handleJoin = async (e: React.FormEvent): Promise<void> => {
     e.preventDefault()
-    if (!selectedBranchId || submitting) return
-
-    setSubmitting(true)
+    if (!selectedBranchId || joinMutation.isPending) return
     try {
-      const created = await joinWaitlist({
+      await joinMutation.mutateAsync({
         branchId: selectedBranchId,
         partySize: parseInt(partySize, 10) || 1,
         preferredDate,
         preferredTimeFrom,
         ...(preferredTimeTo ? { preferredTimeTo } : {}),
         ...(notes.trim() ? { notes: notes.trim() } : {}),
+        reservationGuest: {
+          fullName: fullName.trim(),
+          countryCode: countryCode.trim(),
+          phoneNumber: phoneNumber.trim(),
+        },
       })
-      const entryId = created.entryId
-      if (!entryId) {
-        toast('error', t.waitlist.errors.unknown)
-        return
-      }
-      setEntries((prev) => [
-        { ...created, entryId, joinedAt: created.createdAt ?? new Date().toISOString() },
-        ...prev,
-      ])
       toast('success', t.waitlist.joinSuccess)
+      setFullName('')
+      setPhoneNumber('')
       setNotes('')
       setPreferredTimeTo('')
+      setDay(preferredDate)
       setJoinOpen(false)
     } catch (err) {
-      toast('error', isApiError(err) ? err.message : t.waitlist.errors.unknown)
-    } finally {
-      setSubmitting(false)
+      toast('error', errorMessage(err))
     }
   }
 
   const handlePromote = async (): Promise<void> => {
-    if (!actionEntryId || promoting) return
-    setPromoting(true)
+    if (!actionEntryId || promoteMutation.isPending) return
     try {
-      const updated = await promoteWaitlistEntry(actionEntryId)
-      updateEntry(actionEntryId, updated)
+      await promoteMutation.mutateAsync(actionEntryId)
       toast('success', t.waitlist.promoteSuccess)
       setActionEntryId(null)
     } catch (err) {
-      toast('error', isApiError(err) ? err.message : t.waitlist.errors.unknown)
-    } finally {
-      setPromoting(false)
+      toast('error', errorMessage(err))
     }
   }
 
   const handleCancel = async (): Promise<void> => {
-    if (!cancelEntryId) return
+    if (!cancelEntryId || cancelMutation.isPending) return
     try {
-      const updated = await cancelWaitlistEntry(cancelEntryId)
-      updateEntry(cancelEntryId, { ...updated, status: updated.status ?? 'Cancelled' })
+      await cancelMutation.mutateAsync(cancelEntryId)
       toast('info', t.waitlist.cancelSuccess)
     } catch (err) {
-      toast('error', isApiError(err) ? err.message : t.waitlist.errors.unknown)
+      toast('error', errorMessage(err))
     } finally {
       setCancelEntryId(null)
     }
   }
 
-  const activeEntries = entries.filter((e) => e.status !== 'Cancelled' && e.status !== 'Expired')
+  const activeEntries: BranchWaitlistItemDto[] = (waitlistQuery.data ?? []).filter((entry) =>
+    ACTIVE_STATUSES.has(entry.status ?? ''),
+  )
 
   return (
     <div>
@@ -162,6 +143,31 @@ export function WaitlistPage() {
           <p className="text-body-sm text-on-surface-variant">{t.scope.noBranchesBody}</p>
         ) : (
           <form onSubmit={(e) => void handleJoin(e)} className="grid grid-cols-1 gap-4">
+            <label className="flex flex-col gap-1.5">
+              <span className="text-sm font-medium text-on-surface-variant">{t.waitlist.guestName}</span>
+              <Input value={fullName} onChange={(e) => setFullName(e.target.value)} required />
+            </label>
+            <div className="grid grid-cols-3 gap-3">
+              <label className="flex flex-col gap-1.5">
+                <span className="text-sm font-medium text-on-surface-variant">{t.walkIn.countryCode}</span>
+                <Input
+                  value={countryCode}
+                  onChange={(e) => setCountryCode(e.target.value)}
+                  placeholder="SY"
+                  required
+                />
+              </label>
+              <label className="flex flex-col gap-1.5 col-span-2">
+                <span className="text-sm font-medium text-on-surface-variant">{t.reservations.phone}</span>
+                <Input
+                  value={phoneNumber}
+                  onChange={(e) => setPhoneNumber(e.target.value)}
+                  type="tel"
+                  placeholder="900000001"
+                  required
+                />
+              </label>
+            </div>
             <label className="flex flex-col gap-1.5">
               <span className="text-sm font-medium text-on-surface-variant">{t.waitlist.partySize}</span>
               <Input
@@ -203,22 +209,41 @@ export function WaitlistPage() {
               <span className="text-sm font-medium text-on-surface-variant">{t.reservations.notes}</span>
               <Input value={notes} onChange={(e) => setNotes(e.target.value)} />
             </label>
-            <Button type="submit" disabled={submitting} className="h-11">
-              {submitting ? t.common.loading : t.waitlist.join}
+            <Button type="submit" disabled={joinMutation.isPending} className="h-11">
+              {joinMutation.isPending ? t.common.loading : t.waitlist.join}
             </Button>
           </form>
         )}
       </Drawer>
 
-      <EmptyState
-        icon="info"
-        title={t.waitlist.noServerBoardTitle}
-        description={t.waitlist.noServerBoardBody}
-        className="mb-6 py-8"
-      />
+      <div className="mb-6 flex items-end gap-3">
+        <label className="flex flex-col gap-1.5">
+          <span className="text-sm font-medium text-on-surface-variant">{t.waitlist.day}</span>
+          <Input type="date" value={day} onChange={(e) => setDay(e.target.value)} />
+        </label>
+      </div>
 
-      {activeEntries.length === 0 ? (
-        <EmptyState title={t.ops.allClear} description={t.waitlist.sessionEmpty} />
+      {!canOperate ? (
+        <EmptyState icon="store" title={t.scope.noBranchesTitle} description={t.scope.noBranchesBody} />
+      ) : waitlistQuery.isPending ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[0, 1, 2].map((i) => (
+            <Skeleton key={i} className="h-44 rounded-2xl" />
+          ))}
+        </div>
+      ) : waitlistQuery.isError ? (
+        <EmptyState
+          icon="error"
+          title={t.waitlist.errors.loadFailed}
+          description={errorMessage(waitlistQuery.error)}
+          action={
+            <Button type="button" onClick={() => void waitlistQuery.refetch()}>
+              {t.common.retry}
+            </Button>
+          }
+        />
+      ) : activeEntries.length === 0 ? (
+        <EmptyState title={t.ops.allClear} description={t.waitlist.empty} />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {activeEntries.map((entry, index) => (
@@ -235,11 +260,23 @@ export function WaitlistPage() {
                   </div>
                   <div>
                     <p className="font-semibold text-on-surface">
-                      <Num>{entry.partySize ?? '—'}</Num> {t.common.guests}
+                      {entry.customer.name ?? '—'}
                     </p>
-                    {entry.joinedAt && (
+                    <p className="text-body-sm text-on-surface-variant">
+                      <Num>{entry.partySize ?? '—'}</Num> {t.common.guests}
+                      {entry.customer.phone ? (
+                        <>
+                          {' · '}
+                          <span dir="ltr">{entry.customer.phone}</span>
+                        </>
+                      ) : null}
+                    </p>
+                    <p className="text-label-sm text-on-surface-variant">
+                      {entry.customer.type === 'User' ? t.waitlist.fromApp : t.waitlist.addedByStaff}
+                    </p>
+                    {entry.createdAt && (
                       <p className="text-label-md text-primary">
-                        {t.waitlist.waiting} {formatRelative(entry.joinedAt, locale)}
+                        {t.waitlist.waiting} {formatRelative(entry.createdAt, locale)}
                       </p>
                     )}
                   </div>
@@ -272,7 +309,6 @@ export function WaitlistPage() {
                 <Button
                   size="sm"
                   className="flex-1"
-                  disabled={entry.status === 'Converted' || entry.status === 'Cancelled'}
                   onClick={() => setActionEntryId(entry.entryId)}
                 >
                   <MaterialIcon name="how_to_reg" size={14} /> {t.waitlist.promote}
@@ -282,7 +318,6 @@ export function WaitlistPage() {
                   size="icon"
                   className="h-11 w-11"
                   label={t.waitlist.cancel}
-                  disabled={entry.status === 'Cancelled'}
                   onClick={() => setCancelEntryId(entry.entryId)}
                 >
                   <MaterialIcon name="cancel" size={16} className="text-danger" />
@@ -301,7 +336,7 @@ export function WaitlistPage() {
         message={t.waitlist.promoteConfirm}
         confirmLabel={t.waitlist.promote}
         variant="primary"
-        busy={promoting}
+        busy={promoteMutation.isPending}
         closeOnConfirm={false}
       />
 
@@ -313,6 +348,7 @@ export function WaitlistPage() {
         message={t.common.confirm}
         confirmLabel={t.waitlist.cancel}
         variant="danger"
+        busy={cancelMutation.isPending}
         closeOnConfirm={false}
       />
     </div>
