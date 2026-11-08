@@ -93,8 +93,9 @@ export function Modal({
 
   if (!open) return null
 
+  // z-[75]: above the side Drawer (z-70), so dialogs opened from it appear in front.
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center p-0 sm:p-4">
+    <div className="fixed inset-0 z-[75] flex items-end justify-center sm:items-center p-0 sm:p-4">
       <div
         className="absolute inset-0 bg-inverse-surface/50 backdrop-blur-[3px] animate-fade-in"
         onClick={onClose}

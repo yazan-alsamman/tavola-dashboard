@@ -118,7 +118,6 @@ export function FloorPlanPage() {
   const [activateError, setActivateError] = useState<string | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [placePreset, setPlacePreset] = useState<TablePreset | null>(null)
-  const [snapEnabled, setSnapEnabled] = useState(true)
   const [viewMode, setViewMode] = useState<'all' | 'focus'>('focus')
   const [overviewPlanId, setOverviewPlanId] = useState<string | null>(null)
   const [dragging, setDragging] = useState(false)
@@ -367,6 +366,8 @@ export function FloorPlanPage() {
             return areaId ? { floorPlanAreaId: areaId } : {}
           })(),
       })
+      // A preset places exactly one table; the next click must not add another.
+      setPlacePreset(null)
       toast('success', t.floorPlan.createdSuccess)
     } catch (err) {
       setRepositionError(mapInventoryMutationError(err, t.inventory.errors))
@@ -824,8 +825,6 @@ export function FloorPlanPage() {
               repositionBusyTableId={repositionBusyId}
               onReposition={(id, x, y) => void handleReposition(id, x, y)}
               onResize={(id, w, h) => void handleResize(id, w, h)}
-              snapEnabled={snapEnabled}
-              onSnapChange={setSnapEnabled}
               placePreset={placePreset}
               onPlacePreset={(preset) => {
                 setPlacePreset(preset)

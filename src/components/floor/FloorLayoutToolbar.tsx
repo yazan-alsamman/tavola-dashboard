@@ -7,8 +7,6 @@ import { cn } from '@/lib/utils'
 
 interface FloorLayoutToolbarProps {
   canManage: boolean
-  snapEnabled: boolean
-  onSnapToggle: () => void
   zoomPercent: number
   onZoomIn: () => void
   onZoomOut: () => void
@@ -24,8 +22,6 @@ interface FloorLayoutToolbarProps {
 
 export function FloorLayoutToolbar({
   canManage,
-  snapEnabled,
-  onSnapToggle,
   zoomPercent,
   onZoomIn,
   onZoomOut,
@@ -83,16 +79,6 @@ export function FloorLayoutToolbar({
           aria-label={t.floorPlan.fitView}
         >
           <MaterialIcon name="fit_screen" size={18} />
-        </Button>
-        <Button
-          type="button"
-          variant={snapEnabled ? 'secondary' : 'ghost'}
-          size="sm"
-          onClick={onSnapToggle}
-          className="ms-1 h-11 shrink-0"
-        >
-          <MaterialIcon name="grid_on" size={16} />
-          {snapEnabled ? t.floorPlan.snapOn : t.floorPlan.snapOff}
         </Button>
         {trailing}
       </div>
