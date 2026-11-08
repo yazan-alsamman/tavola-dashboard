@@ -89,20 +89,19 @@ export function ReservationCreatePanel() {
     idempotencyKeyRef.current = null
 
     try {
-      const date = localStart.slice(0, 10)
       const result = await searchAvailability({
-        restaurantId: selectedRestaurantId,
         branchId: selectedBranchId,
-        date,
+        reservationStartTime: branchLocalDateTimeToUtcIso(localStart, branchTimezone),
         partySize,
       })
       setTables(result)
       if (result.length === 0) {
         setFormError(t.reservations.create.noTables)
       }
-    } catch (err) {
+    } catch {
+      // A failed search must never read as "no tables": say it failed.
       setTables([])
-      setFormError(mapCreateError(err, t))
+      setFormError(t.reservations.create.searchFailed)
     } finally {
       setSearching(false)
     }

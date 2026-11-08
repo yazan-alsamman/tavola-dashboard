@@ -10,6 +10,7 @@ import { isApiError } from '@/api/errors'
 import { useRestaurantScope } from '@/context/RestaurantScopeContext'
 import { normalizePaginated } from '@/lib/pagination'
 import { reservationKeys } from '@/lib/queryKeys'
+import { shiftDateKey } from '@/lib/calendarDates'
 import { toReservationViews, type ReservationView } from '@/lib/reservationView'
 
 function asViews(items: ReservationDto[]): ReservationView[] {
@@ -52,7 +53,52 @@ async function fetchOwnedReservations(
   return items.filter((r) => r.restaurantId === selectedRestaurantId)
 }
 
+/** The API rejects branch reservation windows longer than this many days. */
+const BRANCH_RESERVATIONS_MAX_RANGE_DAYS = 366
+
+/**
+ * Splits an inclusive YYYY-MM-DD range into consecutive windows the API accepts,
+ * so a long range ("all dates") is fetched in full instead of being rejected.
+ */
+export function splitDateRange(
+  dateFrom: string,
+  dateTo: string,
+  maxDays = BRANCH_RESERVATIONS_MAX_RANGE_DAYS,
+): Array<[string, string]> {
+  const windows: Array<[string, string]> = []
+  let cursor = dateFrom
+  while (cursor <= dateTo) {
+    const candidateEnd = shiftDateKey(cursor, maxDays - 1)
+    const end = candidateEnd < dateTo ? candidateEnd : dateTo
+    windows.push([cursor, end])
+    cursor = shiftDateKey(end, 1)
+  }
+  return windows
+}
+
 async function fetchAllBranchReservations(
+  signal: AbortSignal | undefined,
+  restaurantId: string,
+  branchId: string,
+  dateFrom: string,
+  dateTo: string,
+): Promise<ReservationView[]> {
+  const items: ReservationView[] = []
+  for (const [windowFrom, windowTo] of splitDateRange(dateFrom, dateTo)) {
+    items.push(
+      ...(await fetchBranchReservationsWindow(
+        signal,
+        restaurantId,
+        branchId,
+        windowFrom,
+        windowTo,
+      )),
+    )
+  }
+  return items
+}
+
+async function fetchBranchReservationsWindow(
   signal: AbortSignal | undefined,
   restaurantId: string,
   branchId: string,

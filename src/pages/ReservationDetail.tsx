@@ -25,6 +25,8 @@ import {
 import { reservationKeys } from '@/lib/queryKeys'
 import { toReservationView, type ReservationView } from '@/lib/reservationView'
 import { formatDate, formatDateTime } from '@/lib/format'
+import { formatInstantInTimeZone } from '@/lib/branchDateTime'
+import { useRestaurantScope } from '@/context/RestaurantScopeContext'
 import { reservationStatusLabel } from '@/lib/statusLabel'
 
 function mergeReservation(
@@ -48,6 +50,14 @@ function mergeReservation(
 
 function formatInstant(iso: string, locale: string): string {
   return formatDateTime(iso, locale)
+}
+
+/** Time of day only, in the branch's own timezone (the date has its own field). */
+function formatTimeOfDay(iso: string, timeZone: string, locale: string): string {
+  return formatInstantInTimeZone(iso, timeZone, locale, {
+    dateStyle: undefined,
+    timeStyle: 'short',
+  })
 }
 
 function isoToDatetimeLocal(iso: string): string {
@@ -85,9 +95,10 @@ function DetailField({
   )
 }
 
-function ReservationInfo({ reservation, locale, t }: {
+function ReservationInfo({ reservation, locale, timeZone, t }: {
   reservation: ReservationView
   locale: string
+  timeZone: string
   t: ReturnType<typeof useLocale>['t']
 }) {
   return (
@@ -117,7 +128,7 @@ function ReservationInfo({ reservation, locale, t }: {
         />
         <DetailField
           label={t.reservations.time}
-          value={formatInstant(reservation.reservationStartTime, locale)}
+          value={formatTimeOfDay(reservation.reservationStartTime, timeZone, locale)}
         />
         <DetailField
           label={t.reservations.guests}
@@ -148,6 +159,8 @@ export function ReservationDetailPage() {
   const { id } = useParams()
   const { t, locale } = useLocale()
   const { toast } = useToast()
+  const { selectedBranch } = useRestaurantScope()
+  const branchTimeZone = selectedBranch?.timezone ?? 'UTC'
   const queryClient = useQueryClient()
   const detailQuery = useMyReservationDetailQuery(id)
   const cached = useCachedReservation(id)
@@ -295,7 +308,7 @@ export function ReservationDetailPage() {
             <div>
               <dt className="text-label-sm text-on-surface-variant">{t.reservations.time}</dt>
               <dd className="text-label-lg text-on-surface">
-                {formatInstant(reservation.reservationStartTime, locale)}
+                {formatTimeOfDay(reservation.reservationStartTime, branchTimeZone, locale)}
               </dd>
             </div>
             {reservation.tableNumber && (
@@ -336,7 +349,12 @@ export function ReservationDetailPage() {
         </div>
       </div>
 
-      <ReservationInfo reservation={reservation} locale={locale} t={t} />
+      <ReservationInfo
+        reservation={reservation}
+        locale={locale}
+        timeZone={branchTimeZone}
+        t={t}
+      />
 
       {(reservation.status === 'Pending' || reservation.status === 'Approved') && (
         <section className="rounded-xl border border-outline-variant/30 bg-surface p-4">
