@@ -21,6 +21,7 @@ import {
 } from '@/lib/floorGeometry'
 import { areaFill, visiblePartitions } from '@/lib/floorPartitions'
 import { tableShapeKind } from '@/lib/tableShape'
+import { effectiveCapacity } from '@/lib/tableCapacity'
 import { cn } from '@/lib/utils'
 
 interface FloorPlanReadViewProps {
@@ -506,6 +507,7 @@ export function FloorPlanReadView({
                       height={box.height}
                       selected={selected}
                       overlapping={overlapping.has(tb.tableId)}
+                      seats={effectiveCapacity(tb, tables)}
                     />
                   </button>
                   {selected && repositionEnabled && onResize && !busy && (

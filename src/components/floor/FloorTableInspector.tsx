@@ -9,6 +9,8 @@ import { useLocale } from '@/context/LocaleContext'
 
 interface FloorTableInspectorProps {
   table: TableDto
+  /** Seats to show; a merge primary passes the whole group's total. */
+  seats?: number
   floorPlanName: string | null
   floorPlanActive: boolean
   canManage: boolean
@@ -31,6 +33,7 @@ interface FloorTableInspectorProps {
 
 export function FloorTableInspector({
   table,
+  seats,
   floorPlanName,
   floorPlanActive,
   canManage,
@@ -66,7 +69,7 @@ export function FloorTableInspector({
             {table.tableNumber}
           </p>
           <p className="text-label-sm text-on-surface-variant">
-            <Num>{table.capacity}</Num> {t.common.seats} ·{' '}
+            <Num>{seats ?? table.capacity}</Num> {t.common.seats} ·{' '}
             {t.tables.shapes[table.shape]}
           </p>
         </div>

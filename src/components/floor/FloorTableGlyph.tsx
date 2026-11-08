@@ -29,6 +29,8 @@ interface FloorTableGlyphProps {
   selected: boolean
   /** Visual warning only. Does not block the drop. */
   overlapping?: boolean
+  /** Seats to show; a merge primary passes the whole group's total. */
+  seats?: number
 }
 
 /** Visual tabletop + chairs. Geometry box is the tabletop; chairs are decoration. */
@@ -38,12 +40,14 @@ export function FloorTableGlyph({
   height,
   selected,
   overlapping = false,
+  seats,
 }: FloorTableGlyphProps) {
+  const shownSeats = seats ?? table.capacity
   const kind = tableShapeKind(table.shape)
   const round = kind === 'round'
   const chairs = chairAnchors(
     kind === 'round' ? 'Round' : 'Rectangle',
-    table.capacity,
+    shownSeats,
     width,
     height,
   )
@@ -82,7 +86,7 @@ export function FloorTableGlyph({
           {table.tableNumber}
         </span>
         <span className="text-[10px] opacity-80 mt-0.5">
-          <Num>{table.capacity}</Num>
+          <Num>{shownSeats}</Num>
         </span>
       </span>
     </>

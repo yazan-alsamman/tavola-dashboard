@@ -5,6 +5,7 @@ import type { CreateTableRequest, TableDto } from '@/api/tables'
 import { CreateFloorPlanDialog } from '@/components/inventory/CreateFloorPlanDialog'
 import { ChangeTableStatusDialog } from '@/components/inventory/ChangeTableStatusDialog'
 import { MoveTableDialog } from '@/components/inventory/MoveTableDialog'
+import { effectiveCapacity } from '@/lib/tableCapacity'
 import { TableFormDialog } from '@/components/inventory/TableFormDialog'
 import { CreateFloorPlanAreaDialog } from '@/components/floor/CreateFloorPlanAreaDialog'
 import { FloorPlanAreaBar } from '@/components/floor/FloorPlanAreaBar'
@@ -855,6 +856,7 @@ export function FloorPlanPage() {
           <FloorTableInspector
             plain
             table={selectedTable}
+            seats={effectiveCapacity(selectedTable, tables)}
             floorPlanName={
               floorPlans.find((fp) => fp.floorPlanId === selectedTable.floorPlanId)?.name ??
               null
