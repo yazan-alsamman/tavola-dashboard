@@ -60,7 +60,7 @@ export const ar: TranslationKeys = {
     sourceApp: 'عن طريق Tavola (التطبيق)',
     sourceAppHint: 'حجزها الزبائن من التطبيق',
     sourceDashboard: 'عن طريق اللوحة',
-    sourceDashboardHint: 'الهاتف والزيارات المباشرة وإدخالات الموظفين',
+    sourceDashboardHint: 'حجوزات الهاتف وإدخالات الموظفين',
     sourceToday: '{n} اليوم',
     sourceShare: '{n}% من الحجوزات جاءت من التطبيق',
     title: 'لوحة التحكم',

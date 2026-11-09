@@ -58,7 +58,7 @@ export const en = {
     sourceApp: 'Through Tavola (the app)',
     sourceAppHint: 'Booked by customers in the app',
     sourceDashboard: 'Through the dashboard',
-    sourceDashboardHint: 'Phone, walk-in and staff entries',
+    sourceDashboardHint: 'Phone bookings and staff entries',
     sourceToday: '{n} today',
     sourceShare: '{n}% of reservations came through the app',
     title: 'Dashboard',
