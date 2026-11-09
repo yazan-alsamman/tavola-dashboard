@@ -215,8 +215,7 @@ export function FloorPlanPage() {
     return inArea.length === 0 || inArea.some((tb) => tableFloor(tb) === currentFloor)
   })
 
-  const countedTables =
-    viewMode === 'all' ? catalogTables : tablesOnFloor(tables, currentFloor)
+  const countedTables = viewMode === 'all' ? catalogTables : floorTables
   const counts = {
     total: countedTables.length,
     available: countedTables.filter((tb) => tb.status === 'Available').length,
@@ -937,7 +936,7 @@ export function FloorPlanPage() {
               onDragActiveChange={setDragging}
             />
             </div>
-            <div className="lg:order-2">
+            <div className="min-w-0 lg:order-2">
               <FloorTableQueue
                 tables={unplaced}
                 selectedTableId={placingUnplaced ? selectedTableId : null}
