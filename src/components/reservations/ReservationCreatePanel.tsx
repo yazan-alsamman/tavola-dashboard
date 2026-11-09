@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import {
-  createReservation,
+  createStaffReservation,
   createIdempotencyKey,
   searchAvailability,
   type ReservationDto,
@@ -15,6 +15,7 @@ import { branchLocalDateTimeToUtcIso, formatInstantInTimeZone } from '@/lib/bran
 import { reservationKeys } from '@/lib/queryKeys'
 import { MaterialIcon } from '@/components/ui/Icon'
 import { Button } from '@/components/ui/Button'
+import { Input } from '@/components/ui/Input'
 import { Num } from '@/components/ui/Num'
 
 function mapCreateError(
@@ -42,11 +43,16 @@ function mapCreateError(
   }
 }
 
+interface ReservationCreatePanelProps {
+  /** Pre-fills the start (branch-local `YYYY-MM-DDTHH:mm`), e.g. from an empty calendar hour. */
+  initialLocalStart?: string
+}
+
 /**
- * Staff-facing availability search + Online create against live Phase 7.1 APIs.
- * Creates as the authenticated user (customer Online contract) — not phone/walk-in guest booking.
+ * Staff booking on the customer's behalf (`source = Phone`): availability
+ * search, then create in the guest's name and phone at the branch's local time.
  */
-export function ReservationCreatePanel() {
+export function ReservationCreatePanel({ initialLocalStart = '' }: ReservationCreatePanelProps) {
   const { t, locale } = useLocale()
   const { toast } = useToast()
   const queryClient = useQueryClient()
@@ -57,7 +63,10 @@ export function ReservationCreatePanel() {
     status: scopeStatus,
   } = useRestaurantScope()
 
-  const [localStart, setLocalStart] = useState('')
+  const [localStart, setLocalStart] = useState(initialLocalStart)
+  const [guestName, setGuestName] = useState('')
+  const [countryCode, setCountryCode] = useState('SY')
+  const [phoneNumber, setPhoneNumber] = useState('')
   const [partySize, setPartySize] = useState(2)
   const [notes, setNotes] = useState('')
   const [tables, setTables] = useState<TableAvailabilityDto[]>([])
@@ -109,6 +118,10 @@ export function ReservationCreatePanel() {
 
   const handleCreate = async (): Promise<void> => {
     if (!selectedBranchId || !localStart || !selectedTableId || submitting) return
+    if (!guestName.trim() || !phoneNumber.trim() || !countryCode.trim()) {
+      setFormError(t.reservations.create.guestRequired)
+      return
+    }
 
     setFormError('')
     setSubmitting(true)
@@ -120,13 +133,19 @@ export function ReservationCreatePanel() {
 
     try {
       const startIso = branchLocalDateTimeToUtcIso(localStart, branchTimezone)
-      const reservation = await createReservation(
+      const reservation = await createStaffReservation(
         {
           branchId: selectedBranchId,
           tableId: selectedTableId,
           reservationStartTime: startIso,
           guests: partySize,
           notes: notes.trim() || null,
+          source: 'Phone',
+          reservationGuest: {
+            fullName: guestName.trim(),
+            countryCode: countryCode.trim().toUpperCase(),
+            phoneNumber: phoneNumber.trim(),
+          },
         },
         idempotencyKey,
       )
@@ -136,6 +155,8 @@ export function ReservationCreatePanel() {
       idempotencyKeyRef.current = null
       setSelectedTableId(null)
       setTables([])
+      setGuestName('')
+      setPhoneNumber('')
     } catch (err) {
       setFormError(mapCreateError(err, t))
       // Keep idempotency key so a retry of the same submit does not mint a new key.
@@ -157,10 +178,55 @@ export function ReservationCreatePanel() {
           <p className="text-body-md text-on-surface-variant mt-1">
             {t.reservations.create.subtitle}
           </p>
-          <p className="text-label-sm text-on-surface-variant mt-2">
-            {t.reservations.create.timezoneHint}: {branchTimezone}
-          </p>
         </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 mb-4 md:grid-cols-[minmax(0,1fr)_6rem_minmax(0,1fr)]">
+        <label className="flex flex-col gap-1.5">
+          <span className="text-label-md text-on-surface-variant">
+            {t.reservations.create.guestName}
+          </span>
+          <Input
+            value={guestName}
+            onChange={(e) => {
+              setGuestName(e.target.value)
+              idempotencyKeyRef.current = null
+            }}
+            autoComplete="off"
+            required
+          />
+        </label>
+        <label className="flex flex-col gap-1.5">
+          <span className="text-label-md text-on-surface-variant">
+            {t.reservations.create.countryCode}
+          </span>
+          <Input
+            value={countryCode}
+            onChange={(e) => {
+              setCountryCode(e.target.value)
+              idempotencyKeyRef.current = null
+            }}
+            maxLength={2}
+            dir="ltr"
+            required
+          />
+        </label>
+        <label className="flex flex-col gap-1.5">
+          <span className="text-label-md text-on-surface-variant">
+            {t.reservations.create.guestPhone}
+          </span>
+          <Input
+            value={phoneNumber}
+            onChange={(e) => {
+              setPhoneNumber(e.target.value)
+              idempotencyKeyRef.current = null
+            }}
+            type="tel"
+            dir="ltr"
+            placeholder="0912345678"
+            required
+          />
+        </label>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
@@ -264,7 +330,7 @@ export function ReservationCreatePanel() {
             <Button
               type="button"
               onClick={() => void handleCreate()}
-              disabled={!selectedTableId || submitting}
+              disabled={!selectedTableId || submitting || !guestName.trim() || !phoneNumber.trim()}
             >
               {submitting ? t.common.loading : t.reservations.create.submit}
             </Button>
@@ -276,7 +342,7 @@ export function ReservationCreatePanel() {
         <div className="mt-4 rounded-lg bg-success/10 border border-success/20 p-4 text-body-md">
           <p className="font-semibold text-on-surface">{t.reservations.create.createdLabel}</p>
           <p className="text-on-surface-variant mt-1">
-            {lastCreated.reservationId} · {lastCreated.status} · {lastCreated.source}
+            {t.reservations.create.successBody}
           </p>
           <p className="text-on-surface-variant">
             {formatInstantInTimeZone(

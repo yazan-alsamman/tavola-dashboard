@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react'
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { BrowserRouter, Navigate, Routes, Route } from 'react-router-dom'
 import { ThemeProvider } from '@/context/ThemeContext'
 import { LocaleProvider } from '@/context/LocaleContext'
 import { SidebarProvider } from '@/context/SidebarContext'
@@ -19,8 +19,7 @@ import { ReservationDetailPage } from '@/pages/ReservationDetail'
 import { CalendarPage } from '@/pages/Calendar'
 import { FloorPlanPage } from '@/pages/FloorPlan'
 import { TablesPage } from '@/pages/Tables'
-import { WaitlistPage } from '@/pages/Waitlist'
-import { WalkInPage } from '@/pages/WalkIn'
+import { CustomerPage } from '@/pages/Customer'
 import { NotificationsPage } from '@/pages/Notifications'
 import { MessagingPage } from '@/pages/Messaging'
 import { ReportsPage } from '@/pages/Reports'
@@ -73,8 +72,15 @@ export default function App() {
                             <Route path="tables" element={<TablesPage />} />
                             <Route path="menu" element={<MenuPage />} />
                             <Route path="gallery" element={<GalleryPage />} />
-                            <Route path="waitlist" element={<WaitlistPage />} />
-                            <Route path="walk-in" element={<WalkInPage />} />
+                            <Route path="customers/:customerKey" element={<CustomerPage />} />
+                            <Route
+                              path="waitlist"
+                              element={<Navigate to="/app/reservations?tab=waitlist" replace />}
+                            />
+                            <Route
+                              path="walk-in"
+                              element={<Navigate to="/app/reservations?tab=walk-in" replace />}
+                            />
                             <Route path="offers" element={<OffersPage />} />
                             <Route path="reviews" element={<ReviewsPage />} />
                             <Route path="notifications" element={<NotificationsPage />} />

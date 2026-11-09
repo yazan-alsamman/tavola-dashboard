@@ -1,10 +1,12 @@
 import { useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query'
 import { useSyncExternalStore } from 'react'
 import {
+  getBranchDaySchedule,
   getMyReservation,
   listBranchReservations,
   listMyReservations,
   type ReservationDto,
+  type ReservationStatusDto,
 } from '@/api/reservations'
 import { isApiError } from '@/api/errors'
 import { useRestaurantScope } from '@/context/RestaurantScopeContext'
@@ -76,12 +78,19 @@ export function splitDateRange(
   return windows
 }
 
+/** Optional server-side narrowing on top of the date window. */
+interface BranchReservationFilters {
+  status?: ReservationStatusDto
+  customerKey?: string
+}
+
 async function fetchAllBranchReservations(
   signal: AbortSignal | undefined,
   restaurantId: string,
   branchId: string,
   dateFrom: string,
   dateTo: string,
+  filters: BranchReservationFilters = {},
 ): Promise<ReservationView[]> {
   const items: ReservationView[] = []
   for (const [windowFrom, windowTo] of splitDateRange(dateFrom, dateTo)) {
@@ -92,6 +101,7 @@ async function fetchAllBranchReservations(
         branchId,
         windowFrom,
         windowTo,
+        filters,
       )),
     )
   }
@@ -104,6 +114,7 @@ async function fetchBranchReservationsWindow(
   branchId: string,
   dateFrom: string,
   dateTo: string,
+  filters: BranchReservationFilters = {},
 ): Promise<ReservationView[]> {
   const pageSize = 100
   const maxPages = 20
@@ -118,6 +129,7 @@ async function fetchBranchReservationsWindow(
         dateTo,
         page,
         pageSize,
+        ...filters,
       },
       signal,
     )
@@ -203,6 +215,92 @@ export function useCalendarRangeReservationsQuery(
         }
       }
     },
+  })
+}
+
+/**
+ * No reservation can predate the platform itself (its first database
+ * migration ran in July 2026), so this is a safe lower bound for "all dates".
+ */
+export const RESERVATIONS_EPOCH = '2026-07-01'
+/** How far ahead "upcoming" and "all dates" look. */
+export const FUTURE_HORIZON_DAYS = 365
+
+/** Every booking of one customer at this branch (customer page). */
+export function useCustomerReservationsQuery(customerKey: string | undefined, today: string) {
+  const { selectedRestaurantId, selectedBranchId, status } = useRestaurantScope()
+  const to = shiftDateKey(today, FUTURE_HORIZON_DAYS)
+  return useQuery({
+    queryKey: reservationKeys.customer(selectedRestaurantId, selectedBranchId, customerKey ?? ''),
+    enabled:
+      status === 'ready' &&
+      Boolean(customerKey) &&
+      Boolean(selectedRestaurantId) &&
+      Boolean(selectedBranchId),
+    queryFn: ({ signal }) =>
+      fetchAllBranchReservations(
+        signal,
+        selectedRestaurantId!,
+        selectedBranchId!,
+        RESERVATIONS_EPOCH,
+        to,
+        { customerKey },
+      ),
+  })
+}
+
+/** How often the shell re-checks for new bookings waiting for approval. */
+export const PENDING_WATCH_INTERVAL_MS = 30_000
+/** How far ahead the pending watch looks. */
+const PENDING_WATCH_HORIZON_DAYS = 90
+
+/**
+ * Pending bookings of the selected branch, refreshed in the background so the
+ * shell can chime on a new one and warn before an approval deadline passes.
+ * A 403 (no branch access) simply yields nothing to watch.
+ */
+export function usePendingReservationsWatchQuery(today: string, enabled = true) {
+  const { selectedRestaurantId, selectedBranchId, status } = useRestaurantScope()
+  return useQuery({
+    queryKey: reservationKeys.pendingWatch(selectedRestaurantId, selectedBranchId),
+    enabled:
+      enabled &&
+      status === 'ready' &&
+      Boolean(selectedRestaurantId) &&
+      Boolean(selectedBranchId),
+    refetchInterval: PENDING_WATCH_INTERVAL_MS,
+    refetchIntervalInBackground: true,
+    retry: false,
+    queryFn: async ({ signal }) => {
+      try {
+        return await fetchAllBranchReservations(
+          signal,
+          selectedRestaurantId!,
+          selectedBranchId!,
+          shiftDateKey(today, -1),
+          shiftDateKey(today, PENDING_WATCH_HORIZON_DAYS),
+          { status: 'Pending' },
+        )
+      } catch (err) {
+        if (isApiError(err) && err.status === 403) return []
+        throw err
+      }
+    },
+  })
+}
+
+/**
+ * Opening hours of the selected branch on `date` (today or later). Past
+ * dates are not asked for: the API rejects them.
+ */
+export function useBranchDayScheduleQuery(date: string, today: string) {
+  const { selectedBranchId, status } = useRestaurantScope()
+  return useQuery({
+    queryKey: reservationKeys.daySchedule(selectedBranchId, date),
+    enabled: status === 'ready' && Boolean(selectedBranchId) && date >= today,
+    staleTime: 10 * 60_000,
+    retry: false,
+    queryFn: ({ signal }) => getBranchDaySchedule(selectedBranchId!, date, signal),
   })
 }
 

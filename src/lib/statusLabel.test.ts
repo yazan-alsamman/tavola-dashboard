@@ -5,7 +5,7 @@ import { reservationStatusLabel } from '@/lib/statusLabel'
 
 describe('reservationStatusLabel', () => {
   it('uses the English label for a known status', () => {
-    expect(reservationStatusLabel('Pending', en.status)).toBe('Pending')
+    expect(reservationStatusLabel('Pending', en.status)).toBe('Awaiting approval')
     expect(reservationStatusLabel('NoShow', en.status)).toBe('No Show')
   })
 

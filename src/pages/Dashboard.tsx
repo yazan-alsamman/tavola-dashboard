@@ -303,7 +303,7 @@ export function DashboardPage() {
                 {t.nav.reservations}
               </Button>
             </Link>
-            <Link to="/app/walk-in">
+            <Link to="/app/reservations?tab=walk-in">
               <Button variant="primary">
                 <MaterialIcon name="add" size={16} />
                 {t.walkIn.title}
@@ -430,7 +430,7 @@ export function DashboardPage() {
                   title={t.ops.noArrivals}
                   description={t.dashboard.noArrivalsHint}
                   action={
-                    <Link to="/app/walk-in" className="text-label-md font-semibold text-primary">
+                    <Link to="/app/reservations?tab=walk-in" className="text-label-md font-semibold text-primary">
                       {t.walkIn.title}
                     </Link>
                   }

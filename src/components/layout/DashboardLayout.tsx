@@ -7,17 +7,19 @@ import { useSidebar } from '@/context/SidebarContext'
 import { useLocale } from '@/context/LocaleContext'
 import { cn } from '@/lib/utils'
 import { MaterialIcon } from '@/components/ui/Icon'
+import { usePendingReservationAlerts } from '@/hooks/usePendingReservationAlerts'
 
 export function DashboardLayout() {
   const { isCollapsed } = useSidebar()
   const { t } = useLocale()
+  usePendingReservationAlerts()
 
   /** Service-critical destinations only — mobile is a thumb-reach surface. */
   const mobileNav = [
     { path: '/app', end: true, icon: 'dashboard', label: t.nav.dashboard },
     { path: '/app/reservations', end: false, icon: 'event', label: t.nav.reservations },
     { path: '/app/floor-plan', end: false, icon: 'layers', label: t.nav.floorPlan },
-    { path: '/app/walk-in', end: false, icon: 'directions_walk', label: t.nav.walkIn },
+    { path: '/app/calendar', end: false, icon: 'calendar_month', label: t.nav.calendar },
   ]
 
   return (

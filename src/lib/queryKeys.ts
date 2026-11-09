@@ -40,6 +40,12 @@ export const reservationKeys = {
       pageSize,
     ] as const,
   detail: (id: string) => [...reservationKeys.all, 'detail', id] as const,
+  customer: (restaurantId: string | null, branchId: string | null, customerKey: string) =>
+    [...reservationKeys.all, 'customer', restaurantId ?? '', branchId ?? '', customerKey] as const,
+  daySchedule: (branchId: string | null, date: string) =>
+    [...reservationKeys.all, 'day-schedule', branchId ?? '', date] as const,
+  pendingWatch: (restaurantId: string | null, branchId: string | null) =>
+    [...reservationKeys.all, 'pending-watch', restaurantId ?? '', branchId ?? ''] as const,
   availability: (
     restaurantId: string,
     branchId: string,

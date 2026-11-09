@@ -1,9 +1,17 @@
 import { useMemo, useState } from 'react'
 import { ReservationOfferBadge } from '@/components/reservations/ReservationOfferBadge'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import type { ReservationSourceDto, ReservationStatusDto } from '@/api/reservations'
 import { ReservationActions } from '@/components/reservations/ReservationActions'
 import { ReservationCreatePanel } from '@/components/reservations/ReservationCreatePanel'
+import { AutoClosedReport } from '@/components/reservations/AutoClosedReport'
+import {
+  ReservationStatusChangeNote,
+  ReservationTimingHint,
+  ReturningCustomerBadge,
+} from '@/components/reservations/ReservationContext'
+import { WaitlistPage } from '@/pages/Waitlist'
+import { WalkInPage } from '@/pages/WalkIn'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { MaterialIcon } from '@/components/ui/Icon'
 import { EmptyState } from '@/components/ui/EmptyState'
@@ -14,7 +22,12 @@ import { StatusBadge } from '@/components/ui/StatusBadge'
 import { Num } from '@/components/ui/Num'
 import { useLocale } from '@/context/LocaleContext'
 import { useRestaurantScope } from '@/context/RestaurantScopeContext'
-import { useCalendarRangeReservationsQuery } from '@/hooks/useReservationQueries'
+import {
+  FUTURE_HORIZON_DAYS,
+  RESERVATIONS_EPOCH,
+  useCalendarRangeReservationsQuery,
+} from '@/hooks/useReservationQueries'
+import { useNow } from '@/hooks/useNow'
 import {
   useReservationSummaryQuery,
   useReservationTrendsQuery,
@@ -61,14 +74,6 @@ function matchesSearch(reservation: ReservationView, query: string): boolean {
 
 type WindowFilter = 'today' | 'upcoming' | 'all'
 
-/**
- * No reservation can predate the platform itself (its first database
- * migration ran in July 2026), so this is a safe lower bound for "all dates".
- */
-const RESERVATIONS_EPOCH = '2026-07-01'
-/** How far ahead "upcoming" and "all dates" look. */
-const FUTURE_HORIZON_DAYS = 365
-
 function reservationListRange(
   windowFilter: WindowFilter,
   today: string,
@@ -78,19 +83,17 @@ function reservationListRange(
   if (windowFilter === 'upcoming') return { from: today, to }
   return { from: today < RESERVATIONS_EPOCH ? today : RESERVATIONS_EPOCH, to }
 }
-type Density = 'comfortable' | 'compact'
-
 function ReservationCard({
   reservation,
   locale,
   t,
-  compact,
+  now,
   onOpen,
 }: {
   reservation: ReservationView
   locale: string
   t: ReturnType<typeof useLocale>['t']
-  compact: boolean
+  now: number
   onOpen: () => void
 }) {
   const tableLabel = reservation.tableNumber
@@ -101,10 +104,7 @@ function ReservationCard({
 
   return (
     <article
-      className={cn(
-        'rounded-2xl border border-outline-variant/30 bg-surface-container-lowest shadow-sm',
-        compact ? 'p-3' : 'p-4',
-      )}
+      className="rounded-2xl border border-outline-variant/30 bg-surface-container-lowest p-4 shadow-sm"
     >
       <button
         type="button"
@@ -134,18 +134,34 @@ function ReservationCard({
             {' · '}
             {sourceLabel(reservation.source, t)}
           </p>
-          {reservation.offer && (
-            <div className="mt-1.5">
-              <ReservationOfferBadge offer={reservation.offer} />
-            </div>
-          )}
-          {!compact && reservation.customerPhone && (
-            <p className="mt-1 text-label-sm text-on-surface" dir="ltr">
-              {reservation.customerPhone}
+          {reservation.customerPhone && (
+            <p className="mt-1 text-label-md text-on-surface">
+              <span dir="ltr" className="tabular-nums">
+                {reservation.customerPhone}
+              </span>
             </p>
           )}
-          {!compact && reservation.notes && (
-            <p className="mt-2 text-body-sm text-on-surface line-clamp-2">{reservation.notes}</p>
+          {(reservation.offer || reservation.visitCount > 0 || reservation.noShowCount > 0) && (
+            <div className="mt-1.5 flex flex-wrap gap-1.5">
+              <ReservationOfferBadge offer={reservation.offer} />
+              <ReturningCustomerBadge reservation={reservation} />
+            </div>
+          )}
+          <div className="mt-1.5 space-y-1">
+            <ReservationTimingHint reservation={reservation} now={now} />
+            <ReservationStatusChangeNote reservation={reservation} />
+          </div>
+          {reservation.internalNote && (
+            <p className="mt-2 flex gap-1.5 text-body-sm text-on-surface">
+              <MaterialIcon name="edit" size={16} className="mt-0.5 shrink-0 text-primary" />
+              <span className="line-clamp-2">
+                <span className="font-semibold">{t.reservations.internalNote.tag}: </span>
+                {reservation.internalNote}
+              </span>
+            </p>
+          )}
+          {reservation.notes && (
+            <p className="mt-2 text-body-sm text-on-surface-variant line-clamp-2">{reservation.notes}</p>
           )}
         </div>
       </button>
@@ -160,13 +176,88 @@ function ReservationCard({
   )
 }
 
+type ReservationsTab = 'bookings' | 'waitlist' | 'walk-in'
+
+const TABS: ReservationsTab[] = ['bookings', 'waitlist', 'walk-in']
+
+function parseTab(value: string | null): ReservationsTab {
+  return TABS.includes(value as ReservationsTab) ? (value as ReservationsTab) : 'bookings'
+}
+
+/** A branch-local `YYYY-MM-DDTHH:mm` start passed in `?new=` (e.g. from the calendar). */
+function parseNewBookingStart(value: string | null): string | null {
+  return value && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(value) ? value : null
+}
+
+/**
+ * One place for every way a guest gets a table: bookings, the waitlist, and
+ * walk-ins are tabs here (`?tab=`), not separate pages.
+ */
+export function ReservationsPage() {
+  const { t } = useLocale()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const tab = parseTab(searchParams.get('tab'))
+  const newBookingStart = parseNewBookingStart(searchParams.get('new'))
+
+  const selectTab = (next: ReservationsTab): void => {
+    setSearchParams(next === 'bookings' ? {} : { tab: next }, { replace: true })
+  }
+
+  const labels: Record<ReservationsTab, string> = {
+    bookings: t.reservations.tabs.bookings,
+    waitlist: t.reservations.tabs.waitlist,
+    'walk-in': t.reservations.tabs.walkIn,
+  }
+
+  return (
+    <div>
+      <PageHeader title={t.reservations.title} subtitle={t.reservations.subtitle} />
+      <div
+        role="tablist"
+        aria-label={t.reservations.tabs.label}
+        className="mb-6 flex gap-1 overflow-x-auto rounded-xl bg-surface-container-low p-1"
+      >
+        {TABS.map((key) => (
+          <button
+            key={key}
+            type="button"
+            role="tab"
+            id={`reservations-tab-${key}`}
+            aria-selected={tab === key}
+            aria-controls={`reservations-panel-${key}`}
+            onClick={() => selectTab(key)}
+            className={cn(
+              'min-h-11 flex-1 whitespace-nowrap rounded-lg px-4 text-label-lg font-semibold transition-colors',
+              tab === key
+                ? 'bg-surface-container-lowest text-primary shadow-sm'
+                : 'text-on-surface-variant hover:text-on-surface',
+            )}
+          >
+            {labels[key]}
+          </button>
+        ))}
+      </div>
+      <div
+        role="tabpanel"
+        id={`reservations-panel-${tab}`}
+        aria-labelledby={`reservations-tab-${tab}`}
+      >
+        {tab === 'bookings' && <BookingsTab initialNewBookingStart={newBookingStart} />}
+        {tab === 'waitlist' && <WaitlistPage embedded />}
+        {tab === 'walk-in' && <WalkInPage embedded />}
+      </div>
+    </div>
+  )
+}
+
 /**
  * Staff reservations hub — branch date-window list, with owner-visible
  * day counts when the employee inbox returns 403.
  */
-export function ReservationsPage() {
+function BookingsTab({ initialNewBookingStart }: { initialNewBookingStart: string | null }) {
   const { t, locale } = useLocale()
   const navigate = useNavigate()
+  const now = useNow()
   const {
     selectedBranch,
     status: scopeStatus,
@@ -175,9 +266,8 @@ export function ReservationsPage() {
 
   const [statusFilter, setStatusFilter] = useState<ReservationStatusDto | ''>('')
   const [windowFilter, setWindowFilter] = useState<WindowFilter>('today')
-  const [density, setDensity] = useState<Density>('comfortable')
   const [searchText, setSearchText] = useState('')
-  const [createOpen, setCreateOpen] = useState(false)
+  const [createOpen, setCreateOpen] = useState(initialNewBookingStart !== null)
 
   const today = getTodayISO()
   // Analytics summaries keep their bounded window (the analytics API caps the range).
@@ -248,26 +338,20 @@ export function ReservationsPage() {
 
   return (
     <div>
-      <PageHeader
-        title={t.reservations.title}
-        subtitle={t.reservations.subtitle}
-        actions={
-          <Button
-            type="button"
-            variant={createOpen ? 'outline' : 'primary'}
-            onClick={() => setCreateOpen((open) => !open)}
-          >
-            <MaterialIcon name={createOpen ? 'close' : 'add'} size={18} />
-            {createOpen ? t.reservations.board.hideBooking : t.reservations.board.newBooking}
-          </Button>
-        }
-      />
-
-      {selectedBranch && (
-        <p className="mb-4 text-label-sm text-on-surface-variant">
-          {formatBranchLabel(selectedBranch)}
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <p className="text-label-sm text-on-surface-variant">
+          {selectedBranch ? formatBranchLabel(selectedBranch) : null}
         </p>
-      )}
+        <Button
+          type="button"
+          variant={createOpen ? 'outline' : 'primary'}
+          onClick={() => setCreateOpen((open) => !open)}
+        >
+          <MaterialIcon name={createOpen ? 'close' : 'add'} size={18} />
+          {createOpen ? t.reservations.board.hideBooking : t.reservations.board.newBooking}
+        </Button>
+      </div>
+
 
       {usingFallback && (
         <div className="mb-6 rounded-2xl border border-outline-variant/40 bg-surface-container-low p-4">
@@ -290,9 +374,11 @@ export function ReservationsPage() {
 
       {createOpen && (scopeStatus === 'ready' || scopeStatus === 'empty_branches') && (
         <div className="mb-8">
-          <ReservationCreatePanel />
+          <ReservationCreatePanel initialLocalStart={initialNewBookingStart ?? ''} />
         </div>
       )}
+
+      {!usingFallback && <AutoClosedReport today={today} />}
 
       {listQuery.isLoading && (
         <p className="text-body-md text-on-surface-variant py-12 text-center">
@@ -356,18 +442,6 @@ export function ReservationsPage() {
                 </option>
               ))}
             </Select>
-            <div className="flex gap-2" role="group" aria-label={t.reservations.list.density}>
-              <FilterChip
-                label={t.reservations.list.densityComfortable}
-                active={density === 'comfortable'}
-                onClick={() => setDensity('comfortable')}
-              />
-              <FilterChip
-                label={t.reservations.list.densityCompact}
-                active={density === 'compact'}
-                onClick={() => setDensity('compact')}
-              />
-            </div>
             <p className="text-label-sm text-on-surface-variant sm:ms-auto">
               <Num>{usingFallback && windowFilter === 'all' ? Math.max(rowCount, branchTotal) : filteredItems.length}</Num>{' '}
               {t.reservations.board.bookings}
@@ -402,7 +476,7 @@ export function ReservationsPage() {
                         reservation={reservation}
                         locale={locale}
                         t={t}
-                        compact={density === 'compact'}
+                        now={now}
                         onOpen={() => navigate(`/app/reservations/${reservation.reservationId}`)}
                       />
                     ))}

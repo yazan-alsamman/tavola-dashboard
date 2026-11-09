@@ -46,7 +46,12 @@ function mapWalkInError(
   }
 }
 
-export function WalkInPage() {
+interface WalkInPageProps {
+  /** Rendered as a tab inside Reservations: no page title of its own. */
+  embedded?: boolean
+}
+
+export function WalkInPage({ embedded = false }: WalkInPageProps) {
   const { t, locale } = useLocale()
   const { toast } = useToast()
   const navigate = useNavigate()
@@ -190,7 +195,11 @@ export function WalkInPage() {
 
   return (
     <div>
-      <PageHeader title={t.walkIn.title} subtitle={t.walkIn.subtitle} />
+      <PageHeader
+        title={t.walkIn.title}
+        subtitle={t.walkIn.subtitle}
+        className={embedded ? '[&_h1]:sr-only' : undefined}
+      />
 
       <div className="grid grid-cols-1 xl:grid-cols-5 gap-6">
         <Card className="xl:col-span-2">
@@ -300,9 +309,6 @@ export function WalkInPage() {
                 </label>
               </>
             )}
-            <p className="text-label-sm text-on-surface-variant">
-              {t.reservations.create.timezoneHint}: {branchTimezone}
-            </p>
             <Button type="button" className="h-11" onClick={() => void handleSearch()} disabled={searching || !localStart}>
               {searching ? t.common.loading : t.reservations.create.searchAvailability}
             </Button>
