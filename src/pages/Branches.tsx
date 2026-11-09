@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { MaterialIcon } from '@/components/ui/Icon'
 import { PageHeader } from '@/components/ui/PageHeader'
+import { PriceLevelStars } from '@/components/branches/PriceLevelStars'
 import { Button } from '@/components/ui/Button'
 import { Card, CardTitle } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
@@ -286,6 +287,12 @@ export function BranchesPage() {
                     <dd className="text-on-surface">{branch.currency}</dd>
                   </div>
                 )}
+                <div className="flex justify-between gap-2">
+                  <dt>{t.branches.fields.priceLevel}</dt>
+                  <dd className="text-on-surface">
+                    <PriceLevelStars level={branch.priceLevel} />
+                  </dd>
+                </div>
                 <div className="flex justify-between gap-2">
                   <dt>{t.branches.location.title}</dt>
                   <dd className="text-on-surface text-end">

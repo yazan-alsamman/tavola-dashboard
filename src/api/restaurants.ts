@@ -32,11 +32,11 @@ export interface CreateRestaurantRequest {
   priceLevel?: number | null
 }
 
+/** `priceLevel` is computed per branch (ADR-046) and no longer sent. */
 export interface UpdateRestaurantRequest {
   name: string
   description?: string | null
   cuisineType?: string | null
-  priceLevel?: number | null
   status?: RestaurantStatus
 }
 
@@ -274,6 +274,20 @@ export async function removeRestaurantGalleryImage(
     `/restaurants/${restaurantId}/gallery/${galleryItemId}`,
     { method: 'DELETE' },
   )
+}
+
+/**
+ * Drag ordering (ADR-046): every gallery image of the restaurant, once, in
+ * the new order. A partial or stale list is a 400. Returns 204.
+ */
+export async function reorderRestaurantGallery(
+  restaurantId: string,
+  galleryItemIds: string[],
+): Promise<void> {
+  await apiRequest<undefined>(`/restaurants/${restaurantId}/gallery/order`, {
+    method: 'PUT',
+    body: { galleryItemIds },
+  })
 }
 
 export async function getRestaurantCuisineCategories(

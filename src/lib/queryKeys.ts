@@ -96,6 +96,8 @@ export const offerKeys = {
   all: ['offers'] as const,
   list: (restaurantId: string, page: number, pageSize: number) =>
     [...offerKeys.all, restaurantId, page, pageSize] as const,
+  impact: (restaurantId: string, offerId: string) =>
+    [...offerKeys.all, restaurantId, 'impact', offerId] as const,
 }
 
 export const messagingKeys = {

@@ -580,3 +580,16 @@ Decision:
 3. The restaurant replies once and may open a review for re-rating. The dashboard has no delete and no review-photo upload; the Gallery no longer manages review images.
 
 Consequences: a single-rating review from app 1.0.2 shows its stars without axes.
+
+## ADR-026 — Menu names, branch menus, price level, gallery order; offer kinds, conditions and impact (CR round 2, batch 4)
+
+Context: the CR's menu page (item names in Arabic and English with the branch currency, a menu per branch or shared, a computed price level, ordered photos) and offers page (four kinds in Arabic, days and hours, conditions, visible edit and delete, an impact card; broadcast removed from round 2). Backend contracts: ADR-046 and ADR-047. Numbered 026 because 016–020 were reused by the round-2 entries above.
+
+Decision:
+1. Menu items carry `nameAr`/`nameEn`; the list shows the reader's language first and the other below. The backend's item update is a full replace, so every update goes through `menuItemUpdateBody(item, changes)`; this also fixes the availability toggle, which used to send only `availabilityMode`.
+2. Prices show the item currency, else the menu's (`menuCurrency`: its branch's, or the one currency all branches share). A new menu can be shared or belong to one branch.
+3. The price level is computed per branch and shown as stars on the Menu and Branches pages; Settings no longer edits it.
+4. Gallery photos reorder by drag (desktop) or by move buttons (touch, keyboard) through `PUT /restaurants/:id/gallery/order`; upload tips sit above the drop zone. The Gallery tab stays (round-2 exclusion).
+5. Offers: the four current kinds (older kinds still display), percentage or amount in the covered branches' currency, days/hours/conditions, the server's status (Ended past the period). Edit, delete, publish and impact are visible buttons. The impact card reads `GET /restaurants/:id/offers/:offerId/impact`.
+
+Consequences: a shared menu over branches with different currencies shows prices without a currency unless the item has one. The impact card is fetched only while open.

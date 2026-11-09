@@ -1,11 +1,26 @@
 import { useState, type FormEvent } from 'react'
 import { isApiError } from '@/api/errors'
-import type {
-  CreateOfferRequest,
-  OfferDiscountType,
-  OfferDto,
-  OfferType,
+import {
+  CURRENT_OFFER_TYPES,
+  NO_OFFER_CONDITIONS,
+  isOfferEditable,
+  offerConditions,
+  offerCurrency,
+  type CreateOfferRequest,
+  type OfferConditions,
+  type OfferDiscountType,
+  type OfferDto,
+  type OfferType,
 } from '@/api/offers'
+import { OfferConditionsFields } from '@/components/offers/OfferConditionsFields'
+import { OfferImpactCard } from '@/components/offers/OfferImpactCard'
+import {
+  offerConditionLabels,
+  offerScheduleLabel,
+  offerStatusLabel,
+  offerTypeLabel,
+  offerValueLabel,
+} from '@/components/offers/offerText'
 import { MaterialIcon } from '@/components/ui/Icon'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Button } from '@/components/ui/Button'
@@ -21,9 +36,7 @@ import {
   DataTableBody,
   DataTableRow,
   DataTableCell,
-  DataTableRowActions,
 } from '@/components/ui/DataTable'
-import { DropdownMenu, DropdownMenuItem } from '@/components/ui/DropdownMenu'
 import { useLocale } from '@/context/LocaleContext'
 import { useRestaurantScope } from '@/context/RestaurantScopeContext'
 import { useToast } from '@/context/ToastContext'
@@ -39,7 +52,6 @@ import { formatDate, formatDateRange } from '@/lib/format'
 
 const PAGE_SIZE = 20
 
-const OFFER_TYPES: OfferType[] = ['Promotion']
 const DISCOUNT_TYPES: OfferDiscountType[] = ['Percentage', 'FixedAmount']
 
 interface OfferFormState {
@@ -50,16 +62,18 @@ interface OfferFormState {
   discountValue: string
   startsAt: string
   endsAt: string
+  conditions: OfferConditions
 }
 
 const emptyForm = (): OfferFormState => ({
-  type: 'Promotion',
+  type: CURRENT_OFFER_TYPES[0],
   title: '',
   description: '',
   discountType: 'Percentage',
   discountValue: '',
   startsAt: '',
   endsAt: '',
+  conditions: { ...NO_OFFER_CONDITIONS },
 })
 
 function toDatetimeLocal(iso: string | undefined): string {
@@ -76,13 +90,14 @@ function fromDatetimeLocal(value: string): string {
 
 function offerToForm(offer: OfferDto): OfferFormState {
   return {
-    type: offer.type ?? 'Promotion',
+    type: offer.type ?? CURRENT_OFFER_TYPES[0],
     title: offer.title ?? '',
     description: offer.description ?? '',
     discountType: offer.discountType ?? 'Percentage',
     discountValue: offer.discountValue != null ? String(offer.discountValue) : '',
     startsAt: toDatetimeLocal(offer.startsAt),
     endsAt: toDatetimeLocal(offer.endsAt),
+    conditions: offerConditions(offer),
   }
 }
 
@@ -95,6 +110,7 @@ function formToRequest(form: OfferFormState): CreateOfferRequest {
     discountValue: Number(form.discountValue),
     startsAt: fromDatetimeLocal(form.startsAt),
     endsAt: fromDatetimeLocal(form.endsAt),
+    ...form.conditions,
   }
 }
 
@@ -107,32 +123,15 @@ function offerPeriod(offer: OfferDto, locale: string): string {
   return '—'
 }
 
-function offerStatusLabel(
-  status: string | undefined,
-  t: ReturnType<typeof useLocale>['t'],
-): string {
-  if (status === 'Draft') return t.offers.statusDraft
-  if (status === 'Published') return t.offers.statusPublished
-  return status ?? '—'
-}
-
-function discountLabel(
-  offer: OfferDto,
-  t: ReturnType<typeof useLocale>['t'],
-): string {
-  if (offer.discountType === 'Percentage') {
-    return `${offer.discountValue ?? 0}%`
-  }
-  if (offer.discountType === 'FixedAmount') {
-    return `${offer.discountValue ?? 0} ${t.offers.fixedAmount}`
-  }
-  return String(offer.discountValue ?? '—')
-}
-
 export function OffersPage() {
   const { t, locale } = useLocale()
   const { toast } = useToast()
-  const { selectedRestaurantId, status: scopeStatus } = useRestaurantScope()
+  const {
+    selectedRestaurantId,
+    status: scopeStatus,
+    branches,
+    formatBranchLabel,
+  } = useRestaurantScope()
   const canManage = useCanManageOffers()
 
   const [page, setPage] = useState(1)
@@ -140,6 +139,7 @@ export function OffersPage() {
   const [editingOffer, setEditingOffer] = useState<OfferDto | null>(null)
   const [form, setForm] = useState<OfferFormState>(emptyForm)
   const [deleteTarget, setDeleteTarget] = useState<OfferDto | null>(null)
+  const [impactTarget, setImpactTarget] = useState<OfferDto | null>(null)
 
   const enabled = scopeStatus === 'ready' && Boolean(selectedRestaurantId)
   const listQuery = useOffersListQuery(
@@ -179,6 +179,11 @@ export function OffersPage() {
     e.preventDefault()
     if (!selectedRestaurantId || !canManage) return
 
+    const { startTime, endTime } = form.conditions
+    if (startTime && endTime && startTime >= endTime) {
+      toast('error', t.offers.errors.hours)
+      return
+    }
     const body = formToRequest(form)
     try {
       if (editingOffer) {
@@ -215,35 +220,57 @@ export function OffersPage() {
     }
   }
 
+  const currencyOf = (offer: Pick<OfferDto, 'branchIds'>): string | null =>
+    offerCurrency(offer.branchIds ?? [], branches)
+
   const offerActions = (offer: OfferDto) => {
     if (!canManage) return null
-    const isDraft = offer.status === 'Draft'
     return (
-      <DataTableRowActions
-        primary={
-          isDraft ? (
-            <Button
-              size="sm"
-              disabled={publishMutation.isPending}
-              onClick={() => void handlePublish(offer)}
-            >
-              {t.offers.publish}
-            </Button>
-          ) : undefined
-        }
-        menu={
-          <DropdownMenu label={t.common.moreActions}>
-            {isDraft && (
-              <DropdownMenuItem onSelect={() => openEdit(offer)}>
-                {t.common.edit}
-              </DropdownMenuItem>
-            )}
-            <DropdownMenuItem destructive onSelect={() => setDeleteTarget(offer)}>
-              {t.common.delete}
-            </DropdownMenuItem>
-          </DropdownMenu>
-        }
-      />
+      <div className="flex flex-wrap justify-end gap-1">
+        {offer.status === 'Draft' && (
+          <Button
+            size="sm"
+            disabled={publishMutation.isPending}
+            onClick={() => void handlePublish(offer)}
+          >
+            {t.offers.publish}
+          </Button>
+        )}
+        {offer.status !== 'Draft' && (
+          <Button size="sm" variant="outline" onClick={() => setImpactTarget(offer)}>
+            <MaterialIcon name="insights" size={16} />
+            {t.offers.impactAction}
+          </Button>
+        )}
+        {isOfferEditable(offer) && (
+          <Button size="sm" variant="outline" onClick={() => openEdit(offer)}>
+            <MaterialIcon name="edit" size={16} />
+            {t.common.edit}
+          </Button>
+        )}
+        <Button
+          size="sm"
+          variant="ghost"
+          className="text-error"
+          onClick={() => setDeleteTarget(offer)}
+        >
+          <MaterialIcon name="delete" size={16} />
+          {t.common.delete}
+        </Button>
+      </div>
+    )
+  }
+
+  const offerDetails = (offer: OfferDto) => {
+    const conditions = offerConditions(offer)
+    const extras = offerConditionLabels(conditions, t.offers, locale)
+    return (
+      <>
+        <span className="block">{offerScheduleLabel(conditions, t.offers)}</span>
+        {extras.length > 0 && (
+          <span className="block text-on-surface-variant">{extras.join(' · ')}</span>
+        )}
+      </>
     )
   }
 
@@ -277,6 +304,14 @@ export function OffersPage() {
   const offers = listQuery.data?.items ?? []
   const total = listQuery.data?.total ?? 0
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
+  const formTypes: OfferType[] = CURRENT_OFFER_TYPES.includes(
+    form.type as (typeof CURRENT_OFFER_TYPES)[number],
+  )
+    ? [...CURRENT_OFFER_TYPES]
+    : [form.type, ...CURRENT_OFFER_TYPES]
+  const formCurrency = offerCurrency(form.conditions.branchIds, branches)
+  const valueUnit =
+    form.discountType === 'Percentage' ? t.offers.fields.percent : formCurrency
   const forbidden =
     listQuery.isError &&
     isApiError(listQuery.error) &&
@@ -358,16 +393,21 @@ export function OffersPage() {
                           {offer.title ?? '—'}
                         </p>
                         <p className="text-label-sm text-on-surface-variant">
-                          {discountLabel(offer, t)} · {offerPeriod(offer, locale)}
+                          {offerTypeLabel(offer.type, t.offers)} ·{' '}
+                          {offerValueLabel(offer, currencyOf(offer), t.offers, locale)}
                         </p>
                       </div>
                       <StatusBadge
                         type="custom"
                         status={offer.status ?? ''}
-                        label={offerStatusLabel(offer.status, t)}
+                        label={offerStatusLabel(offer.status, t.offers)}
                       />
                     </div>
-                    {canManage && <div className="mt-3 flex justify-end">{offerActions(offer)}</div>}
+                    <div className="mt-2 text-label-sm text-on-surface">
+                      <span className="block">{offerPeriod(offer, locale)}</span>
+                      {offerDetails(offer)}
+                    </div>
+                    {canManage && <div className="mt-3">{offerActions(offer)}</div>}
                   </article>
                 ))}
               </div>
@@ -376,9 +416,7 @@ export function OffersPage() {
             <DataTableHead>
               <DataTableHeader>{t.offers.columns.title}</DataTableHeader>
               <DataTableHeader>{t.offers.columns.discount}</DataTableHeader>
-              <DataTableHeader className="hidden md:table-cell">
-                {t.offers.columns.period}
-              </DataTableHeader>
+              <DataTableHeader>{t.offers.columns.period}</DataTableHeader>
               <DataTableHeader>{t.offers.columns.status}</DataTableHeader>
               {canManage && (
                 <DataTableHeader className="text-end">
@@ -400,15 +438,23 @@ export function OffersPage() {
                         )}
                       </div>
                     </DataTableCell>
-                    <DataTableCell>{discountLabel(offer, t)}</DataTableCell>
-                    <DataTableCell className="hidden md:table-cell text-label-sm">
-                      {offerPeriod(offer, locale)}
+                    <DataTableCell>
+                      <span className="block text-label-sm text-on-surface-variant">
+                        {offerTypeLabel(offer.type, t.offers)}
+                      </span>
+                      <span className="block font-medium whitespace-nowrap">
+                        {offerValueLabel(offer, currencyOf(offer), t.offers, locale)}
+                      </span>
+                    </DataTableCell>
+                    <DataTableCell className="text-label-sm">
+                      <span className="block whitespace-nowrap">{offerPeriod(offer, locale)}</span>
+                      {offerDetails(offer)}
                     </DataTableCell>
                     <DataTableCell>
                       <StatusBadge
                         type="custom"
                         status={offer.status ?? ''}
-                        label={offerStatusLabel(offer.status, t)}
+                        label={offerStatusLabel(offer.status, t.offers)}
                       />
                     </DataTableCell>
                     {canManage && (
@@ -470,12 +516,17 @@ export function OffersPage() {
                 setForm((prev) => ({ ...prev, type: e.target.value as OfferType }))
               }
             >
-              {OFFER_TYPES.map((type) => (
+              {formTypes.map((type) => (
                 <option key={type} value={type}>
-                  {type}
+                  {offerTypeLabel(type, t.offers)}
                 </option>
               ))}
             </Select>
+            {form.type in t.offers.typeHints && (
+              <span className="text-label-sm text-on-surface-variant">
+                {(t.offers.typeHints as Record<string, string>)[form.type]}
+              </span>
+            )}
           </label>
 
           <label className="flex flex-col gap-1.5">
@@ -521,18 +572,23 @@ export function OffersPage() {
                   <option key={dt} value={dt}>
                     {dt === 'Percentage'
                       ? t.offers.discountPercentage
-                      : t.offers.discountFixedAmount}
+                      : formCurrency
+                        ? `${t.offers.discountFixedAmount} (${formCurrency})`
+                        : t.offers.discountFixedAmount}
                   </option>
                 ))}
               </Select>
             </label>
             <label className="flex flex-col gap-1.5">
               <span className="text-sm font-medium text-on-surface-variant">
-                {t.offers.fields.discountValue}
+                {valueUnit
+                  ? t.offers.fields.discountValueIn.replace('{unit}', valueUnit)
+                  : t.offers.fields.discountValue}
               </span>
               <Input
                 type="number"
                 min={0}
+                max={form.discountType === 'Percentage' ? 100 : undefined}
                 step={form.discountType === 'Percentage' ? 1 : 0.01}
                 value={form.discountValue}
                 onChange={(e) =>
@@ -572,6 +628,13 @@ export function OffersPage() {
             </label>
           </div>
 
+          <OfferConditionsFields
+            value={form.conditions}
+            onChange={(conditions) => setForm((prev) => ({ ...prev, conditions }))}
+            branches={branches}
+            formatBranchLabel={formatBranchLabel}
+          />
+
           <div className="flex justify-end gap-3 pt-2">
             <Button type="button" variant="outline" onClick={closeForm}>
               {t.common.cancel}
@@ -586,6 +649,18 @@ export function OffersPage() {
             </Button>
           </div>
         </form>
+      </Modal>
+
+      <Modal
+        open={Boolean(impactTarget)}
+        onClose={() => setImpactTarget(null)}
+        title={t.offers.impact.title}
+        description={impactTarget?.title}
+        size="lg"
+      >
+        {impactTarget && selectedRestaurantId && (
+          <OfferImpactCard restaurantId={selectedRestaurantId} offerId={impactTarget.offerId} />
+        )}
       </Modal>
 
       <ConfirmDialog

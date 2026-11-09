@@ -177,7 +177,6 @@ export function SettingsPage() {
     name: '',
     description: '',
     cuisineType: '',
-    priceLevel: 2,
   })
   const [settings, setSettings] = useState<RestaurantSettingsDto>(defaultSettings)
   const [hours, setHours] = useState<WorkingHoursEntry[]>(entriesToWeek([]))
@@ -316,7 +315,6 @@ export function SettingsPage() {
       name: restaurant.name,
       description: restaurant.description ?? '',
       cuisineType: restaurant.cuisineType ?? '',
-      priceLevel: restaurant.priceLevel ?? 2,
     })
   }
 
@@ -329,7 +327,6 @@ export function SettingsPage() {
         name: profile.name.trim(),
         description: profile.description.trim() || null,
         cuisineType: profile.cuisineType.trim() || null,
-        priceLevel: profile.priceLevel,
         status: selectedRestaurant?.status ?? 'Active',
       })
       applyRestaurant(updated)
@@ -532,20 +529,6 @@ export function SettingsPage() {
               value={profile.cuisineType}
               onChange={(v) => setProfile({ ...profile, cuisineType: v })}
             />
-            <div>
-              <label className="text-sm font-medium text-text-secondary mb-1.5 block">
-                {t.settings.profileForm.priceLevel}
-              </label>
-              <Input
-                type="number"
-                min={1}
-                max={4}
-                value={profile.priceLevel}
-                onChange={(e) =>
-                  setProfile({ ...profile, priceLevel: Number(e.target.value) || 1 })
-                }
-              />
-            </div>
             <Button type="submit" disabled={saving}>
               {saving ? t.common.loading : t.common.save}
             </Button>

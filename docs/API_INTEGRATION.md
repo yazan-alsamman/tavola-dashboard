@@ -48,8 +48,8 @@ Supporting modules:
 | `src/api/tokenStore.ts` | In-memory access token + `sessionStorage` refresh token + session-invalidated listeners |
 | `src/api/auth.ts` | `login`, `logout`, `logoutAll`, `forgotPassword`, `resetPassword`, `changePassword`, `listSessions`, `revokeSession` |
 | `src/api/users.ts` | `getCurrentUser`, `updateCurrentUser`, `getMyPreferences`, `updateMyPreferences`, `uploadMyAvatar` |
-| `src/api/restaurants.ts` | list/get/create/update/delete + settings, working-hours, gallery, cover (`POST /restaurants/:id/cover`), cuisine/occasion category assignment |
-| `src/api/branches.ts` | list/get/create/update/delete + working-hours |
+| `src/api/restaurants.ts` | list/get/create/update/delete + settings, working-hours, gallery (incl. `PUT /restaurants/:id/gallery/order`), cover (`POST /restaurants/:id/cover`), cuisine/occasion category assignment. `priceLevel` is read-only (ADR-046). |
+| `src/api/branches.ts` | list/get/create/update/delete + working-hours. Reads the computed `referencePrice`/`priceLevel` (ADR-046). |
 | `src/api/reservations.ts` | availability, Online + staff phone-booking create, list/get, approve/reject/cancel/reschedule/complete/no-show/table-ready |
 | `src/api/floorPlans.ts` | `listFloorPlans`, `createFloorPlan`, `activateFloorPlan` |
 | `src/api/tables.ts` | list/get + CRUD + move/status + merge/split |
@@ -60,10 +60,10 @@ Supporting modules:
 | `src/api/health.ts` | health / liveness / readiness (non-envelope) |
 | `src/api/analytics.ts` | customers, reservation summary, branch trends/peak-hours, waitlist, reviews-summary (`ReviewsSummaryDto`: 6-month average shown from 5 reviews, axis averages, strongest/weakest axis), org reservation summary |
 | `src/api/organizations.ts` | subscription + usage + members/invitations/transfer + accept invitation |
-| `src/api/offers.ts` | create/list/update/publish/delete |
+| `src/api/offers.ts` | create/list/update/publish/delete + `GET .../offers/:offerId/impact`. Create/update send the ADR-047 conditions (`daysOfWeek`, `startTime`/`endTime`, `minPartySize`, `branchIds`, `oncePerCustomer`, `bookingCap`); update works on Draft and running Published offers. |
 | `src/api/reviews.ts` | `GET /restaurants/:id/reviews` (public) and `/reviews/manage` (Owner/Admin, adds `privateNote`), both with `axis`/`stars` filters; `POST /reviews/:id/reply` and `POST /reviews/:id/reopen`. The dashboard never deletes a review or uploads its photos (ADR-020). |
 | `src/api/messaging.ts` | restaurant inbox, conversation CRUD, multipart send |
-| `src/api/menus.ts` | full menu tree management + public GETs for render |
+| `src/api/menus.ts` | full menu tree management + public GETs for render. Items send `nameAr`/`nameEn` (ADR-046); item update is a full replace built by `menuItemUpdateBody`; create menu takes an optional `branchId`. |
 | `Tavola_platform/src/platform/api/platformAdmin.ts` | Platform Owner console (separate app) — login, dashboard, restaurants/orgs lifecycle, revenue, acquisitions, admins, accounts, audit, pricing, plans, provision, broadcast |
 
 See `docs/API_COMPATIBILITY_REPORT.md` for the full Postman ↔ client ↔ UI matrix (regenerate with `node scripts/build-compat-matrix.mjs`).
@@ -379,6 +379,7 @@ Grouped by Postman folder. `{base}` = `VITE_API_BASE_URL` (i.e. `/api/v1`). All 
 | GET | `/discovery/restaurants/:id` | Public. Photos page reads `coverImageUrl` only, to preview the cover. |
 | POST / DELETE | `/restaurants/:id/gallery[/:galleryItemId]` | Owner/Admin. Multipart `file` on POST. This does not set the cover. |
 | GET | `/restaurants/:id/gallery` | Public. `data` is `{ restaurantId, items }`, ordered by `sortOrder`. Each item uses signed `imageUrl`. |
+| PUT | `/restaurants/:id/gallery/order` | Owner/Admin. `{ galleryItemIds }`: every image once, in the new order; 204. A partial or stale list is a 400 (ADR-046). |
 | GET / PATCH | `/restaurants/:id/cuisine-categories` | |
 | GET / PATCH | `/restaurants/:id/occasion-categories` | |
 
