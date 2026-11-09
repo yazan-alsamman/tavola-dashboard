@@ -83,6 +83,7 @@ import {
   Map,
   MapPin,
   Maximize2,
+  Ellipsis,
   Menu,
   Merge,
   Minus,
@@ -275,6 +276,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
   zoom_in: ZoomIn,
   zoom_out: ZoomOut,
   rotate_right: RotateCw,
+  more_horiz: Ellipsis,
 }
 
 export function MaterialIcon({ name, filled, className, size = 20 }: MaterialIconProps) {

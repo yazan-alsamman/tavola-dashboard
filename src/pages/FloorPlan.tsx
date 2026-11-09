@@ -1,80 +1,39 @@
-import { useEffect, useRef, useState } from 'react'
+import { useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { isApiError } from '@/api/errors'
 import type { FloorPlanAreaDto } from '@/api/floorPlanAreas'
-import type { CreateTableRequest, TableDto } from '@/api/tables'
-import { CreateFloorPlanDialog } from '@/components/inventory/CreateFloorPlanDialog'
-import { ChangeTableStatusDialog } from '@/components/inventory/ChangeTableStatusDialog'
-import { MoveTableDialog } from '@/components/inventory/MoveTableDialog'
-import { effectiveCapacity } from '@/lib/tableCapacity'
+import type { TableDto } from '@/api/tables'
+import { FloorAreaDialog } from '@/components/floor/FloorAreaDialog'
+import { FloorGridEditor, type GridMode } from '@/components/floor/FloorGridEditor'
+import { FloorReviewDialog } from '@/components/floor/FloorReviewDialog'
+import { FloorTableList } from '@/components/floor/FloorTableList'
 import { TableFormDialog } from '@/components/inventory/TableFormDialog'
-import { CreateFloorPlanAreaDialog } from '@/components/floor/CreateFloorPlanAreaDialog'
-import { FloorPlanAreaBar } from '@/components/floor/FloorPlanAreaBar'
-import { FloorPlanReadView } from '@/components/floor/FloorPlanReadView'
-import { FloorSaveStatus, type FloorSaveState } from '@/components/floor/FloorSaveStatus'
-import { FloorTableInspector } from '@/components/floor/FloorTableInspector'
-import { FloorTableQueue } from '@/components/floor/FloorTableQueue'
-import { Drawer } from '@/components/ui/Drawer'
+import { Button } from '@/components/ui/Button'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { MaterialIcon } from '@/components/ui/Icon'
-import { Num } from '@/components/ui/Num'
-import { Button } from '@/components/ui/Button'
-import { PageHeader } from '@/components/ui/PageHeader'
 import { ConfirmDialog } from '@/components/ui/Modal'
+import { PageHeader } from '@/components/ui/PageHeader'
 import { useLocale } from '@/context/LocaleContext'
 import { useRestaurantScope } from '@/context/RestaurantScopeContext'
 import { useToast } from '@/context/ToastContext'
+import { useFloorPlanEditor } from '@/hooks/useFloorPlanEditor'
 import {
   useBranchTablesQuery,
   useFloorPlanAreasQuery,
   useFloorPlanTablesQuery,
   useSelectedFloorPlan,
 } from '@/hooks/useInventoryQueries'
-import {
-  useActivateFloorPlanMutation,
-  useCreateTableMutation,
-  useDeleteFloorPlanAreaMutation,
-  useDeleteTableMutation,
-  useUpdateTableMutation,
-} from '@/hooks/useInventoryMutations'
 import { useCanManageInventory } from '@/hooks/usePermissions'
-import { mapInventoryMutationError } from '@/lib/inventoryMutationErrors'
-import {
-  nextHallSortOrder,
-  partitionFrame,
-  sectionIdForBox,
-  tablesInsidePartition,
-  drawAttachesToSelectedArea,
-  visiblePartitions,
-} from '@/lib/floorPartitions'
-import {
-  readSectionDrafts,
-  writeSectionDrafts,
-} from '@/lib/floorSectionDrafts'
-import {
-  clampTableSize,
-  isTablePlaced,
-  layoutUnplaced,
-  nextTableNumber,
-  resolveTableSize,
-  tableBox,
-  withCompleteGeometry,
-  type TableBox,
-  type TablePreset,
-} from '@/lib/floorGeometry'
-import { tableShapeKind } from '@/lib/tableShape'
-import {
-  floorLabel,
-  listFloors,
-  nextFloor,
-  tableFloor,
-  tablesOnFloor,
-} from '@/lib/floors'
+import { areaFloor, areaRect, type CellRect } from '@/lib/floorGrid'
+import { floorLabel, listFloors, nextFloor } from '@/lib/floors'
 import { cn } from '@/lib/utils'
 
+type View = 'map' | 'list'
+
 /**
- * Backend-driven Floor Plan with production mutations.
- * Viewing a floor plan does not activate it — activation is explicit.
- * Geometry: save-on-drop via Update Table (no PATCH per pointer move).
+ * "مخطط المكان" (CR WJ-R-2026-002 p.04–05): one plan per branch with a tab
+ * per floor, areas drawn on a fixed grid, tables placed by drag, a list view
+ * and a review before guests see it. Replaces the separate Tables page.
  */
 export function FloorPlanPage() {
   const { t } = useLocale()
@@ -87,540 +46,149 @@ export function FloorPlanPage() {
     selectedBranchId,
   } = useRestaurantScope()
   const canManage = useCanManageInventory()
-  const {
-    floorPlansQuery,
-    selectedFloorPlanId,
-    selectedFloorPlan,
-    selectFloorPlan,
-  } = useSelectedFloorPlan()
-  const areasQuery = useFloorPlanAreasQuery(
-    selectedFloorPlanId,
-    scopeStatus === 'ready' && Boolean(selectedFloorPlanId),
-  )
-  const tablesQuery = useFloorPlanTablesQuery(
-    selectedFloorPlanId,
-    scopeStatus === 'ready' && Boolean(selectedFloorPlanId),
-  )
-  const branchTablesQuery = useBranchTablesQuery()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const view: View = searchParams.get('view') === 'list' ? 'list' : 'map'
+  const { floorPlansQuery, selectedFloorPlanId, selectedFloorPlan } = useSelectedFloorPlan()
+  const ready = scopeStatus === 'ready' && Boolean(selectedFloorPlanId)
+  const areasQuery = useFloorPlanAreasQuery(selectedFloorPlanId, ready)
+  const tablesQuery = useFloorPlanTablesQuery(selectedFloorPlanId, ready)
+  const branchTablesQuery = useBranchTablesQuery(scopeStatus === 'ready')
 
-  const activateMutation = useActivateFloorPlanMutation()
-  const createMutation = useCreateTableMutation()
-  const updateMutation = useUpdateTableMutation()
-  const deleteMutation = useDeleteTableMutation()
-  const deleteAreaMutation = useDeleteFloorPlanAreaMutation()
-
-  const [selectedTableId, setSelectedTableId] = useState<string | null>(null)
-  const [createFloorOpen, setCreateFloorOpen] = useState(false)
-  const [createTableOpen, setCreateTableOpen] = useState(false)
-  const [editTable, setEditTable] = useState<TableDto | null>(null)
-  const [moveTableTarget, setMoveTableTarget] = useState<TableDto | null>(null)
-  const [statusTable, setStatusTable] = useState<TableDto | null>(null)
-  const [deleteTableTarget, setDeleteTableTarget] = useState<TableDto | null>(
-    null,
-  )
-  const [repositionBusyId, setRepositionBusyId] = useState<string | null>(null)
-  const [repositionError, setRepositionError] = useState<string | null>(null)
-  const [failedSave, setFailedSave] = useState<{
-    tableId: string
-    overrides: Parameters<typeof withCompleteGeometry>[1]
-    message: string
-  } | null>(null)
-  const [activateError, setActivateError] = useState<string | null>(null)
-  const [deleteError, setDeleteError] = useState<string | null>(null)
-  const [placePreset, setPlacePreset] = useState<TablePreset | null>(null)
-  const [viewMode, setViewMode] = useState<'all' | 'focus'>('focus')
-  const [overviewPlanId, setOverviewPlanId] = useState<string | null>(null)
-  const [dragging, setDragging] = useState(false)
-  const [drawHall, setDrawHall] = useState(false)
-  const [hallDialogOpen, setHallDialogOpen] = useState(false)
-  const [pendingPartition, setPendingPartition] = useState<TableBox | null>(null)
-  const pendingPartitionRef = useRef<TableBox | null>(null)
-  const [sectionRects, setSectionRects] = useState<Record<string, TableBox>>({})
-  const [draftScope, setDraftScope] = useState('')
-  const [highlightedAreaId, setHighlightedAreaId] = useState<string | null>(null)
-  const [deleteHallTarget, setDeleteHallTarget] = useState<FloorPlanAreaDto | null>(
-    null,
-  )
-  const [hallError, setHallError] = useState<string | null>(null)
-  const [zonesOpen, setZonesOpen] = useState(false)
   const [currentFloor, setCurrentFloor] = useState(0)
   const [openedFloors, setOpenedFloors] = useState<number[]>([])
+  const [mode, setMode] = useState<GridMode>({ kind: 'idle' })
+  const [redrawTarget, setRedrawTarget] = useState<FloorPlanAreaDto | null>(null)
+  const [pendingRect, setPendingRect] = useState<CellRect | null>(null)
+  const [areaDialog, setAreaDialog] = useState<{ area: FloorPlanAreaDto | null } | null>(null)
+  const [deleteAreaTarget, setDeleteAreaTarget] = useState<FloorPlanAreaDto | null>(null)
+  const [tableDialog, setTableDialog] = useState<{ table: TableDto | null } | null>(null)
+  const [deleteTableTarget, setDeleteTableTarget] = useState<TableDto | null>(null)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
+  const [reviewOpen, setReviewOpen] = useState(false)
 
-  const restaurantId = selectedRestaurantId ?? ''
-  const branchId = selectedBranchId ?? ''
   const tables = tablesQuery.data ?? []
-  const halls = areasQuery.data ?? []
-  const draftScopeKey =
-    restaurantId && branchId && selectedFloorPlanId
-      ? `${restaurantId}:${branchId}:${selectedFloorPlanId}`
-      : ''
+  const areas = areasQuery.data ?? []
+  const branchTables = branchTablesQuery.data?.length ? branchTablesQuery.data : tables
+  const scope =
+    selectedRestaurantId && selectedBranchId
+      ? { restaurantId: selectedRestaurantId, branchId: selectedBranchId }
+      : null
+  const editor = useFloorPlanEditor({
+    scope,
+    floorPlanId: selectedFloorPlanId,
+    tables,
+    areas,
+    currentFloor,
+  })
 
-  if (draftScopeKey && draftScope !== draftScopeKey) {
-    setDraftScope(draftScopeKey)
-    setSectionRects(
-      readSectionDrafts(restaurantId, branchId, selectedFloorPlanId!),
-    )
-  }
-
-  useEffect(() => {
-    if (!draftScopeKey || draftScope !== draftScopeKey || !selectedFloorPlanId) return
-    writeSectionDrafts(restaurantId, branchId, selectedFloorPlanId, sectionRects)
-  }, [
-    branchId,
-    draftScope,
-    draftScopeKey,
-    restaurantId,
-    sectionRects,
-    selectedFloorPlanId,
-  ])
-
-  useEffect(() => {
-    if (!draftScopeKey || draftScope !== draftScopeKey) return
-    const areas = areasQuery.data ?? []
-    const floorTables = tablesQuery.data ?? []
-    setSectionRects((current) => {
-      let changed = false
-      const next = { ...current }
-      for (const area of areas) {
-        if (next[area.floorPlanAreaId]) continue
-        const frame = partitionFrame(
-          floorTables.filter((table) => table.floorPlanAreaId === area.floorPlanAreaId),
-        )
-        if (!frame) continue
-        next[area.floorPlanAreaId] = frame
-        changed = true
-      }
-      return changed ? next : current
-    })
-  }, [areasQuery.data, draftScope, draftScopeKey, tablesQuery.data])
-  const branchTables = branchTablesQuery.data ?? []
-  const catalogTables = branchTables.length > 0 ? branchTables : tables
-  const selectedTable = catalogTables.find((tb) => tb.tableId === selectedTableId)
-  const floorPlans = floorPlansQuery.data ?? []
-  const unplaced = tables.filter((tb) => !isTablePlaced(tb))
-  const placingUnplaced =
-    selectedTable != null && !isTablePlaced(selectedTable)
-
-  const floors = listFloors(tables, openedFloors)
+  const floors = listFloors(tables, [...openedFloors, ...areas.map(areaFloor)])
   const floorLabels = {
     ground: t.floorPlan.floorGround,
     ordinals: t.floorPlan.floorOrdinals,
     numbered: t.floorPlan.floorNumbered,
   }
-  // Only placed tables are drawn; the queue holds the rest whatever their floor.
-  const floorTables = tablesOnFloor(tables, currentFloor).filter(isTablePlaced)
-  // An area belongs to the floor its tables stand on; an empty area shows everywhere.
-  const floorHalls = halls.filter((area) => {
-    const inArea = tables.filter((tb) => tb.floorPlanAreaId === area.floorPlanAreaId)
-    return inArea.length === 0 || inArea.some((tb) => tableFloor(tb) === currentFloor)
-  })
+  const floorAreasAll = areas.filter((area) => areaFloor(area) === currentFloor)
 
-  const countedTables = viewMode === 'all' ? catalogTables : floorTables
-  const counts = {
-    total: countedTables.length,
-    available: countedTables.filter((tb) => tb.status === 'Available').length,
-    occupied: countedTables.filter((tb) => tb.status === 'Occupied').length,
-  }
-  const inspectedPlan =
-    viewMode === 'focus'
-      ? selectedFloorPlan
-      : (floorPlans.find((fp) => fp.floorPlanId === overviewPlanId) ?? null)
-  const layoutReady =
-    viewMode === 'all' ? branchTablesQuery.isSuccess : tablesQuery.isSuccess
-  const saveState: FloorSaveState =
-    Boolean(repositionBusyId) ||
-    updateMutation.isPending ||
-    createMutation.isPending
-      ? 'saving'
-      : failedSave || repositionError
-        ? 'failed'
-        : dragging
-          ? 'unsaved'
-          : 'saved'
-
-  const createOnFloorPlanId =
-    viewMode === 'focus'
-      ? selectedFloorPlanId
-      : (overviewPlanId ?? selectedFloorPlanId)
-
-  const persistGeometry = async (
-    table: TableDto,
-    overrides: Parameters<typeof withCompleteGeometry>[1],
-  ): Promise<boolean> => {
-    if (!restaurantId || !branchId) return false
-    setRepositionError(null)
-    setFailedSave((current) =>
-      current?.tableId === table.tableId ? null : current,
-    )
-    setRepositionBusyId(table.tableId)
-    try {
-      await updateMutation.mutateAsync({
-        tableId: table.tableId,
-        body: withCompleteGeometry(table, overrides),
-        scope: { restaurantId, branchId },
-        floorPlanId: table.floorPlanId,
-      })
-      return true
-    } catch (err) {
-      setFailedSave({
-        tableId: table.tableId,
-        overrides,
-        message: mapInventoryMutationError(err, t.inventory.errors),
-      })
-      return false
-    } finally {
-      setRepositionBusyId(null)
-    }
+  const setView = (next: View) => {
+    const params = new URLSearchParams(searchParams)
+    if (next === 'list') params.set('view', 'list')
+    else params.delete('view')
+    setSearchParams(params, { replace: true })
+    setMode({ kind: 'idle' })
   }
 
-  const retryFailedSave = async () => {
-    if (!failedSave) return
-    const table = catalogTables.find((tb) => tb.tableId === failedSave.tableId)
-    if (!table) {
-      setFailedSave(null)
+  const startDraw = (target: FloorPlanAreaDto | null) => {
+    setRedrawTarget(target)
+    setMode({ kind: 'drawArea' })
+  }
+
+  const handleAreaDrawn = (rect: CellRect) => {
+    setMode({ kind: 'idle' })
+    if (!editor.rectFreeOfAreas(rect, redrawTarget?.floorPlanAreaId)) {
+      toast('error', t.floorGrid.areaOverlap)
       return
     }
-    await persistGeometry(table, failedSave.overrides)
-  }
-
-  const createWithFreeNumber = async (body: Omit<CreateTableRequest, 'tableNumber'>) => {
-    const rejected: string[] = []
-    let lastError: unknown
-    for (let attempt = 0; attempt < 40; attempt += 1) {
-      const tableNumber = nextTableNumber([...branchTables, ...tables], rejected)
-      try {
-        return await createMutation.mutateAsync({
-          restaurantId,
-          branchId,
-          body: { ...body, tableNumber },
-        })
-      } catch (err) {
-        lastError = err
-        if (!isApiError(err) || err.code !== 'CONFLICT') throw err
-        rejected.push(tableNumber)
-      }
-    }
-    throw lastError
-  }
-
-  const handleDuplicate = async (table: TableDto) => {
-    if (!restaurantId || !branchId) return
-    setRepositionError(null)
-    const size = resolveTableSize(table)
-    try {
-      const created = await createWithFreeNumber({
-          floorPlanId: table.floorPlanId,
-          capacity: table.capacity,
-          shape: table.shape,
-          positionX: (table.positionX ?? 48) + 32,
-          positionY: (table.positionY ?? 48) + 32,
-          width: size.width,
-          height: size.height,
-          rotation: table.rotation ?? 0,
-          floor: table.floor,
-          layer: table.layer ?? 0,
-          indoor: table.indoor,
-          vip: table.vip,
-          smoking: table.smoking,
-          floorPlanAreaId: table.floorPlanAreaId,
-          color: table.color,
-      })
-      setSelectedTableId(created.tableId)
-      toast('success', t.floorPlan.duplicateSuccess)
-    } catch (err) {
-      setRepositionError(mapInventoryMutationError(err, t.inventory.errors))
-    }
-  }
-
-  const handleReposition = async (
-    tableId: string,
-    positionX: number,
-    positionY: number,
-  ) => {
-    const table = catalogTables.find((tb) => tb.tableId === tableId)
-    if (!table) return
-    await persistGeometry(table, { positionX, positionY })
-  }
-
-  const handleResize = async (
-    tableId: string,
-    width: number,
-    height: number,
-  ) => {
-    const table = catalogTables.find((tb) => tb.tableId === tableId)
-    if (!table) return
-    const size =
-      tableShapeKind(table.shape) === 'round'
-        ? { width, height: width }
-        : { width, height }
-    await persistGeometry(table, size)
-  }
-
-  const handlePlaceAt = async (x: number, y: number) => {
-    if (!restaurantId || !branchId || !selectedFloorPlanId) return
-    setRepositionError(null)
-
-    if (placingUnplaced && selectedTable && !placePreset) {
-      await placeQueuedTable(selectedTable, x, y)
+    if (redrawTarget) {
+      void editor.redrawArea(redrawTarget, rect)
+      setRedrawTarget(null)
       return
     }
-
-    if (!placePreset) return
-    try {
-      await createWithFreeNumber({
-          floorPlanId: selectedFloorPlanId,
-          capacity: placePreset.capacity,
-          shape: placePreset.shape,
-          positionX: x,
-          positionY: y,
-          width: placePreset.width,
-          height: placePreset.height,
-          rotation: 0,
-          indoor: true,
-          vip: false,
-          smoking: false,
-          layer: 0,
-          floor: currentFloor,
-          ...(() => {
-            const areaId =
-              highlightedAreaId ??
-              sectionIdForBox(visiblePartitions(floorHalls, floorTables, sectionRects), {
-                x,
-                y,
-                width: placePreset.width,
-                height: placePreset.height,
-              })
-            return areaId ? { floorPlanAreaId: areaId } : {}
-          })(),
-      })
-      // A preset places exactly one table; the next click must not add another.
-      setPlacePreset(null)
-      toast('success', t.floorPlan.createdSuccess)
-    } catch (err) {
-      setRepositionError(mapInventoryMutationError(err, t.inventory.errors))
-    }
+    setPendingRect(rect)
+    setAreaDialog({ area: null })
   }
 
-  const placeQueuedTable = async (table: TableDto, x: number, y: number) => {
-    const ok = await persistGeometry(table, {
-      positionX: x,
-      positionY: y,
-      floor: currentFloor,
-    })
-    if (ok) setSelectedTableId(null)
-  }
-
-  const handleDropTable = async (tableId: string, x: number, y: number) => {
-    const table = unplaced.find((tb) => tb.tableId === tableId)
-    if (!table) return
-    setRepositionError(null)
-    setPlacePreset(null)
-    await placeQueuedTable(table, x, y)
-  }
-
-  const handleAddFloor = () => {
-    const floor = nextFloor(floors)
-    setOpenedFloors((current) => [...current, floor])
-    setCurrentFloor(floor)
-    setHighlightedAreaId(null)
-    setPlacePreset(null)
-  }
-
-  const handleAutoPlace = async () => {
-    if (!restaurantId || !branchId || unplaced.length === 0) return
-    setRepositionError(null)
-    const occupied = floorTables.map((tb) => tableBox(tb))
-    const laid = layoutUnplaced(unplaced, occupied)
-    for (const item of laid) {
-      const table = tables.find((tb) => tb.tableId === item.tableId)
-      if (!table) continue
-      const ok = await persistGeometry(table, {
-        positionX: item.x,
-        positionY: item.y,
-        width: item.width,
-        height: item.height,
-        floor: currentFloor,
-      })
-      if (!ok) return
-    }
-    if (laid.length > 0) {
-      toast('success', t.floorPlan.placedSuccess)
-    }
-  }
-
-  const rememberSection = (areaId: string, region: TableBox) => {
-    setSectionRects((current) => ({ ...current, [areaId]: region }))
-  }
-
-  const assignTablesInRegion = async (areaId: string, region: TableBox) => {
-    let assigned = false
-    for (const table of tablesInsidePartition(tables, region)) {
-      const ok = await persistGeometry(table, { floorPlanAreaId: areaId })
-      if (!ok) return false
-      assigned = true
-    }
-    if (assigned) toast('success', t.floorPlan.hallAssigned)
-    return true
-  }
-
-  const handleHallCreated = async (area: FloorPlanAreaDto) => {
-    const region = pendingPartitionRef.current ?? pendingPartition
-    pendingPartitionRef.current = null
-    setPendingPartition(null)
-    setHighlightedAreaId(area.floorPlanAreaId)
-    if (!region) {
-      toast('success', t.floorPlan.hallCreated)
-      return
-    }
-    rememberSection(area.floorPlanAreaId, region)
-    const ok = await assignTablesInRegion(area.floorPlanAreaId, region)
-    if (ok && tablesInsidePartition(tables, region).length === 0) {
-      toast('success', t.floorPlan.hallCreated)
-    }
-  }
-
-  const handleDrawHall = (box: TableBox) => {
-    setDrawHall(false)
-    if (drawAttachesToSelectedArea(highlightedAreaId, sectionRects)) {
-      rememberSection(highlightedAreaId!, box)
-      void assignTablesInRegion(highlightedAreaId!, box)
-      return
-    }
-    pendingPartitionRef.current = box
-    setPendingPartition(box)
-    setHallDialogOpen(true)
-  }
-
-  const confirmDeleteHall = async () => {
-    if (!deleteHallTarget || !restaurantId || !branchId) return
-    setHallError(null)
-    try {
-      await deleteAreaMutation.mutateAsync({
-        restaurantId,
-        branchId,
-        floorPlanId: deleteHallTarget.floorPlanId,
-        areaId: deleteHallTarget.floorPlanAreaId,
-      })
-      if (highlightedAreaId === deleteHallTarget.floorPlanAreaId) {
-        setHighlightedAreaId(null)
-      }
-      setSectionRects((current) => {
-        const next = { ...current }
-        delete next[deleteHallTarget.floorPlanAreaId]
-        return next
-      })
-      setDeleteHallTarget(null)
-      toast('success', t.floorPlan.hallDeleted)
-    } catch (err) {
-      const blocked = isApiError(err) && err.code === 'CONFLICT'
-      const message = blocked
-        ? t.floorPlan.hallDeleteBlocked
-        : mapInventoryMutationError(err, t.inventory.errors)
-      setHallError(message)
-      toast('error', message)
-    }
-  }
-
-  const handleAreaCreated = (floorPlanId: string) => {
-    setViewMode('focus')
-    setOverviewPlanId(floorPlanId)
-    setSelectedTableId(null)
-    setPlacePreset(null)
-    selectFloorPlan(floorPlanId)
-    toast('success', t.floorPlan.areaCreated)
-  }
-
-  const handleActivate = async (floorPlanId?: string) => {
-    const id = floorPlanId ?? selectedFloorPlan?.floorPlanId
-    if (!id || !restaurantId || !branchId) return
-    setActivateError(null)
-    try {
-      await activateMutation.mutateAsync({
-        restaurantId,
-        branchId,
-        floorPlanId: id,
-      })
-      toast('success', t.floorPlan.activateSuccess)
-    } catch (err) {
-      setActivateError(mapInventoryMutationError(err, t.inventory.errors))
-    }
-  }
-
-  const confirmDelete = async () => {
-    if (!deleteTableTarget || !restaurantId || !branchId) return
+  const confirmDeleteTable = async () => {
+    if (!deleteTableTarget) return
     setDeleteError(null)
     try {
-      await deleteMutation.mutateAsync({
-        tableId: deleteTableTarget.tableId,
-        scope: { restaurantId, branchId },
-        floorPlanId: deleteTableTarget.floorPlanId,
-      })
-      if (selectedTableId === deleteTableTarget.tableId) {
-        setSelectedTableId(null)
-      }
+      await editor.removeTable(deleteTableTarget)
       setDeleteTableTarget(null)
     } catch (err) {
-      setDeleteError(mapInventoryMutationError(err, t.inventory.errors))
+      setDeleteError(err instanceof Error ? err.message : t.inventory.errors.unknown)
     }
-  }
-
-  const bumpSize = async (table: TableDto, delta: number) => {
-    const size = resolveTableSize(table)
-    const width = clampTableSize(size.width + delta)
-    const height =
-      tableShapeKind(table.shape) === 'round'
-        ? width
-        : clampTableSize(size.height + delta)
-    await persistGeometry(table, { width, height })
   }
 
   const header = (
     <PageHeader
-      title={t.floorPlan.title}
-      subtitle={`${t.floorPlan.subtitle}${
-        selectedBranch ? ` · ${formatBranchLabel(selectedBranch)}` : ''
-      }`}
+      title={t.floorGrid.title}
+      subtitle={`${t.floorGrid.subtitle}${selectedBranch ? ` · ${formatBranchLabel(selectedBranch)}` : ''}`}
       actions={
-        canManage && selectedFloorPlanId ? (
-          <Button type="button" onClick={() => setCreateTableOpen(true)}>
-            {t.inventory.createTable}
-          </Button>
+        selectedFloorPlanId ? (
+          <div className="flex flex-wrap items-center gap-2">
+            <div
+              role="tablist"
+              aria-label={t.floorGrid.viewLabel}
+              className="inline-flex rounded-lg bg-surface-container-high p-1"
+            >
+              {(['map', 'list'] as const).map((option) => (
+                <button
+                  key={option}
+                  type="button"
+                  role="tab"
+                  aria-selected={view === option}
+                  onClick={() => setView(option)}
+                  className={cn(
+                    'min-h-9 rounded-md px-4 text-label-md font-semibold',
+                    view === option
+                      ? 'bg-primary text-on-primary shadow-sm'
+                      : 'text-on-surface-variant hover:text-on-surface',
+                  )}
+                >
+                  {option === 'map' ? t.floorGrid.viewMap : t.floorGrid.viewList}
+                </button>
+              ))}
+            </div>
+            <Button type="button" variant="outline" onClick={() => setReviewOpen(true)}>
+              {t.floorGrid.review}
+            </Button>
+            {canManage && (
+              <Button type="button" onClick={() => setTableDialog({ table: null })}>
+                <MaterialIcon name="add" size={18} />
+                {t.floorGrid.addTable}
+              </Button>
+            )}
+          </div>
         ) : undefined
       }
     />
   )
 
-  if (scopeStatus === 'loading' || scopeStatus === 'idle') {
-    return (
-      <div className="py-16 text-center text-on-surface-variant">
-        {t.floorPlan.loading}
-      </div>
-    )
-  }
-
-  if (floorPlansQuery.isLoading) {
-    return (
-      <div className="py-16 text-center text-on-surface-variant">
-        {t.floorPlan.loading}
-      </div>
-    )
+  if (scopeStatus === 'loading' || scopeStatus === 'idle' || floorPlansQuery.isLoading) {
+    return <div className="py-16 text-center text-on-surface-variant">{t.floorPlan.loading}</div>
   }
 
   if (floorPlansQuery.isError) {
     const forbidden =
-      isApiError(floorPlansQuery.error) &&
-      floorPlansQuery.error.code === 'FORBIDDEN'
+      isApiError(floorPlansQuery.error) && floorPlansQuery.error.code === 'FORBIDDEN'
     return (
       <EmptyState
         icon="error"
         title={forbidden ? t.floorPlan.forbiddenTitle : t.floorPlan.errorTitle}
-        description={
-          forbidden ? t.floorPlan.forbiddenBody : t.floorPlan.errorBody
-        }
+        description={forbidden ? t.floorPlan.forbiddenBody : t.floorPlan.errorBody}
         action={
           <button
             type="button"
-            className="text-label-md text-primary font-semibold"
+            className="text-label-md font-semibold text-primary"
             onClick={() => void floorPlansQuery.refetch()}
           >
             {t.scope.retry}
@@ -630,120 +198,58 @@ export function FloorPlanPage() {
     )
   }
 
-  if (floorPlans.length === 0) {
+  if (!selectedFloorPlanId) {
     return (
       <div className="space-y-4">
         {header}
         <EmptyState
           icon="layers"
-          title={t.floorPlan.noFloorPlansTitle}
-          description={t.floorPlan.noFloorPlansBody}
+          title={t.floorGrid.startTitle}
+          description={t.floorGrid.startBody}
           action={
             canManage ? (
-              <button
+              <Button
                 type="button"
-                className="text-label-md text-primary font-semibold"
-                onClick={() => setCreateFloorOpen(true)}
+                loading={editor.busy.starting}
+                onClick={() => void editor.startPlan(t.floorGrid.defaultPlanName)}
               >
-                {t.floorPlan.addArea}
-              </button>
+                {t.floorGrid.startAction}
+              </Button>
             ) : undefined
           }
         />
-        {canManage && restaurantId && branchId && (
-          <CreateFloorPlanDialog
-            open={createFloorOpen}
-            onClose={() => setCreateFloorOpen(false)}
-            restaurantId={restaurantId}
-            branchId={branchId}
-            variant="floorPlan"
-            onCreated={handleAreaCreated}
-          />
-        )}
       </div>
     )
   }
 
+  const loadFailed = tablesQuery.isError || areasQuery.isError
+
   return (
-    <div className="space-y-4">
+    <div className="min-w-0 space-y-4">
       {header}
 
-      {!layoutReady && (
-        <FloorSaveStatus
-          state={saveState}
-          onRetry={failedSave ? () => void retryFailedSave() : undefined}
-          retryLabel={t.floorPlan.retrySave}
-        />
-      )}
-
-      {canManage && inspectedPlan && !inspectedPlan.isActive && (
-        <div className="flex flex-wrap items-center gap-3 rounded-lg border border-warning/30 bg-warning-light px-4 py-3">
-          <MaterialIcon name="visibility_off" size={18} className="text-warning" />
-          <p className="text-label-md text-on-surface flex-1 min-w-48">
-            {t.floorPlan.areaNotVisible}
-          </p>
-          <Button
-            type="button"
-            size="sm"
-            disabled={activateMutation.isPending}
-            onClick={() => void handleActivate(inspectedPlan.floorPlanId)}
-            loading={activateMutation.isPending}
-          >
-            {activateMutation.isPending
-              ? t.floorPlan.activating
-              : t.floorPlan.showToGuests}
-          </Button>
-          {activateError && (
-            <p className="w-full text-label-sm text-error" role="alert">
-              {activateError}
-            </p>
-          )}
-        </div>
-      )}
-
       {!canManage && (
-        <p className="text-label-sm text-on-surface-variant">{t.inventory.employeeBlocked}</p>
+        <p className="text-label-sm text-on-surface-variant">{t.floorGrid.employeeView}</p>
       )}
-      {repositionError && (
-        <p className="text-label-sm text-error" role="alert">
-          {repositionError}
-        </p>
-      )}
-      {failedSave && (
+
+      {editor.failedSave && (
         <div
-          className="flex flex-wrap items-center gap-3 rounded-lg border border-error/30 bg-error/5 px-4 py-3"
           role="alert"
+          className="flex flex-wrap items-center gap-3 rounded-lg border border-error/30 bg-error/5 px-4 py-3"
         >
-          <p className="text-label-md text-error flex-1">
-            {t.floorPlan.saveFailedTitle} {failedSave.message}
+          <p className="min-w-48 flex-1 text-label-md text-error">
+            {t.floorGrid.saveFailed} {editor.failedSave.message}
           </p>
-          <Button
-            type="button"
-            size="sm"
-            disabled={Boolean(repositionBusyId)}
-            onClick={() => void retryFailedSave()}
-          >
-            {t.floorPlan.retrySave}
+          <Button type="button" size="sm" onClick={editor.retryFailedSave}>
+            {t.floorGrid.retry}
           </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            disabled={Boolean(repositionBusyId)}
-            onClick={() => setFailedSave(null)}
-          >
+          <Button type="button" size="sm" variant="outline" onClick={editor.dismissFailedSave}>
             {t.floorPlan.discardSave}
           </Button>
         </div>
       )}
 
-      {(viewMode === 'all' ? branchTablesQuery.isLoading : tablesQuery.isLoading) && (
-        <p className="py-8 text-center text-on-surface-variant">
-          {t.floorPlan.loadingTables}
-        </p>
-      )}
-
-      {(viewMode === 'all' ? branchTablesQuery.isError : tablesQuery.isError) && (
+      {loadFailed ? (
         <EmptyState
           icon="error"
           title={t.floorPlan.errorTitle}
@@ -751,44 +257,38 @@ export function FloorPlanPage() {
           action={
             <button
               type="button"
-              className="text-label-md text-primary font-semibold"
-              onClick={() =>
-                void (viewMode === 'all'
-                  ? branchTablesQuery.refetch()
-                  : tablesQuery.refetch())
-              }
+              className="text-label-md font-semibold text-primary"
+              onClick={() => {
+                void tablesQuery.refetch()
+                void areasQuery.refetch()
+              }}
             >
               {t.scope.retry}
             </button>
           }
         />
-      )}
-
-      {layoutReady && (
+      ) : tablesQuery.isLoading || areasQuery.isLoading ? (
+        <p className="py-8 text-center text-on-surface-variant">{t.floorPlan.loadingTables}</p>
+      ) : view === 'list' ? (
+        <FloorTableList
+          tables={tables}
+          areas={areas}
+          floorLabels={floorLabels}
+          canManage={canManage}
+          merging={editor.busy.merging}
+          onEdit={(table) => setTableDialog({ table })}
+          onDelete={(table) => {
+            setDeleteError(null)
+            setDeleteTableTarget(table)
+          }}
+          onToggleService={(table) => void editor.toggleOutOfService(table)}
+          onMerge={editor.mergeTables}
+          onSplit={(table) => void editor.splitTable(table)}
+        />
+      ) : (
         <div className="min-w-0 space-y-3">
-          <div className="min-w-0 space-y-3">
-            {areasQuery.isError && (
-              <p className="text-label-sm text-error" role="alert">
-                {t.floorPlan.errorBody}{' '}
-                <button
-                  type="button"
-                  className="font-semibold text-primary"
-                  onClick={() => void areasQuery.refetch()}
-                >
-                  {t.scope.retry}
-                </button>
-              </p>
-            )}
-            {hallError && (
-              <p className="text-label-sm text-error" role="alert">
-                {hallError}
-              </p>
-            )}
-            <div
-              className="flex flex-wrap items-center gap-2"
-              role="tablist"
-              aria-label={t.floorPlan.floorsLabel}
-            >
+          <div className="flex flex-wrap items-center gap-2">
+            <div role="tablist" aria-label={t.floorPlan.floorsLabel} className="flex flex-wrap gap-2">
               {floors.map((floor) => (
                 <button
                   key={floor}
@@ -797,7 +297,7 @@ export function FloorPlanPage() {
                   aria-selected={floor === currentFloor}
                   onClick={() => {
                     setCurrentFloor(floor)
-                    setHighlightedAreaId(null)
+                    setMode({ kind: 'idle' })
                   }}
                   className={cn(
                     'min-h-10 rounded-lg px-4 text-label-md font-semibold',
@@ -809,292 +309,159 @@ export function FloorPlanPage() {
                   {floorLabel(floor, floorLabels)}
                 </button>
               ))}
-              {canManage && (
-                <Button type="button" variant="ghost" size="sm" onClick={handleAddFloor}>
-                  <MaterialIcon name="add" size={18} />
-                  {t.floorPlan.addFloor}
-                </Button>
-              )}
             </div>
-            {zonesOpen && (
-              <FloorPlanAreaBar
-                areas={floorHalls}
-                tables={floorTables}
-                highlightedAreaId={highlightedAreaId}
-                drawHall={drawHall}
-                canManage={canManage}
-                tools={false}
-                floorName={selectedFloorPlan?.name}
-                onHighlight={setHighlightedAreaId}
-                onAdd={() => {
-                  setDrawHall(false)
-                  pendingPartitionRef.current = null
-                  setPendingPartition(null)
-                  setHallDialogOpen(true)
+            {canManage && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  const floor = nextFloor(floors)
+                  setOpenedFloors((current) => [...current, floor])
+                  setCurrentFloor(floor)
                 }}
-                onToggleDraw={() => {
-                  setPlacePreset(null)
-                  setDrawHall((current) => !current)
-                }}
-                onDelete={(area) => {
-                  setHallError(null)
-                  setDeleteHallTarget(area)
-                }}
-              />
+              >
+                <MaterialIcon name="add" size={18} />
+                {t.floorPlan.addFloor}
+              </Button>
             )}
-            {viewMode === 'focus' && unplaced.length > 0 && canManage && (
-              <div className="flex justify-end">
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="sm"
-                  disabled={Boolean(repositionBusyId)}
-                  onClick={() => void handleAutoPlace()}
-                >
-                  {t.floorPlan.autoPlace}
-                </Button>
-              </div>
+            {canManage && (
+              <Button
+                type="button"
+                size="sm"
+                variant={mode.kind === 'drawArea' ? 'primary' : 'outline'}
+                className="ms-auto"
+                aria-pressed={mode.kind === 'drawArea'}
+                onClick={() =>
+                  mode.kind === 'drawArea' ? setMode({ kind: 'idle' }) : startDraw(null)
+                }
+              >
+                <MaterialIcon name={mode.kind === 'drawArea' ? 'close' : 'crop_free'} size={18} />
+                {mode.kind === 'drawArea' ? t.floorGrid.cancel : t.floorGrid.drawArea}
+              </Button>
             )}
-            <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_15rem]">
-            <div className="min-w-0 lg:order-1">
-            <FloorPlanReadView
-              key={`${selectedFloorPlanId ?? 'floor'}:${currentFloor}`}
-              tables={floorTables}
-              areas={floorHalls}
-              onDropTable={
-                canManage ? (id, x, y) => void handleDropTable(id, x, y) : undefined
-              }
-              dropSizeFor={(id) => {
-                const table = unplaced.find((tb) => tb.tableId === id)
-                return table ? resolveTableSize(table) : { width: 80, height: 80 }
-              }}
-              drawHall={drawHall && canManage}
-              sectionDrafts={sectionRects}
-              onDrawHall={handleDrawHall}
-              toolbarLeading={
-                <>
-                  <FloorSaveStatus
-                    state={saveState}
-                    onRetry={failedSave ? () => void retryFailedSave() : undefined}
-                    retryLabel={t.floorPlan.retrySave}
-                  />
-                  <Button
-                    type="button"
-                    variant={zonesOpen ? 'secondary' : 'ghost'}
-                    className="h-11 shrink-0"
-                    aria-expanded={zonesOpen}
-                    onClick={() => setZonesOpen((open) => !open)}
-                  >
-                    {t.floorPlan.hallsLabel}
-                  </Button>
-                  {canManage && (
-                    <Button
-                      type="button"
-                      variant={drawHall ? 'primary' : 'ghost'}
-                      className="h-11 shrink-0"
-                      aria-pressed={drawHall}
-                      onClick={() => {
-                        setPlacePreset(null)
-                        setDrawHall((current) => !current)
-                      }}
-                    >
-                      {drawHall ? t.floorPlan.drawHallActive : t.floorPlan.drawHall}
-                    </Button>
-                  )}
-                </>
-              }
-              toolbarTrailing={
-                <span className="ms-auto flex items-center gap-2 text-label-sm text-on-surface-variant">
-                  <Num>{counts.occupied}</Num> {t.status.Occupied}
-                  <span aria-hidden="true">·</span>
-                  <Num>{counts.available}</Num> {t.status.Available}
-                </span>
-              }
-              selectedTableId={selectedTableId}
-              onSelectTable={(id) => {
-                setSelectedTableId(id)
-                if (id) setPlacePreset(null)
-              }}
-              repositionEnabled={canManage}
-              repositionBusyTableId={repositionBusyId}
-              onReposition={(id, x, y) => void handleReposition(id, x, y)}
-              onResize={(id, w, h) => void handleResize(id, w, h)}
-              placePreset={placePreset}
-              onPlacePreset={(preset) => {
-                setPlacePreset(preset)
-                if (preset) setSelectedTableId(null)
-              }}
-              placeEnabled={Boolean(placePreset) || placingUnplaced}
-              placeSize={
-                placePreset ??
-                (placingUnplaced && selectedTable
-                  ? resolveTableSize(selectedTable)
-                  : undefined)
-              }
-              onPlaceAt={(x, y) => void handlePlaceAt(x, y)}
-              placing={createMutation.isPending || Boolean(repositionBusyId)}
-              onDragActiveChange={setDragging}
-            />
-            </div>
-            <div className="min-w-0 lg:order-2">
-              <FloorTableQueue
-                tables={unplaced}
-                selectedTableId={placingUnplaced ? selectedTableId : null}
-                onSelect={(id) => {
-                  setPlacePreset(null)
-                  setSelectedTableId((current) => (current === id ? null : id))
-                }}
-                canManage={canManage}
-                busy={Boolean(repositionBusyId) || createMutation.isPending}
-              />
-            </div>
-            </div>
           </div>
+
+          {floorAreasAll.length > 0 && (
+            <ul className="flex flex-wrap gap-2" aria-label={t.floorGrid.areasLabel}>
+              {floorAreasAll.map((area) => (
+                <li key={area.floorPlanAreaId}>
+                  <button
+                    type="button"
+                    disabled={!canManage}
+                    onClick={() => setAreaDialog({ area })}
+                    className="inline-flex min-h-9 items-center gap-2 rounded-full border border-outline-variant/40 bg-surface-container-lowest px-3 text-label-md hover:border-primary/50 disabled:cursor-default"
+                  >
+                    <span aria-hidden className="size-2.5 rounded-full" style={{ backgroundColor: area.color }} />
+                    {area.name}
+                    {areaRect(area) == null && (
+                      <span className="text-label-sm text-warning">· {t.floorGrid.areaNotDrawn}</span>
+                    )}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {tables.length === 0 && floorAreasAll.length === 0 && (
+            <p className="text-label-md text-on-surface-variant">{t.floorGrid.emptyGridHint}</p>
+          )}
+
+          <FloorGridEditor
+            key={`${selectedFloorPlanId}:${currentFloor}`}
+            tables={tables}
+            areas={editor.floorAreas}
+            currentFloor={currentFloor}
+            bounds={editor.bounds}
+            canManage={canManage}
+            mode={mode}
+            onAreaDrawn={handleAreaDrawn}
+            onAreaSelect={(area) => canManage && setAreaDialog({ area })}
+            onPlace={editor.placeTable}
+            onRotate={editor.rotateTable}
+            onEdit={(table) => setTableDialog({ table })}
+            onDelete={(table) => {
+              setDeleteError(null)
+              setDeleteTableTarget(table)
+            }}
+          />
         </div>
       )}
 
-      <Drawer
-        open={selectedTable != null && isTablePlaced(selectedTable)}
-        onClose={() => setSelectedTableId(null)}
-        title={selectedTable?.tableNumber ?? t.floorPlan.title}
-        closeLabel={t.common.close}
-      >
-        {selectedTable && (
-          <FloorTableInspector
-            plain
-            table={selectedTable}
-            seats={effectiveCapacity(selectedTable, tables)}
-            floorPlanName={
-              floorPlans.find((fp) => fp.floorPlanId === selectedTable.floorPlanId)?.name ??
-              null
-            }
-            floorPlanActive={Boolean(
-              floorPlans.find((fp) => fp.floorPlanId === selectedTable.floorPlanId)?.isActive,
-            )}
-            canManage={canManage}
-            busy={repositionBusyId === selectedTable.tableId}
-            onRotate={() =>
-              void persistGeometry(selectedTable, {
-                rotation: ((selectedTable.rotation ?? 0) + 45) % 360,
-              })
-            }
-            onLarger={() => void bumpSize(selectedTable, 16)}
-            onSmaller={() => void bumpSize(selectedTable, -16)}
-            onEdit={() => setEditTable(selectedTable)}
-            onMove={() => setMoveTableTarget(selectedTable)}
-            onStatus={() => setStatusTable(selectedTable)}
-            onDelete={() => {
-              setDeleteError(null)
-              setDeleteTableTarget(selectedTable)
-            }}
-            onDuplicate={() => void handleDuplicate(selectedTable)}
-            duplicating={createMutation.isPending}
-            onClose={() => setSelectedTableId(null)}
-            halls={selectedTable.floorPlanId === selectedFloorPlanId ? halls : []}
-            onAssignHall={(areaId) =>
-              void persistGeometry(selectedTable, { floorPlanAreaId: areaId })
+      <FloorReviewDialog
+        open={reviewOpen}
+        onClose={() => setReviewOpen(false)}
+        tables={tables}
+        areas={areas}
+        floors={floors}
+        floorLabels={floorLabels}
+        live={Boolean(selectedFloorPlan?.isActive)}
+        canManage={canManage}
+        publishing={editor.busy.starting}
+        onPublish={editor.publish}
+      />
+
+      {canManage && (
+        <>
+          <TableFormDialog
+            open={tableDialog != null}
+            onClose={() => setTableDialog(null)}
+            table={tableDialog?.table ?? null}
+            areas={areas}
+            branchTables={branchTables}
+            defaultAreaId={floorAreasAll.length === 1 ? floorAreasAll[0].floorPlanAreaId : null}
+            onSubmit={(draft) =>
+              tableDialog?.table
+                ? editor.editFromDraft(tableDialog.table, draft)
+                : editor.createFromDraft(draft)
             }
           />
-        )}
-      </Drawer>
-
-      {canManage && restaurantId && branchId && (
-        <>
-          {selectedFloorPlanId && (
-            <CreateFloorPlanAreaDialog
-              open={hallDialogOpen}
-              onClose={() => {
-                setHallDialogOpen(false)
-                pendingPartitionRef.current = null
-                setPendingPartition(null)
-              }}
-              restaurantId={restaurantId}
-              branchId={branchId}
-              floorPlanId={selectedFloorPlanId}
-              sortOrder={nextHallSortOrder(halls)}
-              existingNames={halls.map((area) => area.name)}
-              drawn={pendingPartition != null}
-              onCreated={(area) => void handleHallCreated(area)}
-            />
-          )}
-          <ConfirmDialog
-            open={deleteHallTarget != null}
+          <FloorAreaDialog
+            open={areaDialog != null}
             onClose={() => {
-              if (!deleteAreaMutation.isPending) setDeleteHallTarget(null)
+              setAreaDialog(null)
+              setPendingRect(null)
             }}
-            onConfirm={() => void confirmDeleteHall()}
-            title={t.floorPlan.hallDeleteTitle}
-            message={t.floorPlan.hallDeleteMessage.replace(
-              '{name}',
-              deleteHallTarget?.name ?? '',
-            )}
-            confirmLabel={t.floorPlan.deleteHall}
+            area={areaDialog?.area ?? null}
+            existingNames={areas.map((area) => area.name)}
+            onSubmit={(draft) =>
+              areaDialog?.area
+                ? editor.editArea(areaDialog.area, draft)
+                : editor.createAreaFromDraft(draft, pendingRect)
+            }
+            onRedraw={() => {
+              const area = areaDialog?.area ?? null
+              setAreaDialog(null)
+              if (area) {
+                setCurrentFloor(areaFloor(area))
+                startDraw(area)
+                setView('map')
+              }
+            }}
+            onDelete={() => {
+              setDeleteAreaTarget(areaDialog?.area ?? null)
+              setAreaDialog(null)
+            }}
+          />
+          <ConfirmDialog
+            open={deleteAreaTarget != null}
+            onClose={() => setDeleteAreaTarget(null)}
+            onConfirm={() => {
+              if (deleteAreaTarget) void editor.removeArea(deleteAreaTarget)
+              setDeleteAreaTarget(null)
+            }}
+            title={t.floorGrid.areaDeleteTitle}
+            message={t.floorGrid.areaDeleteMessage.replace('{name}', deleteAreaTarget?.name ?? '')}
+            confirmLabel={t.floorGrid.deleteArea}
             cancelLabel={t.common.cancel}
             variant="danger"
-            busy={deleteAreaMutation.isPending}
-            closeOnConfirm={false}
-          />
-          <CreateFloorPlanDialog
-            open={createFloorOpen}
-            onClose={() => setCreateFloorOpen(false)}
-            restaurantId={restaurantId}
-            branchId={branchId}
-            variant="floorPlan"
-            existingNames={floorPlans.map((fp) => fp.name)}
-            onCreated={handleAreaCreated}
-          />
-          <TableFormDialog
-            open={createTableOpen}
-            onClose={() => setCreateTableOpen(false)}
-            restaurantId={restaurantId}
-            branchId={branchId}
-            floorPlans={floorPlans}
-            mode={
-              createTableOpen && createOnFloorPlanId
-                ? { kind: 'create', floorPlanId: createOnFloorPlanId }
-                : null
-            }
-            areas={halls}
-            floors={floors.map((floor) => ({
-              value: floor,
-              label: floorLabel(floor, floorLabels),
-            }))}
-            defaultFloor={currentFloor}
-          />
-          <TableFormDialog
-            open={Boolean(editTable)}
-            onClose={() => setEditTable(null)}
-            restaurantId={restaurantId}
-            branchId={branchId}
-            floorPlans={floorPlans}
-            mode={editTable ? { kind: 'edit', table: editTable } : null}
-            areas={editTable?.floorPlanId === selectedFloorPlanId ? halls : []}
-            floors={floors.map((floor) => ({
-              value: floor,
-              label: floorLabel(floor, floorLabels),
-            }))}
-          />
-          <MoveTableDialog
-            open={Boolean(moveTableTarget)}
-            onClose={() => setMoveTableTarget(null)}
-            restaurantId={restaurantId}
-            branchId={branchId}
-            table={moveTableTarget}
-            floorPlans={floorPlans}
-          />
-          <ChangeTableStatusDialog
-            open={Boolean(statusTable)}
-            onClose={() => setStatusTable(null)}
-            restaurantId={restaurantId}
-            branchId={branchId}
-            table={statusTable}
           />
           <ConfirmDialog
-            open={Boolean(deleteTableTarget)}
+            open={deleteTableTarget != null}
             onClose={() => {
-              if (!deleteMutation.isPending) setDeleteTableTarget(null)
+              if (!editor.busy.deleting) setDeleteTableTarget(null)
             }}
-            onConfirm={() => void confirmDelete()}
+            onConfirm={() => void confirmDeleteTable()}
             title={t.inventory.deleteConfirmTitle}
             message={
               deleteError ??
@@ -1103,14 +470,10 @@ export function FloorPlanPage() {
                 deleteTableTarget?.tableNumber ?? '',
               )
             }
-            confirmLabel={
-              deleteMutation.isPending
-                ? t.inventory.deleting
-                : t.inventory.deleteTable
-            }
+            confirmLabel={editor.busy.deleting ? t.inventory.deleting : t.inventory.deleteTable}
             cancelLabel={t.common.cancel}
             variant="danger"
-            busy={deleteMutation.isPending}
+            busy={editor.busy.deleting}
             closeOnConfirm={false}
           />
         </>

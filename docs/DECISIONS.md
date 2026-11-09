@@ -543,3 +543,20 @@ Decision:
 7. The calendar draws the branch's own hours for the day (`GET /reservations/available-slots`, the only hours route open to employees; past days fall back to 10:00–23:00), drops the period stats (they live in Reports), and every week starts on Saturday.
 
 Consequences: the watch adds one list request per 30 seconds per open dashboard. Sound only plays after the user has interacted with the page, as browsers require.
+
+## ADR-018 — Venue plan on a fixed grid (CR round 2, batch 3)
+
+Context: the owner's round-2 feedback on the floor plan ("مخطط المكان", CR pages 04–05), backend ADR-044. Supersedes the free-form canvas parts of ADR-008 and ADR-016 (zoom, snap/free toggle, presets, resize handles, local area drafts).
+
+Decision:
+1. One plan per branch (the active floor plan; a branch without one gets a one-click start) with a tab per floor, shown as a Map or a List (`?view=list`). `/app/tables` redirects to the list and leaves the sidebar.
+2. The map is a fixed square grid that fills the width. A table snaps to whole squares and its size comes from the size table: 2–4 seats one square; 5–8 seats two by two (round/square) or two in a row (long). Geometry is still saved in layout units (`GRID_CELL` = 80 per square) so the guest app keeps real boxes; turning a long table swaps width and height and saves `rotation: 0`.
+3. Areas are coloured rectangles drawn on the grid with a name and guest features (`features`, `floor`, `positionX/Y`, `width/height` on the area). A table belongs to the area holding its top-left square; dragging it in or out changes `floorPlanAreaId` in the same PATCH, together with the legacy `indoor/vip/smoking` flags derived from the area features (app 1.0.2 still reads them). Deleting an area first moves its tables out of it.
+4. Dragging uses pointer events (mouse and touch) from the grid or from the "not placed yet" box; tap-then-tap also works. A spot that overlaps a table is refused. Clicking a table opens a small menu: rotate, edit, delete.
+5. Saves are optimistic: `useUpdateTableMutation` patches every cached table list first and rolls back on failure, which is offered for retry. The refetch waits for the last queued save.
+6. Add/edit table asks only number, seats, shape and area. The number continues the area's highest T-number and is never reused in the branch.
+7. "Review plan" shows tables and seats per floor and lists tables still off the grid before the plan is shown to guests.
+8. Staff can only take a table out of service and back; other statuses come from bookings. Merge/split stay in the list view; merge and split return `MergedUnitDto` (the merged seats are `effectiveCapacity`).
+
+Consequences: tables saved by the old free-form editor are drawn at the nearest square and resized to the size table the next time they move.
+

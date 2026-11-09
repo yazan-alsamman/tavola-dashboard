@@ -18,7 +18,6 @@ import { ReservationsPage } from '@/pages/Reservations'
 import { ReservationDetailPage } from '@/pages/ReservationDetail'
 import { CalendarPage } from '@/pages/Calendar'
 import { FloorPlanPage } from '@/pages/FloorPlan'
-import { TablesPage } from '@/pages/Tables'
 import { CustomerPage } from '@/pages/Customer'
 import { NotificationsPage } from '@/pages/Notifications'
 import { MessagingPage } from '@/pages/Messaging'
@@ -69,7 +68,7 @@ export default function App() {
                             <Route path="reservations/:id" element={<ReservationDetailPage />} />
                             <Route path="calendar" element={<CalendarPage />} />
                             <Route path="floor-plan" element={<FloorPlanPage />} />
-                            <Route path="tables" element={<TablesPage />} />
+                            <Route path="tables" element={<Navigate to="/app/floor-plan?view=list" replace />} />
                             <Route path="menu" element={<MenuPage />} />
                             <Route path="gallery" element={<GalleryPage />} />
                             <Route path="customers/:customerKey" element={<CustomerPage />} />

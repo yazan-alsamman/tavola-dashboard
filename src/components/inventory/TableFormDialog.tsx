@@ -1,225 +1,157 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import type { FloorPlanAreaDto } from '@/api/floorPlanAreas'
-import type { FloorPlanDto } from '@/api/floorPlans'
-import type {
-  CreateTableRequest,
-  TableDto,
-  TableShapeDto,
-  UpdateTableRequest,
-} from '@/api/tables'
-import { tableToUpdateRequest } from '@/api/tables'
+import type { TableDto } from '@/api/tables'
 import { Modal } from '@/components/ui/Modal'
 import { useLocale } from '@/context/LocaleContext'
+import type { TableDraft } from '@/hooks/useFloorPlanEditor'
 import {
-  useCreateTableMutation,
-  useUpdateTableMutation,
-} from '@/hooks/useInventoryMutations'
-import {
-  extractValidationFieldErrors,
-  mapInventoryMutationError,
-} from '@/lib/inventoryMutationErrors'
-import {
-  DEFAULT_TABLE_HEIGHT,
-  DEFAULT_TABLE_WIDTH,
-} from '@/lib/floorGeometry'
-import { tableFloor } from '@/lib/floors'
+  isNumberTaken,
+  nextNumberInArea,
+  shapeChoiceOf,
+  shapeSpan,
+  type TableShapeChoice,
+} from '@/lib/floorGrid'
+import { cn } from '@/lib/utils'
 
-type Mode =
-  | { kind: 'create'; floorPlanId: string }
-  | { kind: 'edit'; table: TableDto }
+const SHAPES: TableShapeChoice[] = ['square', 'round', 'long']
 
 interface TableFormDialogProps {
   open: boolean
   onClose: () => void
-  restaurantId: string
-  branchId: string
-  floorPlans: FloorPlanDto[]
-  mode: Mode | null
-  /** Dining areas of the table's floor plan; empty hides the area picker. */
-  areas?: FloorPlanAreaDto[]
-  /** Floors to choose from; empty hides the floor picker. */
-  floors?: { value: number; label: string }[]
-  /** Floor a new table starts on. */
-  defaultFloor?: number
+  /** Null adds a table; a table edits it. */
+  table: TableDto | null
+  areas: FloorPlanAreaDto[]
+  /** Every table of the branch, for numbering and duplicate checks. */
+  branchTables: TableDto[]
+  defaultAreaId?: string | null
+  /** Rejects with a user-facing message when the API refuses. */
+  onSubmit: (draft: TableDraft) => Promise<unknown>
 }
 
 interface FormState {
-  floorPlanId: string
   tableNumber: string
+  numberEdited: boolean
   capacity: string
-  shape: TableShapeDto
-  floor: number
+  shape: TableShapeChoice
   floorPlanAreaId: string
-  indoor: boolean
-  vip: boolean
-  smoking: boolean
 }
 
-function emptyForm(mode: Mode | null, defaultFloor: number): FormState {
-  if (mode?.kind === 'edit') {
-    const tb = mode.table
+function initialForm(
+  table: TableDto | null,
+  branchTables: TableDto[],
+  defaultAreaId: string | null,
+): FormState {
+  if (table) {
     return {
-      floorPlanId: tb.floorPlanId,
-      tableNumber: tb.tableNumber,
-      capacity: String(tb.capacity),
-      shape: tb.shape,
-      floor: tableFloor(tb),
-      floorPlanAreaId: tb.floorPlanAreaId ?? '',
-      indoor: tb.indoor,
-      vip: tb.vip,
-      smoking: tb.smoking,
+      tableNumber: table.tableNumber,
+      numberEdited: true,
+      capacity: String(table.capacity),
+      shape: shapeChoiceOf(table),
+      floorPlanAreaId: table.floorPlanAreaId ?? '',
     }
   }
   return {
-    floorPlanId: mode?.kind === 'create' ? mode.floorPlanId : '',
-    tableNumber: '',
+    tableNumber: nextNumberInArea(branchTables, defaultAreaId),
+    numberEdited: false,
     capacity: '4',
-    shape: 'Rectangle',
-    floor: defaultFloor,
-    floorPlanAreaId: '',
-    indoor: true,
-    vip: false,
-    smoking: false,
+    shape: 'square',
+    floorPlanAreaId: defaultAreaId ?? '',
   }
 }
 
+/**
+ * Add / edit a table: number, seats, shape and area only (CR p.05). The
+ * grid size follows from seats and shape; the number is filled in for the
+ * chosen area and never accepted twice in the branch.
+ */
 export function TableFormDialog({
   open,
   onClose,
-  restaurantId,
-  branchId,
-  floorPlans,
-  mode,
-  areas = [],
-  floors = [],
-  defaultFloor = 0,
+  table,
+  areas,
+  branchTables,
+  defaultAreaId = null,
+  onSubmit,
 }: TableFormDialogProps) {
   const { t } = useLocale()
-  const createMutation = useCreateTableMutation()
-  const updateMutation = useUpdateTableMutation()
-  const [form, setForm] = useState<FormState>(() => emptyForm(mode, defaultFloor))
-  const [formError, setFormError] = useState<string | null>(null)
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
-
-  const pending = createMutation.isPending || updateMutation.isPending
+  const [form, setForm] = useState<FormState>(() =>
+    initialForm(table, branchTables, defaultAreaId),
+  )
+  const [error, setError] = useState<string | null>(null)
+  const [pending, setPending] = useState(false)
 
   useEffect(() => {
-    if (open) {
-      setForm(emptyForm(mode, defaultFloor))
-      setFormError(null)
-      setFieldErrors({})
-      createMutation.reset()
-      updateMutation.reset()
-    }
+    if (!open) return
+    setForm(initialForm(table, branchTables, defaultAreaId))
+    setError(null)
+    // Reset only when the dialog opens for a table (or for a new one).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, mode])
+  }, [open, table?.tableId])
 
-  const set =
-    <K extends keyof FormState>(key: K) =>
-    (value: FormState[K]) =>
-      setForm((prev) => ({ ...prev, [key]: value }))
+  const capacity = Number(form.capacity)
+  const span = shapeSpan(form.shape, Number.isInteger(capacity) && capacity > 0 ? capacity : 1)
+
+  const pickArea = (areaId: string) =>
+    setForm((prev) => ({
+      ...prev,
+      floorPlanAreaId: areaId,
+      tableNumber: prev.numberEdited
+        ? prev.tableNumber
+        : nextNumberInArea(branchTables, areaId || null),
+    }))
 
   const submit = async (e: FormEvent) => {
     e.preventDefault()
-    if (!mode) return
-
     const tableNumber = form.tableNumber.trim()
-    const capacity = Number(form.capacity)
-    if (!tableNumber) {
-      setFormError(t.inventory.tableNumberRequired)
-      return
+    if (!tableNumber) return setError(t.floorGrid.numberRequired)
+    if (!Number.isInteger(capacity) || capacity < 1) return setError(t.floorGrid.capacityInvalid)
+    if (isNumberTaken(branchTables, tableNumber, table?.tableId)) {
+      return setError(t.floorGrid.numberTaken)
     }
-    if (!Number.isInteger(capacity) || capacity < 1) {
-      setFormError(t.inventory.capacityInvalid)
-      return
-    }
-
-    const placement = {
-      floor: form.floor,
-      floorPlanAreaId: form.floorPlanAreaId || null,
-    }
-
-    setFormError(null)
-    setFieldErrors({})
-
+    setError(null)
+    setPending(true)
     try {
-      if (mode.kind === 'create') {
-        const body: CreateTableRequest = {
-          floorPlanId: form.floorPlanId || mode.floorPlanId,
-          tableNumber,
-          capacity,
-          shape: form.shape,
-          indoor: form.indoor,
-          vip: form.vip,
-          smoking: form.smoking,
-          // No position: a new table waits in the "not placed yet" queue
-          // until staff drag it onto the map.
-          width: DEFAULT_TABLE_WIDTH,
-          height: form.shape === 'Round' ? DEFAULT_TABLE_WIDTH : DEFAULT_TABLE_HEIGHT,
-          ...placement,
-        }
-        await createMutation.mutateAsync({
-          restaurantId,
-          branchId,
-          body,
-        })
-      } else {
-        const body: UpdateTableRequest = tableToUpdateRequest(mode.table, {
-          tableNumber,
-          capacity,
-          shape: form.shape,
-          indoor: form.indoor,
-          vip: form.vip,
-          smoking: form.smoking,
-          ...placement,
-        })
-        await updateMutation.mutateAsync({
-          tableId: mode.table.tableId,
-          body,
-          scope: { restaurantId, branchId },
-          floorPlanId: mode.table.floorPlanId,
-        })
-      }
+      await onSubmit({
+        tableNumber,
+        capacity,
+        shape: form.shape,
+        floorPlanAreaId: form.floorPlanAreaId || null,
+      })
       onClose()
     } catch (err) {
-      const fields = extractValidationFieldErrors(err)
-      setFieldErrors(fields)
-      setFormError(
-        fields.tableNumber ??
-          fields.capacity ??
-          mapInventoryMutationError(err, t.inventory.errors),
-      )
+      setError(err instanceof Error ? err.message : t.inventory.errors.unknown)
+    } finally {
+      setPending(false)
     }
   }
 
-  if (!mode) return null
-
-  const title =
-    mode.kind === 'create' ? t.inventory.createTable : t.inventory.editTable
+  const inputClass = 'mt-1 w-full rounded-lg bg-surface-container-low px-3 py-2 text-body-md'
 
   return (
     <Modal
       open={open}
       onClose={pending ? () => undefined : onClose}
-      title={title}
+      title={
+        table
+          ? t.floorGrid.editTitle.replace('{table}', table.tableNumber)
+          : t.floorGrid.createTitle
+      }
       size="md"
     >
-      <form onSubmit={(e) => void submit(e)} className="space-y-3">
-        {mode.kind === 'create' && (
+      <form onSubmit={(e) => void submit(e)} className="space-y-4" noValidate>
+        {areas.length > 0 && (
           <label className="block">
-            <span className="text-label-md text-on-surface-variant">
-              {t.inventory.floorPlan}
-            </span>
+            <span className="text-label-md text-on-surface-variant">{t.floorGrid.formArea}</span>
             <select
-              value={form.floorPlanId}
-              onChange={(e) => set('floorPlanId')(e.target.value)}
+              value={form.floorPlanAreaId}
+              onChange={(e) => pickArea(e.target.value)}
               disabled={pending}
-              className="mt-1 w-full rounded-lg bg-surface-container-low px-3 py-2 text-body-md"
+              className={inputClass}
             >
-              {floorPlans.map((fp) => (
-                <option key={fp.floorPlanId} value={fp.floorPlanId}>
-                  {fp.name}
-                  {fp.isActive ? ` (${t.floorPlan.active})` : ''}
+              <option value="">{t.floorGrid.noArea}</option>
+              {areas.map((area) => (
+                <option key={area.floorPlanAreaId} value={area.floorPlanAreaId}>
+                  {area.name}
                 </option>
               ))}
             </select>
@@ -228,145 +160,92 @@ export function TableFormDialog({
 
         <div className="grid grid-cols-2 gap-3">
           <label className="block">
-            <span className="text-label-md text-on-surface-variant">
-              {t.tables.number}
-            </span>
+            <span className="text-label-md text-on-surface-variant">{t.floorGrid.formNumber}</span>
             <input
               value={form.tableNumber}
-              onChange={(e) => set('tableNumber')(e.target.value)}
+              onChange={(e) =>
+                setForm((prev) => ({ ...prev, tableNumber: e.target.value, numberEdited: true }))
+              }
               disabled={pending}
-              className="mt-1 w-full rounded-lg bg-surface-container-low px-3 py-2"
+              dir="ltr"
+              className={inputClass}
               maxLength={50}
             />
-            {fieldErrors.tableNumber && (
-              <span className="text-label-sm text-error">
-                {fieldErrors.tableNumber}
-              </span>
-            )}
           </label>
           <label className="block">
-            <span className="text-label-md text-on-surface-variant">
-              {t.tables.capacity}
-            </span>
+            <span className="text-label-md text-on-surface-variant">{t.floorGrid.formCapacity}</span>
             <input
               type="number"
+              inputMode="numeric"
               min={1}
+              max={50}
               value={form.capacity}
-              onChange={(e) => set('capacity')(e.target.value)}
+              onChange={(e) => setForm((prev) => ({ ...prev, capacity: e.target.value }))}
               disabled={pending}
-              className="mt-1 w-full rounded-lg bg-surface-container-low px-3 py-2"
+              className={inputClass}
             />
           </label>
         </div>
-
-        <label className="block">
-          <span className="text-label-md text-on-surface-variant">
-            {t.tables.shape}
-          </span>
-          <select
-            value={form.shape}
-            onChange={(e) => set('shape')(e.target.value as TableShapeDto)}
-            disabled={pending}
-            className="mt-1 w-full rounded-lg bg-surface-container-low px-3 py-2"
-          >
-            <option value="Rectangle">{t.tables.shapes.Rectangle}</option>
-            <option value="Round">{t.tables.shapes.Round}</option>
-          </select>
-        </label>
-
-        {(floors.length > 1 || areas.length > 0) && (
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            {floors.length > 1 && (
-              <label className="block">
-                <span className="text-label-md text-on-surface-variant">
-                  {t.inventory.floor}
-                </span>
-                <select
-                  value={form.floor}
-                  onChange={(e) => set('floor')(Number(e.target.value))}
-                  disabled={pending}
-                  className="mt-1 w-full rounded-lg bg-surface-container-low px-3 py-2"
-                >
-                  {floors.map((floor) => (
-                    <option key={floor.value} value={floor.value}>
-                      {floor.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            )}
-            {areas.length > 0 && (
-              <label className="block">
-                <span className="text-label-md text-on-surface-variant">
-                  {t.inventory.area}
-                </span>
-                <select
-                  value={form.floorPlanAreaId}
-                  onChange={(e) => set('floorPlanAreaId')(e.target.value)}
-                  disabled={pending}
-                  className="mt-1 w-full rounded-lg bg-surface-container-low px-3 py-2"
-                >
-                  <option value="">{t.inventory.noArea}</option>
-                  {areas.map((area) => (
-                    <option key={area.floorPlanAreaId} value={area.floorPlanAreaId}>
-                      {area.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            )}
-          </div>
+        {!table && (
+          <p className="-mt-2 text-label-sm text-on-surface-variant">{t.floorGrid.numberAuto}</p>
         )}
 
-        <div className="flex flex-wrap gap-4">
-          <label className="flex items-center gap-2 text-label-md">
-            <input
-              type="checkbox"
-              checked={form.indoor}
-              onChange={(e) => set('indoor')(e.target.checked)}
-              disabled={pending}
-            />
-            {t.tables.indoor}
-          </label>
-          <label className="flex items-center gap-2 text-label-md">
-            <input
-              type="checkbox"
-              checked={form.vip}
-              onChange={(e) => set('vip')(e.target.checked)}
-              disabled={pending}
-            />
-            {t.tables.vip}
-          </label>
-          <label className="flex items-center gap-2 text-label-md">
-            <input
-              type="checkbox"
-              checked={form.smoking}
-              onChange={(e) => set('smoking')(e.target.checked)}
-              disabled={pending}
-            />
-            {t.tables.smoking}
-          </label>
-        </div>
+        <fieldset>
+          <legend className="text-label-md text-on-surface-variant">{t.floorGrid.formShape}</legend>
+          <div className="mt-1 grid grid-cols-3 gap-2">
+            {SHAPES.map((shape) => (
+              <button
+                key={shape}
+                type="button"
+                aria-pressed={form.shape === shape}
+                disabled={pending}
+                onClick={() => setForm((prev) => ({ ...prev, shape }))}
+                className={cn(
+                  'flex min-h-12 flex-col items-center justify-center gap-1 rounded-lg border px-2 py-2 text-label-md',
+                  form.shape === shape
+                    ? 'border-primary bg-primary/10 text-primary'
+                    : 'border-outline-variant/40 text-on-surface hover:border-primary/50',
+                )}
+              >
+                <span
+                  aria-hidden
+                  className={cn(
+                    'border-2 border-current',
+                    shape === 'round' && 'size-5 rounded-full',
+                    shape === 'square' && 'size-5 rounded-sm',
+                    shape === 'long' && 'h-4 w-8 rounded-sm',
+                  )}
+                />
+                {t.floorGrid.shapes[shape]}
+              </button>
+            ))}
+          </div>
+          <p className="mt-2 text-label-sm text-on-surface-variant">
+            {t.floorGrid.sizeOnGrid
+              .replace('{cols}', String(span.cols))
+              .replace('{rows}', String(span.rows))}
+          </p>
+        </fieldset>
 
-        {formError && (
+        {error && (
           <p className="text-label-sm text-error" role="alert">
-            {formError}
+            {error}
           </p>
         )}
 
-        <div className="flex justify-end gap-3 pt-2">
+        <div className="flex justify-end gap-3 pt-1">
           <button
             type="button"
             disabled={pending}
             onClick={onClose}
-            className="px-4 py-2 rounded-lg text-label-md text-on-surface-variant"
+            className="rounded-lg px-4 py-2 text-label-md text-on-surface-variant"
           >
             {t.common.cancel}
           </button>
           <button
             type="submit"
             disabled={pending}
-            className="px-4 py-2 rounded-lg text-label-md bg-primary text-on-primary disabled:opacity-50"
+            className="rounded-lg bg-primary px-4 py-2 text-label-md text-on-primary disabled:opacity-50"
           >
             {pending ? t.inventory.saving : t.common.save}
           </button>
