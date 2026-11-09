@@ -21,7 +21,12 @@ import {
 } from '@/hooks/useAnalyticsQueries'
 import { useUnreadNotificationCount } from '@/hooks/useNotificationQueries'
 import { useCalendarRangeReservationsQuery } from '@/hooks/useReservationQueries'
-import { extractReservationSummaryStats, formatCount, formatRate } from '@/lib/analyticsPayload'
+import {
+  extractReservationSourceSplit,
+  extractReservationSummaryStats,
+  formatCount,
+  formatRate,
+} from '@/lib/analyticsPayload'
 import { defaultAnalyticsRange } from '@/lib/dateRange'
 import type { ReservationView } from '@/lib/reservationView'
 import { formatRelative, formatTime } from '@/lib/format'
@@ -102,6 +107,83 @@ function ArrivalRow({
   )
 }
 
+function ReservationSourceCard({
+  today,
+  period,
+}: {
+  today: { app: number; dashboard: number } | null
+  period: { app: number; dashboard: number }
+}) {
+  const { t, locale } = useLocale()
+  const total = period.app + period.dashboard
+  const appShare = total > 0 ? Math.round((period.app / total) * 100) : 0
+  const rows = [
+    {
+      key: 'app',
+      label: t.dashboard.sourceApp,
+      hint: t.dashboard.sourceAppHint,
+      icon: 'smartphone',
+      value: period.app,
+      today: today?.app ?? 0,
+      tone: 'bg-primary',
+    },
+    {
+      key: 'dashboard',
+      label: t.dashboard.sourceDashboard,
+      hint: t.dashboard.sourceDashboardHint,
+      icon: 'desktop_windows',
+      value: period.dashboard,
+      today: today?.dashboard ?? 0,
+      tone: 'bg-secondary',
+    },
+  ]
+  return (
+    <Card padding="md">
+      <CardHeader>
+        <CardTitle>
+          <MaterialIcon name="call_split" size={17} className="text-primary" />
+          {t.dashboard.sourceTitle}
+        </CardTitle>
+        <span className="text-label-sm text-on-surface-variant">{t.dashboard.sourcePeriod}</span>
+      </CardHeader>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        {rows.map((row) => (
+          <div
+            key={row.key}
+            className="rounded-xl border border-outline-variant/30 bg-surface-container-lowest p-4"
+          >
+            <div className="flex items-center gap-2 text-label-md text-on-surface-variant">
+              <MaterialIcon name={row.icon} size={18} />
+              {row.label}
+            </div>
+            <p className="mt-1 text-headline-md font-bold text-on-surface">
+              {formatCount(row.value, locale)}
+            </p>
+            <p className="text-label-sm text-on-surface-variant">
+              {row.hint} · {t.dashboard.sourceToday.replace('{n}', formatCount(row.today, locale))}
+            </p>
+          </div>
+        ))}
+      </div>
+      {total > 0 && (
+        <div className="mt-4">
+          <div
+            className="flex h-2.5 w-full overflow-hidden rounded-full bg-surface-container-high"
+            role="img"
+            aria-label={t.dashboard.sourceShare.replace('{n}', String(appShare))}
+          >
+            <div className="h-full bg-primary" style={{ width: `${appShare}%` }} />
+            <div className="h-full flex-1 bg-secondary" />
+          </div>
+          <p className="mt-1.5 text-label-sm text-on-surface-variant">
+            {t.dashboard.sourceShare.replace('{n}', String(appShare))}
+          </p>
+        </div>
+      )}
+    </Card>
+  )
+}
+
 function StatLink({ to, children }: { to: string; children: ReactNode }) {
   return (
     <Link
@@ -137,6 +219,10 @@ export function DashboardPage() {
   const summaryQuery = scopeStatus === 'ready' ? todaySummaryQuery : orgSummaryQuery
   const todayStats = extractReservationSummaryStats(summaryQuery.data ?? {})
   const monthStats = extractReservationSummaryStats(
+    (scopeStatus === 'ready' ? monthSummaryQuery.data : orgSummaryQuery.data) ?? {},
+  )
+  const todaySplit = extractReservationSourceSplit(summaryQuery.data ?? {})
+  const monthSplit = extractReservationSourceSplit(
     (scopeStatus === 'ready' ? monthSummaryQuery.data : orgSummaryQuery.data) ?? {},
   )
   const summaryStats = {
@@ -298,6 +384,10 @@ export function DashboardPage() {
             />
           </StatLink>
         </div>
+      )}
+
+      {!statsLoading && !summaryError && monthSplit && (
+        <ReservationSourceCard today={todaySplit} period={monthSplit} />
       )}
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">

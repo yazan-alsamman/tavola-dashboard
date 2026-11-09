@@ -1331,7 +1331,7 @@ export function MenuPage() {
       )}
 
       {menus.length > 0 && (
-      <div className="grid gap-4 xl:grid-cols-3">
+      <div className="grid gap-4 lg:grid-cols-2">
         {/* Menus */}
         <Card padding="none" className="overflow-hidden">
           <CardHeader>
@@ -1636,11 +1636,18 @@ export function MenuPage() {
         </Card>
 
         {/* Items */}
-        <Card padding="none" className="overflow-hidden xl:col-span-1">
+        <Card padding="none" className="overflow-hidden lg:col-span-2">
           <CardHeader>
             <CardTitle>
               <MaterialIcon name="restaurant" size={20} />
-              {t.menu.items.title}
+              {selectedCategory
+                ? `${t.menu.items.title} · ${selectedCategory.name}`
+                : t.menu.items.title}
+              {items.length > 0 && (
+                <Num className="text-label-md font-normal text-on-surface-variant">
+                  ({items.length})
+                </Num>
+              )}
             </CardTitle>
             {canManage && categoryScope && (
               <Button size="sm" variant="secondary" onClick={() => setCreateItemOpen(true)}>
@@ -1669,9 +1676,27 @@ export function MenuPage() {
                       key={item.itemId}
                       className="rounded-xl border border-outline-variant/40 p-4 space-y-3"
                     >
-                      <div className="flex items-start justify-between gap-3">
-                        <p className="font-medium text-on-surface">{item.name}</p>
-                        <p className="text-label-md text-on-surface">
+                      <div className="flex items-start gap-3">
+                        {item.imageUrl ? (
+                          <img
+                            src={item.imageUrl}
+                            alt=""
+                            className="h-14 w-14 shrink-0 rounded-lg border border-outline-variant/30 object-cover"
+                          />
+                        ) : (
+                          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg border border-outline-variant/20 bg-surface-container-low text-on-surface-variant">
+                            <MaterialIcon name="image" size={18} />
+                          </div>
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <p className="font-semibold text-on-surface">{item.name}</p>
+                          {item.description && (
+                            <p className="mt-0.5 line-clamp-2 text-body-sm text-on-surface-variant">
+                              {item.description}
+                            </p>
+                          )}
+                        </div>
+                        <p className="shrink-0 text-label-lg font-semibold text-on-surface">
                           <Num>{item.price ?? 0}</Num>
                           {item.currency ? ` ${item.currency}` : ''}
                         </p>
@@ -1732,11 +1757,20 @@ export function MenuPage() {
                               className="text-warning shrink-0"
                             />
                           )}
-                          <span className="truncate">{item.name}</span>
+                          <div className="min-w-0">
+                            <span className="block font-semibold text-on-surface">
+                              {item.name}
+                            </span>
+                            {item.description && (
+                              <span className="block max-w-md line-clamp-1 text-body-sm text-on-surface-variant">
+                                {item.description}
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </DataTableCell>
-                    <DataTableCell>
+                    <DataTableCell className="whitespace-nowrap font-semibold">
                       <Num>{item.price ?? 0}</Num>
                       {item.currency ? ` ${item.currency}` : ''}
                     </DataTableCell>

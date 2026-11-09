@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
+import type { FloorPlanAreaDto } from '@/api/floorPlanAreas'
 import type { FloorPlanDto } from '@/api/floorPlans'
 import type {
   CreateTableRequest,
@@ -21,9 +22,10 @@ import {
   DEFAULT_TABLE_HEIGHT,
   DEFAULT_TABLE_WIDTH,
 } from '@/lib/floorGeometry'
+import { tableFloor } from '@/lib/floors'
 
 type Mode =
-  | { kind: 'create'; floorPlanId: string; defaultX?: number; defaultY?: number }
+  | { kind: 'create'; floorPlanId: string }
   | { kind: 'edit'; table: TableDto }
 
 interface TableFormDialogProps {
@@ -33,36 +35,36 @@ interface TableFormDialogProps {
   branchId: string
   floorPlans: FloorPlanDto[]
   mode: Mode | null
+  /** Dining areas of the table's floor plan; empty hides the area picker. */
+  areas?: FloorPlanAreaDto[]
+  /** Floors to choose from; empty hides the floor picker. */
+  floors?: { value: number; label: string }[]
+  /** Floor a new table starts on. */
+  defaultFloor?: number
 }
 
 interface FormState {
   floorPlanId: string
   tableNumber: string
   capacity: string
-  positionX: string
-  positionY: string
-  width: string
-  height: string
-  rotation: string
   shape: TableShapeDto
+  floor: number
+  floorPlanAreaId: string
   indoor: boolean
   vip: boolean
   smoking: boolean
 }
 
-function emptyForm(mode: Mode | null): FormState {
+function emptyForm(mode: Mode | null, defaultFloor: number): FormState {
   if (mode?.kind === 'edit') {
     const tb = mode.table
     return {
       floorPlanId: tb.floorPlanId,
       tableNumber: tb.tableNumber,
       capacity: String(tb.capacity),
-      positionX: tb.positionX != null ? String(tb.positionX) : '',
-      positionY: tb.positionY != null ? String(tb.positionY) : '',
-      width: tb.width != null ? String(tb.width) : String(DEFAULT_TABLE_WIDTH),
-      height: tb.height != null ? String(tb.height) : String(DEFAULT_TABLE_HEIGHT),
-      rotation: tb.rotation != null ? String(tb.rotation) : '0',
       shape: tb.shape,
+      floor: tableFloor(tb),
+      floorPlanAreaId: tb.floorPlanAreaId ?? '',
       indoor: tb.indoor,
       vip: tb.vip,
       smoking: tb.smoking,
@@ -72,29 +74,13 @@ function emptyForm(mode: Mode | null): FormState {
     floorPlanId: mode?.kind === 'create' ? mode.floorPlanId : '',
     tableNumber: '',
     capacity: '4',
-    positionX:
-      mode?.kind === 'create' && mode.defaultX != null
-        ? String(mode.defaultX)
-        : '40',
-    positionY:
-      mode?.kind === 'create' && mode.defaultY != null
-        ? String(mode.defaultY)
-        : '40',
-    width: String(DEFAULT_TABLE_WIDTH),
-    height: String(DEFAULT_TABLE_HEIGHT),
-    rotation: '0',
     shape: 'Rectangle',
+    floor: defaultFloor,
+    floorPlanAreaId: '',
     indoor: true,
     vip: false,
     smoking: false,
   }
-}
-
-function parseOptionalNumber(raw: string): number | null {
-  const trimmed = raw.trim()
-  if (trimmed === '') return null
-  const n = Number(trimmed)
-  return Number.isFinite(n) ? n : null
 }
 
 export function TableFormDialog({
@@ -104,11 +90,14 @@ export function TableFormDialog({
   branchId,
   floorPlans,
   mode,
+  areas = [],
+  floors = [],
+  defaultFloor = 0,
 }: TableFormDialogProps) {
   const { t } = useLocale()
   const createMutation = useCreateTableMutation()
   const updateMutation = useUpdateTableMutation()
-  const [form, setForm] = useState<FormState>(() => emptyForm(mode))
+  const [form, setForm] = useState<FormState>(() => emptyForm(mode, defaultFloor))
   const [formError, setFormError] = useState<string | null>(null)
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
 
@@ -116,7 +105,7 @@ export function TableFormDialog({
 
   useEffect(() => {
     if (open) {
-      setForm(emptyForm(mode))
+      setForm(emptyForm(mode, defaultFloor))
       setFormError(null)
       setFieldErrors({})
       createMutation.reset()
@@ -145,12 +134,9 @@ export function TableFormDialog({
       return
     }
 
-    const geometry = {
-      positionX: parseOptionalNumber(form.positionX),
-      positionY: parseOptionalNumber(form.positionY),
-      width: parseOptionalNumber(form.width),
-      height: parseOptionalNumber(form.height),
-      rotation: parseOptionalNumber(form.rotation),
+    const placement = {
+      floor: form.floor,
+      floorPlanAreaId: form.floorPlanAreaId || null,
     }
 
     setFormError(null)
@@ -166,7 +152,11 @@ export function TableFormDialog({
           indoor: form.indoor,
           vip: form.vip,
           smoking: form.smoking,
-          ...geometry,
+          // No position: a new table waits in the "not placed yet" queue
+          // until staff drag it onto the map.
+          width: DEFAULT_TABLE_WIDTH,
+          height: form.shape === 'Round' ? DEFAULT_TABLE_WIDTH : DEFAULT_TABLE_HEIGHT,
+          ...placement,
         }
         await createMutation.mutateAsync({
           restaurantId,
@@ -181,7 +171,7 @@ export function TableFormDialog({
           indoor: form.indoor,
           vip: form.vip,
           smoking: form.smoking,
-          ...geometry,
+          ...placement,
         })
         await updateMutation.mutateAsync({
           tableId: mode.table.tableId,
@@ -284,33 +274,49 @@ export function TableFormDialog({
           </select>
         </label>
 
-        <fieldset className="grid grid-cols-2 gap-3">
-          <legend className="text-label-md text-on-surface-variant mb-1">
-            {t.inventory.geometry}
-          </legend>
-          {(
-            [
-              ['positionX', t.inventory.positionX],
-              ['positionY', t.inventory.positionY],
-              ['width', t.inventory.width],
-              ['height', t.inventory.height],
-              ['rotation', t.inventory.rotation],
-            ] as const
-          ).map(([key, label]) => (
-            <label key={key} className="block">
-              <span className="text-label-sm text-on-surface-variant">
-                {label}
-              </span>
-              <input
-                type="number"
-                value={form[key]}
-                onChange={(e) => set(key)(e.target.value)}
-                disabled={pending}
-                className="mt-1 w-full rounded-lg bg-surface-container-low px-3 py-2 text-body-md"
-              />
-            </label>
-          ))}
-        </fieldset>
+        {(floors.length > 1 || areas.length > 0) && (
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {floors.length > 1 && (
+              <label className="block">
+                <span className="text-label-md text-on-surface-variant">
+                  {t.inventory.floor}
+                </span>
+                <select
+                  value={form.floor}
+                  onChange={(e) => set('floor')(Number(e.target.value))}
+                  disabled={pending}
+                  className="mt-1 w-full rounded-lg bg-surface-container-low px-3 py-2"
+                >
+                  {floors.map((floor) => (
+                    <option key={floor.value} value={floor.value}>
+                      {floor.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+            {areas.length > 0 && (
+              <label className="block">
+                <span className="text-label-md text-on-surface-variant">
+                  {t.inventory.area}
+                </span>
+                <select
+                  value={form.floorPlanAreaId}
+                  onChange={(e) => set('floorPlanAreaId')(e.target.value)}
+                  disabled={pending}
+                  className="mt-1 w-full rounded-lg bg-surface-container-low px-3 py-2"
+                >
+                  <option value="">{t.inventory.noArea}</option>
+                  {areas.map((area) => (
+                    <option key={area.floorPlanAreaId} value={area.floorPlanAreaId}>
+                      {area.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+          </div>
+        )}
 
         <div className="flex flex-wrap gap-4">
           <label className="flex items-center gap-2 text-label-md">

@@ -207,6 +207,7 @@ export function withCompleteGeometry(
       | 'shape'
       | 'floorPlanAreaId'
       | 'color'
+      | 'floor'
     >
   > = {},
 ): UpdateTableRequest {
@@ -224,6 +225,7 @@ export function withCompleteGeometry(
       ? { floorPlanAreaId: overrides.floorPlanAreaId }
       : {}),
     ...(overrides.color !== undefined ? { color: overrides.color } : {}),
+    ...(overrides.floor !== undefined ? { floor: overrides.floor } : {}),
   })
 }
 

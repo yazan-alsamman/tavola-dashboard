@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { ReservationOfferBadge } from '@/components/reservations/ReservationOfferBadge'
 import { Link, useNavigate } from 'react-router-dom'
 import type { ReservationSourceDto, ReservationStatusDto } from '@/api/reservations'
 import { ReservationActions } from '@/components/reservations/ReservationActions'
@@ -133,6 +134,11 @@ function ReservationCard({
             {' · '}
             {sourceLabel(reservation.source, t)}
           </p>
+          {reservation.offer && (
+            <div className="mt-1.5">
+              <ReservationOfferBadge offer={reservation.offer} />
+            </div>
+          )}
           {!compact && reservation.customerPhone && (
             <p className="mt-1 text-label-sm text-on-surface" dir="ltr">
               {reservation.customerPhone}

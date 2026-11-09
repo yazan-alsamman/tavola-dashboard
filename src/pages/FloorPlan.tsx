@@ -12,6 +12,7 @@ import { FloorPlanAreaBar } from '@/components/floor/FloorPlanAreaBar'
 import { FloorPlanReadView } from '@/components/floor/FloorPlanReadView'
 import { FloorSaveStatus, type FloorSaveState } from '@/components/floor/FloorSaveStatus'
 import { FloorTableInspector } from '@/components/floor/FloorTableInspector'
+import { FloorTableQueue } from '@/components/floor/FloorTableQueue'
 import { Drawer } from '@/components/ui/Drawer'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { MaterialIcon } from '@/components/ui/Icon'
@@ -61,6 +62,14 @@ import {
   type TablePreset,
 } from '@/lib/floorGeometry'
 import { tableShapeKind } from '@/lib/tableShape'
+import {
+  floorLabel,
+  listFloors,
+  nextFloor,
+  tableFloor,
+  tablesOnFloor,
+} from '@/lib/floors'
+import { cn } from '@/lib/utils'
 
 /**
  * Backend-driven Floor Plan with production mutations.
@@ -134,6 +143,8 @@ export function FloorPlanPage() {
   )
   const [hallError, setHallError] = useState<string | null>(null)
   const [zonesOpen, setZonesOpen] = useState(false)
+  const [currentFloor, setCurrentFloor] = useState(0)
+  const [openedFloors, setOpenedFloors] = useState<number[]>([])
 
   const restaurantId = selectedRestaurantId ?? ''
   const branchId = selectedBranchId ?? ''
@@ -190,7 +201,22 @@ export function FloorPlanPage() {
   const placingUnplaced =
     selectedTable != null && !isTablePlaced(selectedTable)
 
-  const countedTables = viewMode === 'all' ? catalogTables : tables
+  const floors = listFloors(tables, openedFloors)
+  const floorLabels = {
+    ground: t.floorPlan.floorGround,
+    ordinals: t.floorPlan.floorOrdinals,
+    numbered: t.floorPlan.floorNumbered,
+  }
+  // Only placed tables are drawn; the queue holds the rest whatever their floor.
+  const floorTables = tablesOnFloor(tables, currentFloor).filter(isTablePlaced)
+  // An area belongs to the floor its tables stand on; an empty area shows everywhere.
+  const floorHalls = halls.filter((area) => {
+    const inArea = tables.filter((tb) => tb.floorPlanAreaId === area.floorPlanAreaId)
+    return inArea.length === 0 || inArea.some((tb) => tableFloor(tb) === currentFloor)
+  })
+
+  const countedTables =
+    viewMode === 'all' ? catalogTables : tablesOnFloor(tables, currentFloor)
   const counts = {
     total: countedTables.length,
     available: countedTables.filter((tb) => tb.status === 'Available').length,
@@ -336,7 +362,7 @@ export function FloorPlanPage() {
     setRepositionError(null)
 
     if (placingUnplaced && selectedTable && !placePreset) {
-      await persistGeometry(selectedTable, { positionX: x, positionY: y })
+      await placeQueuedTable(selectedTable, x, y)
       return
     }
 
@@ -355,10 +381,11 @@ export function FloorPlanPage() {
           vip: false,
           smoking: false,
           layer: 0,
+          floor: currentFloor,
           ...(() => {
             const areaId =
               highlightedAreaId ??
-              sectionIdForBox(visiblePartitions(halls, tables, sectionRects), {
+              sectionIdForBox(visiblePartitions(floorHalls, floorTables, sectionRects), {
                 x,
                 y,
                 width: placePreset.width,
@@ -375,10 +402,35 @@ export function FloorPlanPage() {
     }
   }
 
+  const placeQueuedTable = async (table: TableDto, x: number, y: number) => {
+    const ok = await persistGeometry(table, {
+      positionX: x,
+      positionY: y,
+      floor: currentFloor,
+    })
+    if (ok) setSelectedTableId(null)
+  }
+
+  const handleDropTable = async (tableId: string, x: number, y: number) => {
+    const table = unplaced.find((tb) => tb.tableId === tableId)
+    if (!table) return
+    setRepositionError(null)
+    setPlacePreset(null)
+    await placeQueuedTable(table, x, y)
+  }
+
+  const handleAddFloor = () => {
+    const floor = nextFloor(floors)
+    setOpenedFloors((current) => [...current, floor])
+    setCurrentFloor(floor)
+    setHighlightedAreaId(null)
+    setPlacePreset(null)
+  }
+
   const handleAutoPlace = async () => {
     if (!restaurantId || !branchId || unplaced.length === 0) return
     setRepositionError(null)
-    const occupied = tables.filter(isTablePlaced).map((tb) => tableBox(tb))
+    const occupied = floorTables.map((tb) => tableBox(tb))
     const laid = layoutUnplaced(unplaced, occupied)
     for (const item of laid) {
       const table = tables.find((tb) => tb.tableId === item.tableId)
@@ -388,6 +440,7 @@ export function FloorPlanPage() {
         positionY: item.y,
         width: item.width,
         height: item.height,
+        floor: currentFloor,
       })
       if (!ok) return
     }
@@ -732,10 +785,42 @@ export function FloorPlanPage() {
                 {hallError}
               </p>
             )}
+            <div
+              className="flex flex-wrap items-center gap-2"
+              role="tablist"
+              aria-label={t.floorPlan.floorsLabel}
+            >
+              {floors.map((floor) => (
+                <button
+                  key={floor}
+                  type="button"
+                  role="tab"
+                  aria-selected={floor === currentFloor}
+                  onClick={() => {
+                    setCurrentFloor(floor)
+                    setHighlightedAreaId(null)
+                  }}
+                  className={cn(
+                    'min-h-10 rounded-lg px-4 text-label-md font-semibold',
+                    floor === currentFloor
+                      ? 'bg-inverse-surface text-inverse-on-surface'
+                      : 'bg-surface-container-high text-on-surface hover:bg-surface-container-highest',
+                  )}
+                >
+                  {floorLabel(floor, floorLabels)}
+                </button>
+              ))}
+              {canManage && (
+                <Button type="button" variant="ghost" size="sm" onClick={handleAddFloor}>
+                  <MaterialIcon name="add" size={18} />
+                  {t.floorPlan.addFloor}
+                </Button>
+              )}
+            </div>
             {zonesOpen && (
               <FloorPlanAreaBar
-                areas={halls}
-                tables={tables}
+                areas={floorHalls}
+                tables={floorTables}
                 highlightedAreaId={highlightedAreaId}
                 drawHall={drawHall}
                 canManage={canManage}
@@ -771,10 +856,19 @@ export function FloorPlanPage() {
                 </Button>
               </div>
             )}
+            <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_15rem]">
+            <div className="min-w-0 lg:order-1">
             <FloorPlanReadView
-              key={selectedFloorPlanId ?? 'floor'}
-              tables={tables}
-              areas={halls}
+              key={`${selectedFloorPlanId ?? 'floor'}:${currentFloor}`}
+              tables={floorTables}
+              areas={floorHalls}
+              onDropTable={
+                canManage ? (id, x, y) => void handleDropTable(id, x, y) : undefined
+              }
+              dropSizeFor={(id) => {
+                const table = unplaced.find((tb) => tb.tableId === id)
+                return table ? resolveTableSize(table) : { width: 80, height: 80 }
+              }}
               drawHall={drawHall && canManage}
               sectionDrafts={sectionRects}
               onDrawHall={handleDrawHall}
@@ -842,12 +936,26 @@ export function FloorPlanPage() {
               placing={createMutation.isPending || Boolean(repositionBusyId)}
               onDragActiveChange={setDragging}
             />
+            </div>
+            <div className="lg:order-2">
+              <FloorTableQueue
+                tables={unplaced}
+                selectedTableId={placingUnplaced ? selectedTableId : null}
+                onSelect={(id) => {
+                  setPlacePreset(null)
+                  setSelectedTableId((current) => (current === id ? null : id))
+                }}
+                canManage={canManage}
+                busy={Boolean(repositionBusyId) || createMutation.isPending}
+              />
+            </div>
+            </div>
           </div>
         </div>
       )}
 
       <Drawer
-        open={selectedTable != null}
+        open={selectedTable != null && isTablePlaced(selectedTable)}
         onClose={() => setSelectedTableId(null)}
         title={selectedTable?.tableNumber ?? t.floorPlan.title}
         closeLabel={t.common.close}
@@ -944,14 +1052,15 @@ export function FloorPlanPage() {
             floorPlans={floorPlans}
             mode={
               createTableOpen && createOnFloorPlanId
-                ? {
-                    kind: 'create',
-                    floorPlanId: createOnFloorPlanId,
-                    defaultX: 48 + tables.length * 16,
-                    defaultY: 48 + tables.length * 12,
-                  }
+                ? { kind: 'create', floorPlanId: createOnFloorPlanId }
                 : null
             }
+            areas={halls}
+            floors={floors.map((floor) => ({
+              value: floor,
+              label: floorLabel(floor, floorLabels),
+            }))}
+            defaultFloor={currentFloor}
           />
           <TableFormDialog
             open={Boolean(editTable)}
@@ -960,6 +1069,11 @@ export function FloorPlanPage() {
             branchId={branchId}
             floorPlans={floorPlans}
             mode={editTable ? { kind: 'edit', table: editTable } : null}
+            areas={editTable?.floorPlanId === selectedFloorPlanId ? halls : []}
+            floors={floors.map((floor) => ({
+              value: floor,
+              label: floorLabel(floor, floorLabels),
+            }))}
           />
           <MoveTableDialog
             open={Boolean(moveTableTarget)}

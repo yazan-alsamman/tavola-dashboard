@@ -12,7 +12,6 @@ import {
   useNotificationsList,
   useUnreadNotificationCount,
 } from '@/hooks/useNotificationQueries'
-import { NotificationBroadcastPanel } from '@/components/notifications/NotificationBroadcastPanel'
 import { Num } from '@/components/ui/Num'
 
 const defaultTypeIcon = 'notifications'
@@ -82,7 +81,6 @@ export function NotificationsPage() {
         }
       />
 
-      <NotificationBroadcastPanel />
 
       <p className="text-sm text-on-surface-variant mb-4">
         <Num>{unreadCount}</Num> {t.notifications.unread}

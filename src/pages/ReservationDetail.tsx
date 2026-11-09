@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { ReservationOfferBadge } from '@/components/reservations/ReservationOfferBadge'
 import { Link, useParams } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { MaterialIcon } from '@/components/ui/Icon'
@@ -45,6 +46,7 @@ function mergeReservation(
     tableId: fromDetail.tableId || cached.tableId,
     notes: fromDetail.notes ?? cached.notes,
     guests: fromDetail.guests || cached.guests,
+    offer: fromDetail.offer ?? cached.offer,
   }
 }
 
@@ -122,6 +124,9 @@ function ReservationInfo({ reservation, locale, timeZone, t }: {
           label={t.reservations.source}
           value={t.reservations.sources[reservation.source] ?? reservation.source}
         />
+        {reservation.offer && (
+          <DetailField label={t.reservations.offer} value={reservation.offer.title} />
+        )}
         <DetailField
           label={t.reservations.date}
           value={formatDate(reservation.reservationDate, locale)}
@@ -291,6 +296,11 @@ export function ReservationDetailPage() {
               <h1 className="text-headline-md text-on-surface mt-1">
                 {reservation.customerName ?? t.reservations.board.guest}
               </h1>
+              {reservation.offer && (
+                <div className="mt-2">
+                  <ReservationOfferBadge offer={reservation.offer} />
+                </div>
+              )}
             </div>
             <StatusBadge
               type="custom"

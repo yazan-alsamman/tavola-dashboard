@@ -359,3 +359,26 @@ export function displayPayloadFields(
       value: formatPayloadValue(value, key, locale),
     }))
 }
+
+/**
+ * Reservations that came through the customer app (`Online`) versus the ones
+ * staff entered from the dashboard (phone, walk-in, staff, waitlist seating).
+ * Null when the payload carries no source breakdown.
+ */
+export function extractReservationSourceSplit(
+  payload: AnalyticsPayload,
+): { app: number; dashboard: number } | null {
+  const breakdown = pickRecord(payload, ['sourceBreakdown', 'sourceCounts'])
+  const entries = Object.entries(breakdown).filter(
+    (entry): entry is [string, number] =>
+      typeof entry[1] === 'number' && Number.isFinite(entry[1]),
+  )
+  if (entries.length === 0) return null
+  let app = 0
+  let dashboard = 0
+  for (const [source, count] of entries) {
+    if (source === 'Online') app += count
+    else dashboard += count
+  }
+  return { app, dashboard }
+}

@@ -407,7 +407,7 @@ The adopted `postman/TAVLA-API.postman_collection.json` (224 requests, productio
 
 Decision:
 1. Add `listBranchReservations` and drive Calendar + Reservations from the branch date-window API; on Employee-only 403, fall back to ownership list with an honest banner.
-2. Add Owner/Admin broadcast on Notifications via `POST /restaurants/:id/notifications/broadcast`.
+2. Add Owner/Admin broadcast on Notifications via `POST /restaurants/:id/notifications/broadcast`. (Withdrawn in ADR-016.)
 3. Add Settings → Team for members/invitations/role/remove/transfer (Owner/Admin).
 4. Add public `/invite/:token` accept flow.
 5. Do not invent waitlist board or employee roster list endpoints (still absent from Postman).
@@ -515,3 +515,16 @@ Decision:
 Consequences:
 Both pages need the backend release that adds these routes. Against an older backend they show the load-error state.
 
+
+## ADR-016 — Floors, the table queue, offer bookings and no broadcast (CR round 2)
+
+Context: the owner's round-2 feedback on change request WJ-R-2026-002.
+
+Decision:
+1. Floors are the existing `Table.floor` number (null = ground floor) inside the active floor plan. The floor plan page shows one tab per floor; "Add floor" opens an empty tab for the session until a table is placed on it. No new endpoint.
+2. A table with no position is "not placed yet". New tables are created without a position and wait in the queue beside the canvas; staff drag one onto the map (HTML5 drag and drop) or tap it and tap a free spot. Placing sets `positionX/positionY` and the current `floor` in one Update Table call. The create/edit table dialog asks only for number, seats, shape, floor and area.
+3. The restaurant broadcast surface is removed (backend ADR-042 withdrew the route).
+4. Branch reservation rows carry `offer { offerId, title } | null`; cards and the detail page show "Through the offer: …".
+5. The home page splits reservations by source from the existing reservations summary: `Online` is the app, every other source is the dashboard.
+
+Consequences: guests still see the active floor plan only, now across all its floors. Areas belong to a floor plan, so an area shows on the floors its tables stand on, and an empty area shows on every floor.
