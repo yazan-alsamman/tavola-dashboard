@@ -128,9 +128,11 @@ export const analyticsKeys = {
 
 export const reviewKeys = {
   all: ['reviews'] as const,
-  restaurant: (restaurantId: string, page: number, pageSize: number) =>
-    [...reviewKeys.all, 'restaurant', restaurantId, page, pageSize] as const,
-  detail: (reviewId: string) => [...reviewKeys.all, 'detail', reviewId] as const,
+  restaurant: (
+    restaurantId: string,
+    staffView: boolean,
+    params: { page?: number; pageSize?: number; axis?: string; stars?: number },
+  ) => [...reviewKeys.all, 'restaurant', restaurantId, staffView, params] as const,
 }
 
 export const orgKeys = {

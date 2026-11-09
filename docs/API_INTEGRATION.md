@@ -58,10 +58,10 @@ Supporting modules:
 | `src/api/notifications.ts` | list, unread-count, identity-token, mark read / read-all |
 | `src/api/waitlist.ts` | `listBranchWaitlist` (branch day board), join, cancel, promote |
 | `src/api/health.ts` | health / liveness / readiness (non-envelope) |
-| `src/api/analytics.ts` | customers, reservation summary, branch trends/peak-hours, waitlist, reviews-summary, org reservation summary |
+| `src/api/analytics.ts` | customers, reservation summary, branch trends/peak-hours, waitlist, reviews-summary (`ReviewsSummaryDto`: 6-month average shown from 5 reviews, axis averages, strongest/weakest axis), org reservation summary |
 | `src/api/organizations.ts` | subscription + usage + members/invitations/transfer + accept invitation |
 | `src/api/offers.ts` | create/list/update/publish/delete |
-| `src/api/reviews.ts` | restaurant list/get, reply, delete, and review image upload/remove (`POST`/`DELETE /reviews/:id/images`). Photos page adds images from that contract. |
+| `src/api/reviews.ts` | `GET /restaurants/:id/reviews` (public) and `/reviews/manage` (Owner/Admin, adds `privateNote`), both with `axis`/`stars` filters; `POST /reviews/:id/reply` and `POST /reviews/:id/reopen`. The dashboard never deletes a review or uploads its photos (ADR-020). |
 | `src/api/messaging.ts` | restaurant inbox, conversation CRUD, multipart send |
 | `src/api/menus.ts` | full menu tree management + public GETs for render |
 | `Tavola_platform/src/platform/api/platformAdmin.ts` | Platform Owner console (separate app) — login, dashboard, restaurants/orgs lifecycle, revenue, acquisitions, admins, accounts, audit, pricing, plans, provision, broadcast |

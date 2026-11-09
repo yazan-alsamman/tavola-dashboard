@@ -14,7 +14,6 @@ import { ConfirmDialog } from '@/components/ui/Modal'
 import { Num } from '@/components/ui/Num'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { RestaurantCoverSection } from '@/components/gallery/RestaurantCoverSection'
-import { ReviewImagesSection } from '@/components/gallery/ReviewImagesSection'
 import { useLocale } from '@/context/LocaleContext'
 import { useRestaurantScope } from '@/context/RestaurantScopeContext'
 import { useToast } from '@/context/ToastContext'
@@ -281,7 +280,6 @@ export function GalleryPage() {
         </>
       )}
 
-      <ReviewImagesSection />
 
       <ConfirmDialog
         open={Boolean(removeTarget)}

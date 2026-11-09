@@ -1,3 +1,4 @@
+import type { ReviewAxis } from './reviews'
 import { apiRequest } from './client'
 
 /** Preset windows supported by live AnalyticsDateRangeQueryDto. */
@@ -121,11 +122,27 @@ export async function getWaitlistAnalytics(
   )
 }
 
+/**
+ * `GET /restaurants/:id/analytics/reviews-summary` (backend ADR-045): computed
+ * from the reviews themselves. `averageRating` is the real 6-month average
+ * (null with none); guests see "new on Tavola" while `isNew`.
+ */
+export type ReviewsSummaryDto = {
+  activeReviewCount: number
+  averageRating: number | null
+  windowReviewCount: number
+  isNew: boolean
+  axisAverages: Record<ReviewAxis, number | null>
+  strongestAxis: ReviewAxis | null
+  weakestAxis: ReviewAxis | null
+  generatedAt: string
+}
+
 export async function getReviewsSummary(
   restaurantId: string,
   signal?: AbortSignal,
-): Promise<AnalyticsPayload> {
-  return apiRequest<AnalyticsPayload>(
+): Promise<ReviewsSummaryDto> {
+  return apiRequest<ReviewsSummaryDto>(
     `/restaurants/${restaurantId}/analytics/reviews-summary`,
     { signal },
   )

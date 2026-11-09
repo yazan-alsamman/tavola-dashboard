@@ -569,3 +569,14 @@ Decision:
 2. `CreateStaffReservationRequest.source` is `'Phone'` only. The backend keeps `WalkIn` in `ReservationSource` for existing rows and API compatibility, so the dashboard still labels an old walk-in booking and counts it with dashboard bookings.
 
 Consequences: an old `/app/walk-in` bookmark lands on the not-found page.
+
+## ADR-020 — Three-axis reviews, re-rating and no deletion (CR round 2, batch 4)
+
+Context: the CR splits a review into service, place and food, hides the restaurant's rating until it has enough recent reviews, and lets the restaurant ask a guest to rate again instead of deleting. Backend contract: ADR-045.
+
+Decision:
+1. The Reviews page shows the 6-month rating (or "new on Tavola" under 5 reviews), the axis averages with strongest and weakest badges, and server-side axis/star filters.
+2. Owner/Admin read `/reviews/manage` to see each guest's private note; other roles read the public list. `useCanManageReviews` gates reply and reopen; the server still enforces both.
+3. The restaurant replies once and may open a review for re-rating. The dashboard has no delete and no review-photo upload; the Gallery no longer manages review images.
+
+Consequences: a single-rating review from app 1.0.2 shows its stars without axes.
