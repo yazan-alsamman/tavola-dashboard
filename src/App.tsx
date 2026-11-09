@@ -76,10 +76,6 @@ export default function App() {
                               path="waitlist"
                               element={<Navigate to="/app/reservations?tab=waitlist" replace />}
                             />
-                            <Route
-                              path="walk-in"
-                              element={<Navigate to="/app/reservations?tab=walk-in" replace />}
-                            />
                             <Route path="offers" element={<OffersPage />} />
                             <Route path="reviews" element={<ReviewsPage />} />
                             <Route path="notifications" element={<NotificationsPage />} />

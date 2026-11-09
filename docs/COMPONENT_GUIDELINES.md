@@ -23,7 +23,7 @@ Draft offers lead with Publish. Edit and delete sit in the overflow, and delete 
 
 # Service floor
 
-The floor canvas is the page. Zoom, fit, snap, presets, and zones share one toolbar; zones collapse, and the selected table opens in `Drawer`. `FloorSaveStatus` is the save chip, including retry. The tables list uses `DataTableRowActions` (change status, then the overflow) and cards below `md`. The waiting list is the queue; add opens in `Drawer`. Walk-in starts from now and a party size.
+The floor canvas is the page. Zoom, fit, snap, presets, and zones share one toolbar; zones collapse, and the selected table opens in `Drawer`. `FloorSaveStatus` is the save chip, including retry. The tables list uses `DataTableRowActions` (change status, then the overflow) and cards below `md`. The waiting list is the queue; add opens in `Drawer`.
 
 # Operations screens
 

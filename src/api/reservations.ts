@@ -64,9 +64,9 @@ export interface ReservationGuestDto {
   email?: string | null
 }
 
-/** Staff Phone / WalkIn create — requires `source` + `reservationGuest`. */
+/** Staff phone-booking create — requires `source` + `reservationGuest`. */
 export interface CreateStaffReservationRequest extends CreateReservationRequest {
-  source: 'Phone' | 'WalkIn'
+  source: 'Phone'
   reservationGuest: ReservationGuestDto
 }
 
@@ -145,7 +145,7 @@ export async function createReservation(
 }
 
 /**
- * Staff Phone / Walk-In create (`reservations:create`).
+ * Staff phone-booking create (`reservations:create`).
  * Requires `source` + `reservationGuest` per Postman.
  */
 export async function createStaffReservation(

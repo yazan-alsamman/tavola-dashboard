@@ -11,7 +11,6 @@ import {
   ReturningCustomerBadge,
 } from '@/components/reservations/ReservationContext'
 import { WaitlistPage } from '@/pages/Waitlist'
-import { WalkInPage } from '@/pages/WalkIn'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { MaterialIcon } from '@/components/ui/Icon'
 import { EmptyState } from '@/components/ui/EmptyState'
@@ -176,9 +175,9 @@ function ReservationCard({
   )
 }
 
-type ReservationsTab = 'bookings' | 'waitlist' | 'walk-in'
+type ReservationsTab = 'bookings' | 'waitlist'
 
-const TABS: ReservationsTab[] = ['bookings', 'waitlist', 'walk-in']
+const TABS: ReservationsTab[] = ['bookings', 'waitlist']
 
 function parseTab(value: string | null): ReservationsTab {
   return TABS.includes(value as ReservationsTab) ? (value as ReservationsTab) : 'bookings'
@@ -190,8 +189,8 @@ function parseNewBookingStart(value: string | null): string | null {
 }
 
 /**
- * One place for every way a guest gets a table: bookings, the waitlist, and
- * walk-ins are tabs here (`?tab=`), not separate pages.
+ * One place for every way a guest gets a table: bookings and the waitlist are
+ * tabs here (`?tab=`), not separate pages.
  */
 export function ReservationsPage() {
   const { t } = useLocale()
@@ -206,7 +205,6 @@ export function ReservationsPage() {
   const labels: Record<ReservationsTab, string> = {
     bookings: t.reservations.tabs.bookings,
     waitlist: t.reservations.tabs.waitlist,
-    'walk-in': t.reservations.tabs.walkIn,
   }
 
   return (
@@ -244,7 +242,6 @@ export function ReservationsPage() {
       >
         {tab === 'bookings' && <BookingsTab initialNewBookingStart={newBookingStart} />}
         {tab === 'waitlist' && <WaitlistPage embedded />}
-        {tab === 'walk-in' && <WalkInPage embedded />}
       </div>
     </div>
   )

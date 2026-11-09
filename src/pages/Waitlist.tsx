@@ -155,7 +155,7 @@ export function WaitlistPage({ embedded = false }: WaitlistPageProps) {
             </label>
             <div className="grid grid-cols-3 gap-3">
               <label className="flex flex-col gap-1.5">
-                <span className="text-sm font-medium text-on-surface-variant">{t.walkIn.countryCode}</span>
+                <span className="text-sm font-medium text-on-surface-variant">{t.reservations.create.countryCode}</span>
                 <Input
                   value={countryCode}
                   onChange={(e) => setCountryCode(e.target.value)}

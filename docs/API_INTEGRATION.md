@@ -50,7 +50,7 @@ Supporting modules:
 | `src/api/users.ts` | `getCurrentUser`, `updateCurrentUser`, `getMyPreferences`, `updateMyPreferences`, `uploadMyAvatar` |
 | `src/api/restaurants.ts` | list/get/create/update/delete + settings, working-hours, gallery, cover (`POST /restaurants/:id/cover`), cuisine/occasion category assignment |
 | `src/api/branches.ts` | list/get/create/update/delete + working-hours |
-| `src/api/reservations.ts` | availability, Online + staff Phone/Walk-In create, list/get, approve/reject/cancel/reschedule/complete/no-show/table-ready |
+| `src/api/reservations.ts` | availability, Online + staff phone-booking create, list/get, approve/reject/cancel/reschedule/complete/no-show/table-ready |
 | `src/api/floorPlans.ts` | `listFloorPlans`, `createFloorPlan`, `activateFloorPlan` |
 | `src/api/tables.ts` | list/get + CRUD + move/status + merge/split |
 | `src/api/employees.ts` | `listEmployees`, `listRestaurantRoles`, `inviteEmployee`, `assignEmployeeRole`, `assignEmployeeToBranch`, `removeEmployeeFromBranch`, `removeEmployee` |

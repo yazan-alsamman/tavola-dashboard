@@ -534,7 +534,7 @@ Consequences: guests still see the active floor plan only, now across all its fl
 Context: the owner's round-2 feedback on the reservations and calendar pages (backend ADR-043).
 
 Decision:
-1. Reservations, the waitlist and walk-ins are tabs on `/app/reservations` (`?tab=waitlist|walk-in`). `/app/waitlist` and `/app/walk-in` redirect there and leave the sidebar.
+1. Reservations and the waitlist are tabs on `/app/reservations` (`?tab=waitlist`). `/app/waitlist` redirects there and leaves the sidebar. (Walk-in was a third tab until ADR-019.)
 2. "New booking" books on the customer's behalf (`source = Phone` with `reservationGuest` name and phone), always in branch time. `?new=YYYY-MM-DDTHH:mm` opens it pre-filled; an empty calendar hour links there.
 3. One list layout (no comfortable/compact switch) that always shows the phone. Status labels follow the CR wording (Awaiting approval, Confirmed, Visit ended, Approval timed out); a waitlist booking reads "From the waitlist".
 4. Branch rows feed: who cancelled or declined and why (`statusChange`), the staff internal note (`PATCH /reservations/:id/internal-note`), a returning-customer badge (`customer.visitCount`), a countdown to `approvalDeadlineAt`, and a "closes automatically in N min" warning during the server's 30-minute auto-close grace. A daily "tables the system closed" card lists today's and yesterday's bookings completed by the System.
@@ -560,3 +560,12 @@ Decision:
 
 Consequences: tables saved by the old free-form editor are drawn at the nearest square and resized to the size table the next time they move.
 
+## ADR-019 — No walk-in in the dashboard (CR round 2, batch 4)
+
+Context: the owner decided the dashboard should not register walk-in guests at all. Supersedes ADR-017 item 1's walk-in tab and the walk-in parts of earlier UX decisions.
+
+Decision:
+1. The walk-in tab, its page, the `/app/walk-in` route and the dashboard home's walk-in links are removed. Staff book on a guest's behalf only through "New booking" (`source = Phone`).
+2. `CreateStaffReservationRequest.source` is `'Phone'` only. The backend keeps `WalkIn` in `ReservationSource` for existing rows and API compatibility, so the dashboard still labels an old walk-in booking and counts it with dashboard bookings.
+
+Consequences: an old `/app/walk-in` bookmark lands on the not-found page.
