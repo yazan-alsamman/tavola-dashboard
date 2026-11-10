@@ -534,7 +534,7 @@ Consequences: guests still see the active floor plan only, now across all its fl
 Context: the owner's round-2 feedback on the reservations and calendar pages (backend ADR-043).
 
 Decision:
-1. Reservations, the waitlist and walk-ins are tabs on `/app/reservations` (`?tab=waitlist|walk-in`). `/app/waitlist` and `/app/walk-in` redirect there and leave the sidebar.
+1. Reservations and the waitlist are tabs on `/app/reservations` (`?tab=waitlist`). `/app/waitlist` redirects there and leaves the sidebar. (Walk-in was a third tab until ADR-019.)
 2. "New booking" books on the customer's behalf (`source = Phone` with `reservationGuest` name and phone), always in branch time. `?new=YYYY-MM-DDTHH:mm` opens it pre-filled; an empty calendar hour links there.
 3. One list layout (no comfortable/compact switch) that always shows the phone. Status labels follow the CR wording (Awaiting approval, Confirmed, Visit ended, Approval timed out); a waitlist booking reads "From the waitlist".
 4. Branch rows feed: who cancelled or declined and why (`statusChange`), the staff internal note (`PATCH /reservations/:id/internal-note`), a returning-customer badge (`customer.visitCount`), a countdown to `approvalDeadlineAt`, and a "closes automatically in N min" warning during the server's 30-minute auto-close grace. A daily "tables the system closed" card lists today's and yesterday's bookings completed by the System.
@@ -560,3 +560,36 @@ Decision:
 
 Consequences: tables saved by the old free-form editor are drawn at the nearest square and resized to the size table the next time they move.
 
+## ADR-019 — No walk-in in the dashboard (CR round 2, batch 4)
+
+Context: the owner decided the dashboard should not register walk-in guests at all. Supersedes ADR-017 item 1's walk-in tab and the walk-in parts of earlier UX decisions.
+
+Decision:
+1. The walk-in tab, its page, the `/app/walk-in` route and the dashboard home's walk-in links are removed. Staff book on a guest's behalf only through "New booking" (`source = Phone`).
+2. `CreateStaffReservationRequest.source` is `'Phone'` only. The backend keeps `WalkIn` in `ReservationSource` for existing rows and API compatibility, so the dashboard still labels an old walk-in booking and counts it with dashboard bookings.
+
+Consequences: an old `/app/walk-in` bookmark lands on the not-found page.
+
+## ADR-020 — Three-axis reviews, re-rating and no deletion (CR round 2, batch 4)
+
+Context: the CR splits a review into service, place and food, hides the restaurant's rating until it has enough recent reviews, and lets the restaurant ask a guest to rate again instead of deleting. Backend contract: ADR-045.
+
+Decision:
+1. The Reviews page shows the 6-month rating (or "new on Tavola" under 5 reviews), the axis averages with strongest and weakest badges, and server-side axis/star filters.
+2. Owner/Admin read `/reviews/manage` to see each guest's private note; other roles read the public list. `useCanManageReviews` gates reply and reopen; the server still enforces both.
+3. The restaurant replies once and may open a review for re-rating. The dashboard has no delete and no review-photo upload; the Gallery no longer manages review images.
+
+Consequences: a single-rating review from app 1.0.2 shows its stars without axes.
+
+## ADR-026 — Menu names, branch menus, price level, gallery order; offer kinds, conditions and impact (CR round 2, batch 4)
+
+Context: the CR's menu page (item names in Arabic and English with the branch currency, a menu per branch or shared, a computed price level, ordered photos) and offers page (four kinds in Arabic, days and hours, conditions, visible edit and delete, an impact card; broadcast removed from round 2). Backend contracts: ADR-046 and ADR-047. Numbered 026 because 016–020 were reused by the round-2 entries above.
+
+Decision:
+1. Menu items carry `nameAr`/`nameEn`; the list shows the reader's language first and the other below. The backend's item update is a full replace, so every update goes through `menuItemUpdateBody(item, changes)`; this also fixes the availability toggle, which used to send only `availabilityMode`.
+2. Prices show the item currency, else the menu's (`menuCurrency`: its branch's, or the one currency all branches share). A new menu can be shared or belong to one branch.
+3. The price level is computed per branch and shown as stars on the Menu and Branches pages; Settings no longer edits it.
+4. Gallery photos reorder by drag (desktop) or by move buttons (touch, keyboard) through `PUT /restaurants/:id/gallery/order`; upload tips sit above the drop zone. The Gallery tab stays (round-2 exclusion).
+5. Offers: the four current kinds (older kinds still display), percentage or amount in the covered branches' currency, days/hours/conditions, the server's status (Ended past the period). Edit, delete, publish and impact are visible buttons. The impact card reads `GET /restaurants/:id/offers/:offerId/impact`.
+
+Consequences: a shared menu over branches with different currencies shows prices without a currency unless the item has one. The impact card is fetched only while open.

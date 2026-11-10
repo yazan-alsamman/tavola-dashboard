@@ -1,32 +1,29 @@
 import { useQuery } from '@tanstack/react-query'
-import { getReview, listRestaurantReviews } from '@/api/reviews'
+import {
+  listRestaurantReviews,
+  listRestaurantReviewsForStaff,
+  type ListRestaurantReviewsParams,
+} from '@/api/reviews'
 import { normalizePaginated } from '@/lib/pagination'
 import { reviewKeys } from '@/lib/queryKeys'
 
+/**
+ * The restaurant's reviews. Owner/Admin (`staffView`) read the managed list,
+ * which adds each guest's private note; everyone else reads the public list.
+ */
 export function useRestaurantReviewsQuery(
   restaurantId: string | undefined,
-  page: number,
-  pageSize: number,
+  params: ListRestaurantReviewsParams,
+  staffView: boolean,
   enabled = true,
 ) {
   return useQuery({
-    queryKey: reviewKeys.restaurant(restaurantId ?? '', page, pageSize),
+    queryKey: reviewKeys.restaurant(restaurantId ?? '', staffView, params),
     queryFn: async ({ signal }) => {
-      const data = await listRestaurantReviews(
-        restaurantId!,
-        { page, pageSize },
-        signal,
-      )
-      return normalizePaginated(data)
+      const list = staffView ? listRestaurantReviewsForStaff : listRestaurantReviews
+      return normalizePaginated(await list(restaurantId!, params, signal))
     },
     enabled: enabled && Boolean(restaurantId),
-  })
-}
-
-export function useReviewDetailQuery(reviewId: string | undefined) {
-  return useQuery({
-    queryKey: reviewKeys.detail(reviewId ?? ''),
-    queryFn: ({ signal }) => getReview(reviewId!, signal),
-    enabled: Boolean(reviewId),
+    placeholderData: (previous) => previous,
   })
 }

@@ -296,20 +296,12 @@ export function DashboardPage() {
         title={t.ops.operationsTitle}
         subtitle={[firstName, place, t.dashboard.subtitle].filter(Boolean).join(' · ')}
         actions={
-          <>
-            <Link to="/app/reservations">
-              <Button variant="outline">
-                <MaterialIcon name="event" size={16} />
-                {t.nav.reservations}
-              </Button>
-            </Link>
-            <Link to="/app/reservations?tab=walk-in">
-              <Button variant="primary">
-                <MaterialIcon name="add" size={16} />
-                {t.walkIn.title}
-              </Button>
-            </Link>
-          </>
+          <Link to="/app/reservations">
+            <Button variant="primary">
+              <MaterialIcon name="event" size={16} />
+              {t.nav.reservations}
+            </Button>
+          </Link>
         }
       />
 
@@ -429,11 +421,6 @@ export function DashboardPage() {
                   icon="event_available"
                   title={t.ops.noArrivals}
                   description={t.dashboard.noArrivalsHint}
-                  action={
-                    <Link to="/app/reservations?tab=walk-in" className="text-label-md font-semibold text-primary">
-                      {t.walkIn.title}
-                    </Link>
-                  }
                 />
               ) : (
                 <div className="divide-y divide-outline-variant/40">

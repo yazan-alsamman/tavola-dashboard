@@ -90,7 +90,7 @@ src/api/
 
 Customer Authentication, Discovery, and customer favorites are intentionally **not** part of the restaurant dashboard client. Platform Admin lives in the `Tavola_platform` app, not in this restaurant client.
 
-**Reservations note:** Postman now exposes list/get + approve/reject/cancel/complete/no-show/table-ready + Phone/Walk-In create. Client functions live in `reservations.ts`. Staff branch-scoped inbox (if different from ownership `GET /reservations`) is not a separate path in Postman.
+**Reservations note:** Postman now exposes list/get + approve/reject/cancel/complete/no-show/table-ready + Phone create (walk-in was removed from the dashboard, ADR-019). Client functions live in `reservations.ts`. Staff branch-scoped inbox (if different from ownership `GET /reservations`) is not a separate path in Postman.
 
 **Floor/Table note (ADR-007/008):** Domain actions (`move`, `status`, `activate`, `merge`, `split`) are never folded into generic PATCH. Selected FloorPlan for viewing is not auto-activation.
 

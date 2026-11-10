@@ -179,6 +179,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
   align_vertical_center: AlignCenterHorizontal,
   align_vertical_top: AlignStartHorizontal,
   analytics: BarChart3,
+  insights: TrendingUp,
   bar_chart: BarChart3,
   arrow_back: ArrowLeft,
   arrow_forward: ArrowRight,

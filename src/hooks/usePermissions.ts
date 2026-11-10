@@ -53,21 +53,20 @@ export function useCanManageOffers(): boolean {
 }
 
 /**
- * Advisory UI gate for replying to reviews (Domain Action).
- * Backend requires organization Owner/Admin — optional `reviews:manage` slug.
- */
-export function useCanReplyToReviews(): boolean {
-  const { user } = useAuth()
-  if (!user) return false
-  const orgRole = user.organization?.role
-  if (orgRole === 'Owner' || orgRole === 'Admin') return true
-  return user.permissions.includes('reviews:manage')
-}
-
-/**
  * Advisory UI gate for menu management mutations.
  * Org Owner/Admin, or explicit menu:manage permission from JWT claims.
  */
+/**
+ * Owner/Admin: replies, opens a review for re-rating, and reads guests'
+ * private notes (backend ADR-045). Nobody on the restaurant side deletes a
+ * review.
+ */
+export function useCanManageReviews(): boolean {
+  const { user } = useAuth()
+  const orgRole = user?.organization?.role
+  return orgRole === 'Owner' || orgRole === 'Admin'
+}
+
 export function useCanManageMenu(): boolean {
   const { user } = useAuth()
   if (!user) return false

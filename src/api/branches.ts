@@ -18,6 +18,13 @@ export interface BranchDto {
   currency: string | null
   timezone: string
   phone: string | null
+  /**
+   * ADR-046: average price of the branch menu's items ranked 2 to 11.
+   * Computed by the backend; never written by the dashboard.
+   */
+  referencePrice?: number | null
+  /** ADR-046: 1-4, the quartile of `referencePrice` among same-currency branches. */
+  priceLevel?: number | null
   createdAt: string
   updatedAt: string
 }

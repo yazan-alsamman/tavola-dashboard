@@ -9,6 +9,8 @@ export type MenuStatus = 'Active' | 'Inactive' | (string & {})
 export interface MenuDto {
   menuId: string
   restaurantId?: string
+  /** ADR-046: null = shared by every branch; set = that branch's own menu. */
+  branchId?: string | null
   name: string
   displayOrder?: number
   isDefault?: boolean
@@ -47,7 +49,11 @@ export function menuItemAvailabilityMode(value: unknown): MenuItemAvailabilityMo
 export interface MenuItemDto {
   itemId: string
   categoryId?: string
+  /** The Arabic name, else the English one (kept for app 1.0.2). */
   name: string
+  /** ADR-046. At least one of `nameAr`/`nameEn` is set. */
+  nameAr?: string | null
+  nameEn?: string | null
   description?: string | null
   price?: number
   currency?: string | null
@@ -55,6 +61,7 @@ export interface MenuItemDto {
   spicyLevel?: number | null
   calories?: number | null
   allergens?: string[]
+  dietaryLabels?: string[]
   availabilityMode?: MenuItemAvailabilityMode
   isFeatured?: boolean
   displayOrder?: number
@@ -119,6 +126,10 @@ function asRecord(value: unknown): Record<string, unknown> | null {
   return value !== null && typeof value === 'object' && !Array.isArray(value)
     ? (value as Record<string, unknown>)
     : null
+}
+
+function optionalString(value: unknown): string | null {
+  return typeof value === 'string' && value.trim().length > 0 ? value : null
 }
 
 function pickString(record: Record<string, unknown>, ...keys: string[]): string {
@@ -188,6 +199,8 @@ function normalizeItem(raw: unknown): MenuItemDto {
     itemId: pickString(record, 'itemId', 'id'),
     categoryId: pickString(record, 'categoryId') || undefined,
     name: pickString(record, 'name') || 'Item',
+    nameAr: optionalString(record.nameAr),
+    nameEn: optionalString(record.nameEn),
     description:
       typeof record.description === 'string' || record.description === null
         ? (record.description as string | null)
@@ -239,6 +252,7 @@ export function normalizeMenu(raw: unknown): MenuDto {
     ...record,
     menuId: pickString(record, 'menuId', 'id'),
     restaurantId: pickString(record, 'restaurantId') || undefined,
+    branchId: optionalString(record.branchId),
     name: pickString(record, 'name') || 'Menu',
     displayOrder:
       typeof record.displayOrder === 'number' ? record.displayOrder : undefined,
@@ -265,6 +279,8 @@ function normalizeMenuList(data: unknown): MenuDto[] {
 
 export interface CreateMenuRequest {
   name: string
+  /** ADR-046: omit (or null) for a menu shared by every branch. */
+  branchId?: string | null
 }
 
 export interface UpdateMenuRequest {
@@ -287,8 +303,10 @@ export interface ReorderRequest {
   orderedIds: string[]
 }
 
+/** ADR-046: send `nameAr` and/or `nameEn`; the legacy `name` is derived by the backend. */
 export interface CreateMenuItemRequest {
-  name: string
+  nameAr?: string | null
+  nameEn?: string | null
   description?: string | null
   price: number
   currency?: string | null
@@ -296,18 +314,66 @@ export interface CreateMenuItemRequest {
   spicyLevel?: number | null
   calories?: number | null
   allergens?: string[]
+  dietaryLabels?: string[]
 }
 
-export interface UpdateMenuItemRequest {
-  name?: string
-  description?: string | null
-  price?: number
-  currency?: string | null
-  preparationTimeMinutes?: number | null
-  spicyLevel?: number | null
-  calories?: number | null
-  allergens?: string[]
-  availabilityMode?: MenuItemAvailabilityMode
+/**
+ * The backend's item update is a full replace (every omitted optional field
+ * is cleared, `price` and `availabilityMode` are required). Build it with
+ * `menuItemUpdateBody` from the current item so nothing is lost.
+ */
+export interface UpdateMenuItemRequest extends CreateMenuItemRequest {
+  availabilityMode: MenuItemAvailabilityMode
+}
+
+/** The full update body for `item`, with `changes` applied. */
+export function menuItemUpdateBody(
+  item: MenuItemDto,
+  changes: Partial<UpdateMenuItemRequest> = {},
+): UpdateMenuItemRequest {
+  return {
+    nameAr: item.nameAr ?? null,
+    nameEn: item.nameEn ?? (item.nameAr ? null : item.name),
+    description: item.description ?? null,
+    price: item.price ?? 0,
+    currency: item.currency ?? null,
+    preparationTimeMinutes: item.preparationTimeMinutes ?? null,
+    spicyLevel: item.spicyLevel ?? null,
+    calories: item.calories ?? null,
+    allergens: item.allergens ?? [],
+    dietaryLabels: item.dietaryLabels ?? [],
+    availabilityMode: menuItemAvailabilityMode(item.availabilityMode),
+    ...changes,
+  }
+}
+
+/**
+ * The currency a menu's prices are in (CR: "the branch currency beside the
+ * price"): its branch's for a branch menu; for a shared menu, the one
+ * currency every branch uses, else null (an item's own currency wins).
+ */
+export function menuCurrency(
+  menu: Pick<MenuDto, 'branchId'> | null | undefined,
+  branches: ReadonlyArray<{ branchId: string; currency: string | null }>,
+): string | null {
+  if (menu?.branchId) {
+    return branches.find((b) => b.branchId === menu.branchId)?.currency ?? null
+  }
+  const currencies = new Set(branches.map((b) => b.currency).filter(Boolean))
+  return currencies.size === 1 ? [...currencies][0]! : null
+}
+
+/** The item's name in the reader's language, falling back to the other one. */
+export function menuItemDisplayName(item: MenuItemDto, locale: 'ar' | 'en'): string {
+  const preferred = locale === 'ar' ? item.nameAr : item.nameEn
+  return preferred || item.nameAr || item.nameEn || item.name
+}
+
+/** The name in the other language, when it differs from the displayed one. */
+export function menuItemSecondaryName(item: MenuItemDto, locale: 'ar' | 'en'): string | null {
+  const shown = menuItemDisplayName(item, locale)
+  const other = locale === 'ar' ? item.nameEn : item.nameAr
+  return other && other !== shown ? other : null
 }
 
 export interface ReplaceAvailabilityWindowsRequest {
@@ -472,7 +538,10 @@ export async function createMenu(
 ): Promise<MenuDto> {
   const data = await apiRequest<unknown>(menusBase(restaurantId), {
     method: 'POST',
-    body: { name: body.name.trim() },
+    body: {
+      name: body.name.trim(),
+      ...(body.branchId ? { branchId: body.branchId } : {}),
+    },
   })
   return normalizeMenu(data)
 }
@@ -646,20 +715,39 @@ export async function createMenuItem(
     {
       method: 'POST',
       body: {
-        name: body.name.trim(),
+        ...itemNames(body),
         price: body.price,
-        ...(body.description !== undefined ? { description: body.description } : {}),
-        ...(body.currency !== undefined ? { currency: body.currency } : {}),
-        ...(body.preparationTimeMinutes !== undefined
-          ? { preparationTimeMinutes: body.preparationTimeMinutes }
-          : {}),
-        ...(body.spicyLevel !== undefined ? { spicyLevel: body.spicyLevel } : {}),
-        ...(body.calories !== undefined ? { calories: body.calories } : {}),
-        ...(body.allergens !== undefined ? { allergens: body.allergens } : {}),
+        ...optionalItemFields(body),
       },
     },
   )
   return normalizeItem(data)
+}
+
+/** Trimmed names; a blank name is left out so the backend treats it as absent. */
+function itemNames(body: CreateMenuItemRequest): { nameAr?: string; nameEn?: string } {
+  const nameAr = body.nameAr?.trim()
+  const nameEn = body.nameEn?.trim()
+  return {
+    ...(nameAr ? { nameAr } : {}),
+    ...(nameEn ? { nameEn } : {}),
+  }
+}
+
+/** Optional fields as the backend's full replace takes them: null/blank = absent. */
+function optionalItemFields(body: CreateMenuItemRequest): Record<string, unknown> {
+  const description = body.description?.trim()
+  return {
+    ...(description ? { description } : {}),
+    ...(body.currency ? { currency: body.currency } : {}),
+    ...(body.preparationTimeMinutes != null
+      ? { preparationTimeMinutes: body.preparationTimeMinutes }
+      : {}),
+    ...(body.spicyLevel != null ? { spicyLevel: body.spicyLevel } : {}),
+    ...(body.calories != null ? { calories: body.calories } : {}),
+    ...(body.allergens ? { allergens: body.allergens } : {}),
+    ...(body.dietaryLabels ? { dietaryLabels: body.dietaryLabels } : {}),
+  }
 }
 
 export async function updateMenuItem(
@@ -674,21 +762,10 @@ export async function updateMenuItem(
     {
       method: 'PATCH',
       body: {
-        ...(body.name !== undefined ? { name: body.name.trim() } : {}),
-        ...(body.description !== undefined
-          ? { description: body.description }
-          : {}),
-        ...(body.price !== undefined ? { price: body.price } : {}),
-        ...(body.currency !== undefined ? { currency: body.currency } : {}),
-        ...(body.preparationTimeMinutes !== undefined
-          ? { preparationTimeMinutes: body.preparationTimeMinutes }
-          : {}),
-        ...(body.spicyLevel !== undefined ? { spicyLevel: body.spicyLevel } : {}),
-        ...(body.calories !== undefined ? { calories: body.calories } : {}),
-        ...(body.allergens !== undefined ? { allergens: body.allergens } : {}),
-        ...(body.availabilityMode !== undefined
-          ? { availabilityMode: menuItemAvailabilityMode(body.availabilityMode) }
-          : {}),
+        ...itemNames(body),
+        price: body.price,
+        ...optionalItemFields(body),
+        availabilityMode: menuItemAvailabilityMode(body.availabilityMode),
       },
     },
   )

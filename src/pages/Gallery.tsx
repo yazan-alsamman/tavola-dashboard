@@ -5,6 +5,7 @@ import {
   addRestaurantGalleryImage,
   listRestaurantGallery,
   removeRestaurantGalleryImage,
+  reorderRestaurantGallery,
   type GalleryItemDto,
 } from '@/api/restaurants'
 import { Button } from '@/components/ui/Button'
@@ -14,10 +15,10 @@ import { ConfirmDialog } from '@/components/ui/Modal'
 import { Num } from '@/components/ui/Num'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { RestaurantCoverSection } from '@/components/gallery/RestaurantCoverSection'
-import { ReviewImagesSection } from '@/components/gallery/ReviewImagesSection'
 import { useLocale } from '@/context/LocaleContext'
 import { useRestaurantScope } from '@/context/RestaurantScopeContext'
 import { useToast } from '@/context/ToastContext'
+import { moveTo } from '@/lib/reorder'
 import { cn } from '@/lib/utils'
 
 function galleryKeys(restaurantId: string) {
@@ -28,7 +29,7 @@ const ACCEPTED_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp'])
 const MAX_GALLERY_BYTES = 5 * 1024 * 1024
 
 export function GalleryPage() {
-  const { t } = useLocale()
+  const { t, isRTL } = useLocale()
   const { toast } = useToast()
   const queryClient = useQueryClient()
   const { selectedRestaurantId, selectedRestaurant, status: scopeStatus } =
@@ -37,6 +38,9 @@ export function GalleryPage() {
   const [removeTarget, setRemoveTarget] = useState<GalleryItemDto | null>(null)
   const [dragOver, setDragOver] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
+  /** The order shown while a reorder is being saved; null = the server's order. */
+  const [pendingOrder, setPendingOrder] = useState<string[] | null>(null)
+  const [draggingId, setDraggingId] = useState<string | null>(null)
 
   const enabled = scopeStatus === 'ready' && Boolean(selectedRestaurantId)
 
@@ -78,6 +82,32 @@ export function GalleryPage() {
     },
   })
 
+  const reorderMutation = useMutation({
+    mutationFn: (galleryItemIds: string[]) =>
+      reorderRestaurantGallery(selectedRestaurantId!, galleryItemIds),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: galleryKeys(selectedRestaurantId!),
+      })
+      toast('success', t.gallery.reorderSuccess)
+    },
+    onError: (err) => {
+      toast('error', isApiError(err) ? err.message : t.gallery.errors.unknown)
+    },
+    onSettled: () => setPendingOrder(null),
+  })
+
+  const reorder = (from: number, to: number): void => {
+    const ids = moveTo(
+      orderedItems.map((item) => item.galleryItemId),
+      from,
+      to,
+    )
+    if (from === to || reorderMutation.isPending) return
+    setPendingOrder(ids)
+    reorderMutation.mutate(ids)
+  }
+
   const acceptFile = (file: File | undefined): void => {
     if (!file || !selectedRestaurantId) return
     if (!ACCEPTED_TYPES.has(file.type)) {
@@ -112,6 +142,11 @@ export function GalleryPage() {
   }
 
   const items = galleryQuery.data ?? []
+  const orderedItems = pendingOrder
+    ? pendingOrder
+        .map((id) => items.find((item) => item.galleryItemId === id))
+        .filter((item): item is GalleryItemDto => item !== undefined)
+    : items
 
   return (
     <div>
@@ -146,9 +181,19 @@ export function GalleryPage() {
 
       <RestaurantCoverSection restaurantId={selectedRestaurantId!} />
 
-      <p className="text-body-sm text-on-surface-variant mb-4 max-w-2xl">
+      <p className="text-body-sm text-on-surface-variant mb-2 max-w-2xl">
         {t.gallery.hint}
       </p>
+      <details className="mb-4 max-w-2xl rounded-lg bg-surface-container-low px-4 py-2 text-body-sm text-on-surface-variant">
+        <summary className="cursor-pointer font-medium text-on-surface">
+          {t.gallery.tipsTitle}
+        </summary>
+        <ul className="mt-2 list-disc space-y-1 ps-5">
+          {t.gallery.tips.map((tip) => (
+            <li key={tip}>{tip}</li>
+          ))}
+        </ul>
+      </details>
 
       <div
         className={cn(
@@ -238,21 +283,47 @@ export function GalleryPage() {
 
       {galleryQuery.isSuccess && items.length > 0 && (
         <>
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
             <p className="text-label-sm text-on-surface-variant">
               <Num>{items.length}</Num> {t.gallery.photoCount}
             </p>
+            {items.length > 1 && (
+              <p className="flex items-center gap-1.5 text-label-sm text-on-surface-variant">
+                <MaterialIcon name="drag_indicator" size={16} />
+                {t.gallery.reorderHint}
+              </p>
+            )}
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-            {items.map((item) => (
-              <div
+          <ol className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+            {orderedItems.map((item, index) => (
+              <li
                 key={item.galleryItemId}
+                draggable={!reorderMutation.isPending}
+                onDragStart={(event) => {
+                  event.dataTransfer.effectAllowed = 'move'
+                  setDraggingId(item.galleryItemId)
+                }}
+                onDragOver={(event) => {
+                  if (draggingId) event.preventDefault()
+                }}
+                onDrop={(event) => {
+                  event.preventDefault()
+                  const from = orderedItems.findIndex((i) => i.galleryItemId === draggingId)
+                  setDraggingId(null)
+                  if (from >= 0) reorder(from, index)
+                }}
+                onDragEnd={() => setDraggingId(null)}
                 className={cn(
-                  'group relative aspect-square overflow-hidden rounded-xl',
+                  'group relative aspect-square overflow-hidden rounded-xl cursor-grab',
                   'border border-outline-variant/30 bg-surface-container-low',
                   'shadow-sm transition-shadow hover:shadow-md',
+                  draggingId === item.galleryItemId && 'opacity-50',
+                  reorderMutation.isPending && 'cursor-progress',
                 )}
               >
+                <span className="absolute top-2 start-2 rounded-md bg-surface-container-lowest/90 px-2 py-0.5 text-label-sm font-semibold text-on-surface shadow-sm">
+                  <Num>{index + 1}</Num>
+                </span>
                 {item.imageUrl ? (
                   <a href={item.imageUrl} target="_blank" rel="noreferrer" className="block h-full w-full">
                     <img
@@ -275,13 +346,34 @@ export function GalleryPage() {
                 >
                   <MaterialIcon name="delete" size={18} />
                 </button>
-              </div>
+                {orderedItems.length > 1 && (
+                  <div className="absolute bottom-2 inset-x-2 flex justify-between">
+                    <button
+                      type="button"
+                      className="inline-flex h-11 w-11 items-center justify-center rounded-lg bg-surface-container-lowest/90 text-on-surface shadow-sm disabled:opacity-40"
+                      aria-label={t.gallery.moveEarlier}
+                      disabled={index === 0 || reorderMutation.isPending}
+                      onClick={() => reorder(index, index - 1)}
+                    >
+                      <MaterialIcon name={isRTL ? 'chevron_right' : 'chevron_left'} size={18} />
+                    </button>
+                    <button
+                      type="button"
+                      className="inline-flex h-11 w-11 items-center justify-center rounded-lg bg-surface-container-lowest/90 text-on-surface shadow-sm disabled:opacity-40"
+                      aria-label={t.gallery.moveLater}
+                      disabled={index === orderedItems.length - 1 || reorderMutation.isPending}
+                      onClick={() => reorder(index, index + 1)}
+                    >
+                      <MaterialIcon name={isRTL ? 'chevron_left' : 'chevron_right'} size={18} />
+                    </button>
+                  </div>
+                )}
+              </li>
             ))}
-          </div>
+          </ol>
         </>
       )}
 
-      <ReviewImagesSection />
 
       <ConfirmDialog
         open={Boolean(removeTarget)}

@@ -1,7 +1,13 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { isApiError } from '@/api/errors'
-import { menuItemAvailabilityMode } from '@/api/menus'
+import {
+  menuCurrency,
+  menuItemAvailabilityMode,
+  menuItemDisplayName,
+  menuItemSecondaryName,
+  menuItemUpdateBody,
+} from '@/api/menus'
 import type {
   MenuCategoryDto,
   MenuDto,
@@ -10,6 +16,8 @@ import type {
   MenuItemOptionDto,
   MenuItemOptionGroupDto,
 } from '@/api/menus'
+import { PriceLevelStars } from '@/components/branches/PriceLevelStars'
+import { MenuItemNameFields } from '@/components/menu/MenuItemNameFields'
 import { Button } from '@/components/ui/Button'
 import { Card, CardHeader, CardTitle } from '@/components/ui/Card'
 import {
@@ -103,6 +111,8 @@ interface ItemEditModalProps {
   menuId: string
   categoryId: string
   canManage: boolean
+  /** The menu's currency, shown when the item has none of its own. */
+  currency: string | null
   onClose: () => void
 }
 
@@ -113,9 +123,10 @@ function ItemEditModal({
   menuId,
   categoryId,
   canManage,
+  currency,
   onClose,
 }: ItemEditModalProps) {
-  const { t } = useLocale()
+  const { t, locale } = useLocale()
   const { toast } = useToast()
   const updateItem = useUpdateMenuItemMutation()
   const uploadItemImage = useUploadMenuItemImageMutation()
@@ -133,7 +144,7 @@ function ItemEditModal({
   const updateOptionGroup = useUpdateMenuItemOptionGroupMutation()
   const replaceAvailability = useReplaceMenuItemAvailabilityMutation()
 
-  const [name, setName] = useState('')
+  const [names, setNames] = useState({ nameAr: '', nameEn: '' })
   const [description, setDescription] = useState('')
   const [price, setPrice] = useState('')
   const [expandedGroupId, setExpandedGroupId] = useState<string | null>(null)
@@ -154,7 +165,10 @@ function ItemEditModal({
 
   useEffect(() => {
     if (!item) return
-    setName(item.name)
+    setNames({
+      nameAr: item.nameAr ?? '',
+      nameEn: item.nameEn ?? (item.nameAr ? '' : item.name),
+    })
     setDescription(item.description ?? '')
     setPrice(String(item.price ?? ''))
     setExpandedGroupId(null)
@@ -203,17 +217,17 @@ function ItemEditModal({
     e.preventDefault()
     if (!canManage || busy) return
     const parsedPrice = Number(price)
-    if (!name.trim() || Number.isNaN(parsedPrice)) return
+    if ((!names.nameAr.trim() && !names.nameEn.trim()) || Number.isNaN(parsedPrice)) return
 
     try {
       await updateItem.mutateAsync({
         ...itemScope,
-        body: {
-          name: name.trim(),
+        body: menuItemUpdateBody(item, {
+          nameAr: names.nameAr,
+          nameEn: names.nameEn,
           description: description.trim() || null,
           price: parsedPrice,
-          availabilityMode: menuItemAvailabilityMode(item.availabilityMode),
-        },
+        }),
       })
       toast('success', t.menu.items.saveSuccess)
     } catch (err) {
@@ -322,7 +336,7 @@ function ItemEditModal({
       if (menuItemAvailabilityMode(item.availabilityMode) !== 'Scheduled') {
         await updateItem.mutateAsync({
           ...itemScope,
-          body: { availabilityMode: 'Scheduled' },
+          body: menuItemUpdateBody(item, { availabilityMode: 'Scheduled' }),
         })
       }
       await replaceAvailability.mutateAsync({
@@ -343,25 +357,22 @@ function ItemEditModal({
       open={open}
       onClose={busy ? () => undefined : onClose}
       title={t.menu.items.editTitle}
-      description={item.name}
+      description={menuItemDisplayName(item, locale)}
       size="lg"
     >
       <form onSubmit={(e) => void handleSave(e)} className="space-y-6">
         <div className="grid gap-4 sm:grid-cols-2">
+          <MenuItemNameFields
+            nameAr={names.nameAr}
+            nameEn={names.nameEn}
+            onChange={setNames}
+            disabled={!canManage || busy}
+          />
           <div>
             <label className="text-label-sm text-on-surface-variant mb-1 block">
-              {t.menu.items.name}
-            </label>
-            <Input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              disabled={!canManage || busy}
-              required
-            />
-          </div>
-          <div>
-            <label className="text-label-sm text-on-surface-variant mb-1 block">
-              {t.menu.items.price}
+              {(item.currency ?? currency)
+                ? t.menu.items.priceIn.replace('{currency}', (item.currency ?? currency)!)
+                : t.menu.items.price}
             </label>
             <Input
               type="number"
@@ -1017,12 +1028,14 @@ function AddOnRow({
 }
 
 export function MenuPage() {
-  const { t } = useLocale()
+  const { t, locale } = useLocale()
   const { toast } = useToast()
   const {
     status: scopeStatus,
     selectedRestaurantId,
     selectedRestaurant,
+    branches,
+    formatBranchLabel,
   } = useRestaurantScope()
   const canManage = useCanManageMenu()
   const {
@@ -1055,10 +1068,11 @@ export function MenuPage() {
   )
   const [createMenuOpen, setCreateMenuOpen] = useState(false)
   const [newMenuName, setNewMenuName] = useState('')
+  const [newMenuBranchId, setNewMenuBranchId] = useState('')
   const [createCategoryOpen, setCreateCategoryOpen] = useState(false)
   const [newCategoryName, setNewCategoryName] = useState('')
   const [createItemOpen, setCreateItemOpen] = useState(false)
-  const [newItemName, setNewItemName] = useState('')
+  const [newItemNames, setNewItemNames] = useState({ nameAr: '', nameEn: '' })
   const [newItemPrice, setNewItemPrice] = useState('')
   const [editItem, setEditItem] = useState<MenuItemDto | null>(null)
   const [deleteMenuTarget, setDeleteMenuTarget] = useState<MenuDto | null>(null)
@@ -1103,6 +1117,38 @@ export function MenuPage() {
     () => sortByDisplayOrder(selectedCategory?.items ?? []),
     [selectedCategory?.items],
   )
+
+  const currency = menuCurrency(selectedMenu, branches)
+  const itemsCardRef = useRef<HTMLDivElement>(null)
+
+  const branchName = (branchId: string): string => {
+    const branch = branches.find((b) => b.branchId === branchId)
+    return branch ? formatBranchLabel(branch) : t.menu.menus.sharedBadge
+  }
+
+  const itemPrice = (item: MenuItemDto) => (
+    <>
+      <Num>{item.price ?? 0}</Num>
+      {(item.currency ?? currency) ? ` ${item.currency ?? currency}` : ''}
+    </>
+  )
+
+  const itemName = (item: MenuItemDto, className: string) => {
+    const secondary = menuItemSecondaryName(item, locale)
+    return (
+      <span className="block min-w-0">
+        <span className={className}>{menuItemDisplayName(item, locale)}</span>
+        {secondary && (
+          <span
+            className="block text-body-sm text-on-surface-variant"
+            dir={locale === 'ar' ? 'ltr' : 'rtl'}
+          >
+            {secondary}
+          </span>
+        )}
+      </span>
+    )
+  }
 
   const menuScope = { restaurantId, menuId }
   const categoryScope =
@@ -1196,7 +1242,7 @@ export function MenuPage() {
       await updateItem.mutateAsync({
         ...categoryScope,
         itemId: item.itemId,
-        body: { availabilityMode: next },
+        body: menuItemUpdateBody(item, { availabilityMode: next }),
       })
       toast('success', t.menu.items.saveSuccess)
     } catch (err) {
@@ -1367,8 +1413,13 @@ export function MenuPage() {
                       }}
                     >
                       <div className="flex items-center justify-between gap-2">
-                        <span className="text-body-md font-medium text-on-surface truncate">
-                          {menu.name}
+                        <span className="min-w-0">
+                          <span className="block text-body-md font-medium text-on-surface truncate">
+                            {menu.name}
+                          </span>
+                          <span className="block text-label-sm text-on-surface-variant truncate">
+                            {menu.branchId ? branchName(menu.branchId) : t.menu.menus.shared}
+                          </span>
                         </span>
                         <div className="flex items-center gap-1 shrink-0">
                           {menu.isDefault && (
@@ -1505,7 +1556,10 @@ export function MenuPage() {
                     <button
                       type="button"
                       className="w-full text-start px-3 py-2"
-                      onClick={() => setSelectedCategoryId(category.categoryId)}
+                      onClick={() => {
+                        setSelectedCategoryId(category.categoryId)
+                        itemsCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                      }}
                     >
                       <div className="flex items-center gap-3">
                         {category.imageUrl ? (
@@ -1636,7 +1690,8 @@ export function MenuPage() {
         </Card>
 
         {/* Items */}
-        <Card padding="none" className="overflow-hidden lg:col-span-2">
+        <div ref={itemsCardRef} className="lg:col-span-2 scroll-mt-4">
+        <Card padding="none" className="overflow-hidden">
           <CardHeader>
             <CardTitle>
               <MaterialIcon name="restaurant" size={20} />
@@ -1689,7 +1744,7 @@ export function MenuPage() {
                           </div>
                         )}
                         <div className="min-w-0 flex-1">
-                          <p className="font-semibold text-on-surface">{item.name}</p>
+                          {itemName(item, 'block font-semibold text-on-surface')}
                           {item.description && (
                             <p className="mt-0.5 line-clamp-2 text-body-sm text-on-surface-variant">
                               {item.description}
@@ -1697,8 +1752,7 @@ export function MenuPage() {
                           )}
                         </div>
                         <p className="shrink-0 text-label-lg font-semibold text-on-surface">
-                          <Num>{item.price ?? 0}</Num>
-                          {item.currency ? ` ${item.currency}` : ''}
+                          {itemPrice(item)}
                         </p>
                       </div>
                       {itemAvailability(item)}
@@ -1758,9 +1812,7 @@ export function MenuPage() {
                             />
                           )}
                           <div className="min-w-0">
-                            <span className="block font-semibold text-on-surface">
-                              {item.name}
-                            </span>
+                            {itemName(item, 'block font-semibold text-on-surface')}
                             {item.description && (
                               <span className="block max-w-md line-clamp-1 text-body-sm text-on-surface-variant">
                                 {item.description}
@@ -1771,8 +1823,7 @@ export function MenuPage() {
                       </div>
                     </DataTableCell>
                     <DataTableCell className="whitespace-nowrap font-semibold">
-                      <Num>{item.price ?? 0}</Num>
-                      {item.currency ? ` ${item.currency}` : ''}
+                      {itemPrice(item)}
                     </DataTableCell>
                     <DataTableCell>{itemAvailability(item)}</DataTableCell>
                     <DataTableCell className="text-end">
@@ -1824,7 +1875,41 @@ export function MenuPage() {
             </DataTable>
           )}
         </Card>
+        </div>
       </div>
+      )}
+
+      {branches.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>
+              <MaterialIcon name="payments" size={20} />
+              {t.menu.priceLevel.title}
+            </CardTitle>
+          </CardHeader>
+          <p className="mb-3 max-w-3xl text-body-sm text-on-surface-variant">
+            {t.menu.priceLevel.hint}
+          </p>
+          <ul className="divide-y divide-outline-variant/30">
+            {branches.map((branch) => (
+              <li
+                key={branch.branchId}
+                className="flex flex-wrap items-center justify-between gap-2 py-2"
+              >
+                <span className="text-body-md text-on-surface">{formatBranchLabel(branch)}</span>
+                <span className="flex items-center gap-3 text-body-sm">
+                  {branch.referencePrice != null && (
+                    <span className="text-on-surface-variant">
+                      {t.menu.priceLevel.reference}: <Num>{branch.referencePrice}</Num>
+                      {branch.currency ? ` ${branch.currency}` : ''}
+                    </span>
+                  )}
+                  <PriceLevelStars level={branch.priceLevel} />
+                </span>
+              </li>
+            ))}
+          </ul>
+        </Card>
       )}
 
       {/* Create menu */}
@@ -1841,11 +1926,12 @@ export function MenuPage() {
             void createMenu
               .mutateAsync({
                 restaurantId,
-                body: { name: newMenuName.trim() },
+                body: { name: newMenuName.trim(), branchId: newMenuBranchId || null },
               })
               .then(() => {
                 toast('success', t.menu.menus.createSuccess)
                 setNewMenuName('')
+                setNewMenuBranchId('')
                 setCreateMenuOpen(false)
               })
               .catch((err) => toast('error', mapMenuError(err, t)))
@@ -1859,6 +1945,29 @@ export function MenuPage() {
             required
             disabled={createMenu.isPending}
           />
+          {branches.length > 1 && (
+            <label className="block">
+              <span className="text-label-sm text-on-surface-variant mb-1 block">
+                {t.menu.menus.scope}
+              </span>
+              <select
+                className="w-full min-h-11 rounded-lg border border-outline-variant/50 bg-surface-container-lowest px-3 text-body-md text-on-surface"
+                value={newMenuBranchId}
+                onChange={(e) => setNewMenuBranchId(e.target.value)}
+                disabled={createMenu.isPending}
+              >
+                <option value="">{t.menu.menus.shared}</option>
+                {branches.map((branch) => (
+                  <option key={branch.branchId} value={branch.branchId}>
+                    {formatBranchLabel(branch)}
+                  </option>
+                ))}
+              </select>
+              <span className="mt-1 block text-label-sm text-on-surface-variant">
+                {t.menu.menus.scopeHint}
+              </span>
+            </label>
+          )}
           <div className="flex justify-end gap-2">
             <Button
               type="button"
@@ -2048,17 +2157,18 @@ export function MenuPage() {
         <form
           onSubmit={(e) => {
             e.preventDefault()
-            if (!categoryScope || !newItemName.trim() || createItem.isPending) return
+            const hasName = newItemNames.nameAr.trim() || newItemNames.nameEn.trim()
+            if (!categoryScope || !hasName || createItem.isPending) return
             const parsedPrice = Number(newItemPrice)
             if (Number.isNaN(parsedPrice)) return
             void createItem
               .mutateAsync({
                 ...categoryScope,
-                body: { name: newItemName.trim(), price: parsedPrice },
+                body: { ...newItemNames, price: parsedPrice },
               })
               .then(() => {
                 toast('success', t.menu.items.createSuccess)
-                setNewItemName('')
+                setNewItemNames({ nameAr: '', nameEn: '' })
                 setNewItemPrice('')
                 setCreateItemOpen(false)
               })
@@ -2066,23 +2176,27 @@ export function MenuPage() {
           }}
           className="space-y-4"
         >
-          <Input
-            value={newItemName}
-            onChange={(e) => setNewItemName(e.target.value)}
-            placeholder={t.menu.items.namePlaceholder}
-            required
+          <MenuItemNameFields
+            nameAr={newItemNames.nameAr}
+            nameEn={newItemNames.nameEn}
+            onChange={setNewItemNames}
             disabled={createItem.isPending}
           />
-          <Input
-            type="number"
-            min="0"
-            step="0.01"
-            value={newItemPrice}
-            onChange={(e) => setNewItemPrice(e.target.value)}
-            placeholder={t.menu.items.pricePlaceholder}
-            required
-            disabled={createItem.isPending}
-          />
+          <label className="block">
+            <span className="text-label-sm text-on-surface-variant mb-1 block">
+              {currency ? t.menu.items.priceIn.replace('{currency}', currency) : t.menu.items.price}
+            </span>
+            <Input
+              type="number"
+              min="0"
+              step="0.01"
+              value={newItemPrice}
+              onChange={(e) => setNewItemPrice(e.target.value)}
+              placeholder={t.menu.items.pricePlaceholder}
+              required
+              disabled={createItem.isPending}
+            />
+          </label>
           <div className="flex justify-end gap-2">
             <Button
               type="button"
@@ -2106,6 +2220,7 @@ export function MenuPage() {
         menuId={menuId}
         categoryId={resolvedCategoryId ?? ''}
         canManage={canManage}
+        currency={currency}
         onClose={() => setEditItem(null)}
       />
 

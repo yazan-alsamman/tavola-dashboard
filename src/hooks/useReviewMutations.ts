@@ -1,11 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import {
-  deleteReview,
-  removeReviewImage,
-  replyToReview,
-  uploadReviewImage,
-  type ReplyToReviewRequest,
-} from '@/api/reviews'
+import { reopenReview, replyToReview, type ReplyToReviewRequest } from '@/api/reviews'
 import { analyticsKeys, reviewKeys } from '@/lib/queryKeys'
 
 export interface ReviewMutationScope {
@@ -27,64 +21,17 @@ async function invalidateReviews(
 export function useReplyToReviewMutation() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (
-      input: ReviewMutationScope & {
-        reviewId: string
-        body: ReplyToReviewRequest
-      },
-    ) => replyToReview(input.reviewId, input.body),
-    onSuccess: async (_data, vars) => {
-      await invalidateReviews(queryClient, vars)
-      await queryClient.invalidateQueries({
-        queryKey: reviewKeys.detail(vars.reviewId),
-      })
-    },
+    mutationFn: (input: ReviewMutationScope & { reviewId: string; body: ReplyToReviewRequest }) =>
+      replyToReview(input.reviewId, input.body),
+    onSuccess: (_data, vars) => invalidateReviews(queryClient, vars),
   })
 }
 
-export function useDeleteReviewMutation() {
+/** Opens a review for its guest to rate again (Owner/Admin). */
+export function useReopenReviewMutation() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (input: ReviewMutationScope & { reviewId: string }) =>
-      deleteReview(input.reviewId),
-    onSuccess: async (_data, vars) => {
-      await invalidateReviews(queryClient, vars)
-      queryClient.removeQueries({
-        queryKey: reviewKeys.detail(vars.reviewId),
-      })
-    },
-  })
-}
-
-export function useUploadReviewImageMutation() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: (
-      input: ReviewMutationScope & { reviewId: string; file: File },
-    ) => uploadReviewImage(input.reviewId, input.file),
-    onSuccess: async (_data, vars) => {
-      await invalidateReviews(queryClient, vars)
-      await queryClient.invalidateQueries({
-        queryKey: reviewKeys.detail(vars.reviewId),
-      })
-    },
-  })
-}
-
-export function useRemoveReviewImageMutation() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: (
-      input: ReviewMutationScope & {
-        reviewId: string
-        reviewImageId: string
-      },
-    ) => removeReviewImage(input.reviewId, input.reviewImageId),
-    onSuccess: async (_data, vars) => {
-      await invalidateReviews(queryClient, vars)
-      await queryClient.invalidateQueries({
-        queryKey: reviewKeys.detail(vars.reviewId),
-      })
-    },
+    mutationFn: (input: ReviewMutationScope & { reviewId: string }) => reopenReview(input.reviewId),
+    onSuccess: (_data, vars) => invalidateReviews(queryClient, vars),
   })
 }
