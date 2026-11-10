@@ -516,6 +516,8 @@ Consequences:
 Both pages need the backend release that adds these routes. Against an older backend they show the load-error state.
 
 
+> **Numbering note.** The CR round 2 decisions below reuse the numbers ADR-016 to ADR-020, which earlier entries above also use. Cite these as "ADR-0NN (CR round 2)". The next new decision is ADR-027.
+
 ## ADR-016 — Floors, the table queue, offer bookings and no broadcast (CR round 2)
 
 Context: the owner's round-2 feedback on change request WJ-R-2026-002.

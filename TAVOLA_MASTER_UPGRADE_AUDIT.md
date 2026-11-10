@@ -2,7 +2,7 @@
 
 **Date:** 22 September 2026  
 **Scope:** Restaurant dashboard at `D:\Tavola`, with the floor plan as the priority module.  
-**Contract:** `postman/TAVLA-API.postman_collection (2).json` and `postman/_endpoint_inventory.json`. The client in `src/api` is what the app actually calls.
+**Contract:** `postman/TAVLA-API.postman_collection.json` and `postman/_endpoint_inventory.json`. The client in `src/api` is what the app actually calls.
 
 This audit was written from the repository before the floor-plan changes in this pass, then updated to record what those changes did and did not do.
 

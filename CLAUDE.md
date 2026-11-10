@@ -68,31 +68,15 @@ Restaurant/branch **scope** (Phase 3) is real:
 
 - `RestaurantScopeProvider` loads accessible restaurants/branches from the API and owns selected IDs.
 - Shell (`Header`, `Sidebar`, `ScopeGate`) uses backend identity — not mock Naranj / Old City.
-- Legacy `RestaurantContext` still holds **mock operational** data (tables, waitlist, demo reservation reads for Dashboard/Floor/Calendar) until those features are wired.
 - Do not confuse: auth identity ≠ tenant override ≠ selected restaurant ≠ selected branch.
 
-Reservations (Phase 4) — partial, contract-bound:
+Feature data is live:
 
-- Live API module: `src/api/reservations.ts` with `searchAvailability` + `createReservation` only.
-- Staff list/detail/lifecycle Domain Actions are **not** on the live backend — Reservations UI no longer fakes them.
-- See ADR-006.
+- Every page reads and writes through the API modules in `src/api/` (reservations, waitlist, tables, floor plans and areas, menus, offers, reviews, employees, messaging, notifications, analytics, organizations, restaurants, branches, users) with TanStack Query (`AppQueryProvider`, ADR-007/008). There is no mock data layer any more.
+- Floor plans and tables: Move ≠ Update; Status ≠ Update; selected FloorPlan ≠ active FloorPlan. Geometry is saved on drop via Update Table, not per pointer move. Structural `TableStatus` ≠ reservation availability.
+- `src/types/index.ts` still holds a few demo-era types whose values do not match the backend enums. Do not use them for API data; type responses from `src/api/types.ts` and the API modules.
 
-Floor plans & tables (Phases 5–6) — inventory reads + mutations:
-
-- `src/api/floorPlans.ts`, `src/api/tables.ts` + TanStack Query (`AppQueryProvider`, ADR-007/008).
-- The venue plan page (map + list views; the separate Tables page is gone, ADR-018) is backend-driven (Owner/Admin).
-- Mutations: create/activate FloorPlan; create/update/delete/move/status Table.
-- Domain boundaries: Move ≠ Update; Status ≠ Update; selected FloorPlan ≠ active FloorPlan.
-- Geometry: save-on-drop via Update Table (no PATCH per pointer move). The production editor is the floor plan page.
-- Structural `TableStatus` ≠ reservation availability.
-- Legacy mock tables remain for Dashboard / Walk-In / Waitlist only.
-
-Business feature pages still run largely on:
-
-- Mock data (`src/data/mockData.ts`) consumed directly by pages / `RestaurantContext`.
-- Domain types (`src/types/index.ts`) whose enum values (e.g. `ReservationStatus`, `TableStatus`, mock `StaffRole` for the unrouted Staff page) were invented for the demo and **do not match** the backend's actual enums (see `docs/API_INTEGRATION.md`).
-
-This is a known, temporary bootstrap state for **feature data** — not a pattern to extend. Any new feature work must:
+Any new feature work must:
 
 - Go through the real API integration layer described in `docs/API_INTEGRATION.md`, never by adding more mock data or more fake context logic.
 - Correct a type's shape to match the backend contract at the point you wire that type to a real endpoint, rather than adapting the backend response to fit the existing mock shape.
