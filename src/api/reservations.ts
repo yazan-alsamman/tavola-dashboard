@@ -224,6 +224,8 @@ export interface ListBranchReservationsParams {
   dateFrom: string
   dateTo: string
   status?: ReservationStatusDto
+  /** `customer.key` from a list row: only that customer's bookings. */
+  customerKey?: string
   page?: number
   pageSize?: number
 }
@@ -248,6 +250,7 @@ export async function listBranchReservations(
         page: params.page ?? 1,
         limit: params.pageSize ?? 20,
         ...(params.status ? { status: params.status } : {}),
+        ...(params.customerKey ? { customerKey: params.customerKey } : {}),
       },
       signal,
     },
@@ -354,6 +357,52 @@ export async function markReservationTableReady(
   return apiRequest<ReservationDto>(`/reservations/${reservationId}/table-ready`, {
     method: 'POST',
     idempotencyKey,
+  })
+}
+
+/** `GET /reservations/available-slots` — only the day's opening hours are used here. */
+export interface BranchDayScheduleDto {
+  branchId: string
+  date: string
+  timezone: string
+  dayOfWeek: number
+  /** `HH:mm` in branch time; null when the branch is closed that day. */
+  openingTime: string | null
+  closingTime: string | null
+}
+
+/**
+ * The branch's opening hours for one date (branch row wins over the
+ * restaurant default). Any signed-in actor may call it; past dates are
+ * rejected by the API, so callers only ask for today onwards.
+ */
+export async function getBranchDaySchedule(
+  branchId: string,
+  date: string,
+  signal?: AbortSignal,
+): Promise<BranchDayScheduleDto> {
+  return apiRequest<BranchDayScheduleDto>('/reservations/available-slots', {
+    query: { branchId, date, partySize: 1 },
+    signal,
+  })
+}
+
+export interface ReservationInternalNoteDto {
+  reservationId: string
+  internalNote: string | null
+}
+
+/**
+ * Staff-only note (Owner/Admin, or Employee with `reservations:create`).
+ * Blank or null clears it. Never shown to the customer.
+ */
+export async function updateReservationInternalNote(
+  reservationId: string,
+  internalNote: string | null,
+): Promise<ReservationInternalNoteDto> {
+  return apiRequest<ReservationInternalNoteDto>(`/reservations/${reservationId}/internal-note`, {
+    method: 'PATCH',
+    body: { internalNote },
   })
 }
 

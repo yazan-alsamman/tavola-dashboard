@@ -30,6 +30,50 @@ export interface ReservationView extends ReservationDto {
   customerKind: 'User' | 'Guest' | null
   /** The offer the customer booked from (branch rows only), or null. */
   offer: { offerId: string; title: string } | null
+  /** `user:<id>` or `guest:<phone>` — opens the customer page (branch rows only). */
+  customerKey: string | null
+  /** Completed visits at this restaurant, all branches (branch rows only). */
+  visitCount: number
+  noShowCount: number
+  /** Staff-only note, never shown to the customer. */
+  internalNote: string | null
+  /** When a Pending booking expires unanswered; null otherwise. */
+  approvalDeadlineAt: string | null
+  /** Who moved the booking to its final status, and why. */
+  statusChange: ReservationStatusChange | null
+}
+
+export type ReservationActorKind = 'Customer' | 'Restaurant' | 'System'
+
+export interface ReservationStatusChange {
+  status: ReservationStatusDto
+  changedBy: ReservationActorKind
+  reason: string | null
+  changedAt: string
+}
+
+const ACTOR_KINDS = new Set<ReservationActorKind>(['Customer', 'Restaurant', 'System'])
+
+function toStatusChange(raw: unknown): ReservationStatusChange | null {
+  if (!isRecord(raw)) return null
+  const status = text(raw.status)
+  const changedBy = text(raw.changedBy)
+  const changedAt = text(raw.changedAt)
+  if (
+    !status ||
+    !STATUSES.has(status as ReservationStatusDto) ||
+    !changedBy ||
+    !ACTOR_KINDS.has(changedBy as ReservationActorKind) ||
+    !changedAt
+  ) {
+    return null
+  }
+  return {
+    status: status as ReservationStatusDto,
+    changedBy: changedBy as ReservationActorKind,
+    reason: text(raw.reason),
+    changedAt,
+  }
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -106,6 +150,12 @@ export function toReservationView(raw: unknown): ReservationView | null {
     customerKind:
       customerKindRaw === 'User' || customerKindRaw === 'Guest' ? customerKindRaw : null,
     offer: offerId && offerTitle ? { offerId, title: offerTitle } : null,
+    customerKey: customer ? text(customer.key) : null,
+    visitCount: (customer ? amount(customer.visitCount) : null) ?? 0,
+    noShowCount: (customer ? amount(customer.noShowCount) : null) ?? 0,
+    internalNote: text(raw.internalNote),
+    approvalDeadlineAt: text(raw.approvalDeadlineAt),
+    statusChange: toStatusChange(raw.statusChange),
   }
 }
 

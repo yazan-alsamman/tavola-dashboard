@@ -19,7 +19,7 @@ const defaultTypeIcon = 'notifications'
 const typeIcons: Record<string, string> = {
   StaffReservationCreated: 'event_available',
   StaffReservationCancelled: 'cancel',
-  StaffWaitlistEntryCreated: 'hourglass_top',
+  StaffWaitlistEntryCreated: 'hourglass_empty',
   OrganizationMemberBroadcast: 'campaign',
   PlatformAdminBroadcast: 'campaign',
 }

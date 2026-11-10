@@ -528,3 +528,18 @@ Decision:
 5. The home page splits reservations by source from the existing reservations summary: `Online` is the app, every other source is the dashboard.
 
 Consequences: guests still see the active floor plan only, now across all its floors. Areas belong to a floor plan, so an area shows on the floors its tables stand on, and an empty area shows on every floor.
+
+## ADR-017 — One reservations page, booking context and alerts (CR round 2, batch 2)
+
+Context: the owner's round-2 feedback on the reservations and calendar pages (backend ADR-043).
+
+Decision:
+1. Reservations, the waitlist and walk-ins are tabs on `/app/reservations` (`?tab=waitlist|walk-in`). `/app/waitlist` and `/app/walk-in` redirect there and leave the sidebar.
+2. "New booking" books on the customer's behalf (`source = Phone` with `reservationGuest` name and phone), always in branch time. `?new=YYYY-MM-DDTHH:mm` opens it pre-filled; an empty calendar hour links there.
+3. One list layout (no comfortable/compact switch) that always shows the phone. Status labels follow the CR wording (Awaiting approval, Confirmed, Visit ended, Approval timed out); a waitlist booking reads "From the waitlist".
+4. Branch rows feed: who cancelled or declined and why (`statusChange`), the staff internal note (`PATCH /reservations/:id/internal-note`), a returning-customer badge (`customer.visitCount`), a countdown to `approvalDeadlineAt`, and a "closes automatically in N min" warning during the server's 30-minute auto-close grace. A daily "tables the system closed" card lists today's and yesterday's bookings completed by the System.
+5. `/app/customers/:customerKey` lists one customer's bookings at the branch through the list's `customerKey` filter.
+6. The dashboard shell watches Pending bookings every 30 seconds: a chime and toast for a new one, and once more 10 minutes before its approval window ends. The first load only records what is already pending.
+7. The calendar draws the branch's own hours for the day (`GET /reservations/available-slots`, the only hours route open to employees; past days fall back to 10:00–23:00), drops the period stats (they live in Reports), and every week starts on Saturday.
+
+Consequences: the watch adds one list request per 30 seconds per open dashboard. Sound only plays after the user has interacted with the page, as browsers require.

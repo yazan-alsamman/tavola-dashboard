@@ -32,7 +32,12 @@ function clockLabel(value: string, locale: string): string {
   return formatTime(new Date(2000, 0, 1, Number(match[1]), Number(match[2])), locale)
 }
 
-export function WaitlistPage() {
+interface WaitlistPageProps {
+  /** Rendered as a tab inside Reservations: no page title of its own. */
+  embedded?: boolean
+}
+
+export function WaitlistPage({ embedded = false }: WaitlistPageProps) {
   const { t, locale } = useLocale()
   const { toast } = useToast()
   const { selectedRestaurantId, selectedBranchId, status: scopeStatus } = useRestaurantScope()
@@ -125,6 +130,7 @@ export function WaitlistPage() {
       <PageHeader
         title={t.waitlist.title}
         subtitle={t.waitlist.subtitle}
+        className={embedded ? '[&_h1]:sr-only' : undefined}
         actions={
           <Button type="button" onClick={() => setJoinOpen(true)} disabled={!canOperate}>
             <MaterialIcon name="person_add" size={18} />

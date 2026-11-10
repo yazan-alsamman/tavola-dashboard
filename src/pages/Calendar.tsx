@@ -8,27 +8,29 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { Num } from '@/components/ui/Num'
 import { useLocale } from '@/context/LocaleContext'
-import { useCalendarRangeReservationsQuery } from '@/hooks/useReservationQueries'
+import {
+  useBranchDayScheduleQuery,
+  useCalendarRangeReservationsQuery,
+} from '@/hooks/useReservationQueries'
+import { fallbackHours, hoursForSchedule } from '@/lib/branchHours'
 import { useReservationTrendsQuery } from '@/hooks/useAnalyticsQueries'
 import { extractTrendSeries } from '@/lib/analyticsPayload'
 import type { ReservationView } from '@/lib/reservationView'
 import {
   eachDateKey,
   endOfMonth,
-  endOfWeekSunday,
+  endOfWeek,
   formatDateLabel,
   monthGridKeys,
   shiftDateKey,
   shiftMonth,
   startOfMonth,
-  startOfWeekMonday,
+  startOfWeek,
   toDateKey,
 } from '@/lib/calendarDates'
 import { formatHour, formatTime } from '@/lib/format'
 import { reservationStatusLabel } from '@/lib/statusLabel'
 import { cn, getTodayISO } from '@/lib/utils'
-
-const HOURS = Array.from({ length: 14 }, (_, i) => i + 10)
 
 type CalendarView = 'daily' | 'weekly' | 'monthly'
 
@@ -146,8 +148,8 @@ export function CalendarPage() {
     }
     if (view === 'weekly') {
       return {
-        from: startOfWeekMonday(anchorDate),
-        to: endOfWeekSunday(anchorDate),
+        from: startOfWeek(anchorDate),
+        to: endOfWeek(anchorDate),
       }
     }
     return {
@@ -157,6 +159,15 @@ export function CalendarPage() {
   }, [anchorDate, view])
 
   const rangeQuery = useCalendarRangeReservationsQuery(range.from, range.to, true)
+  const scheduleQuery = useBranchDayScheduleQuery(anchorDate, today)
+  const branchClosed = scheduleQuery.isSuccess && scheduleQuery.data.openingTime === null
+  /** The branch's own opening hours for the day; a fixed fallback when unknown. */
+  const dayHours = useMemo(() => {
+    if (!scheduleQuery.isSuccess) return fallbackHours()
+    return (
+      hoursForSchedule(scheduleQuery.data.openingTime, scheduleQuery.data.closingTime) ?? []
+    )
+  }, [scheduleQuery.data, scheduleQuery.isSuccess])
   const calendarSource = rangeQuery.data?.source
   const usingFallback = calendarSource === 'ownership-fallback'
   const trendsQuery = useReservationTrendsQuery(range.from, range.to, usingFallback)
@@ -206,23 +217,11 @@ export function CalendarPage() {
     return max
   }, [byDay, periodDays, trendByDay])
 
-  const daysByBookingCount = useMemo(() => {
-    return [...periodDays]
-      .map((day) => ({
-        day,
-        count: Math.max(byDay.get(day)?.length ?? 0, trendByDay.get(day) ?? 0),
-        reservations: byDay.get(day) ?? [],
-      }))
-      .sort((a, b) => b.count - a.count || a.day.localeCompare(b.day))
-  }, [byDay, periodDays, trendByDay])
-
-  const totalBookings = periodDays.reduce((sum, day) => sum + countOn(day), 0)
-
   const dayReservations = byDay.get(anchorDate) ?? []
 
   const byHour = useMemo(() => {
     const map = new Map<number, ReservationView[]>()
-    for (const hour of HOURS) map.set(hour, [])
+    for (const hour of dayHours) map.set(hour, [])
     for (const reservation of byDay.get(anchorDate) ?? []) {
       const hour = hourOfReservation(reservation)
       if (!map.has(hour)) map.set(hour, [])
@@ -232,7 +231,7 @@ export function CalendarPage() {
       list.sort(sortByStartTime)
     }
     return map
-  }, [anchorDate, byDay])
+  }, [anchorDate, byDay, dayHours])
 
   const hoursRanked = useMemo(() => {
     const hours = [...byHour.entries()]
@@ -243,18 +242,18 @@ export function CalendarPage() {
   }, [byHour])
 
   const hoursChronological = useMemo(() => {
-    const extra = [...byHour.keys()].filter((h) => h >= 0 && !HOURS.includes(h))
-    return [...HOURS, ...extra].sort((a, b) => a - b)
-  }, [byHour])
+    const extra = [...byHour.keys()].filter((h) => h >= 0 && !dayHours.includes(h))
+    return [...dayHours, ...extra].sort((a, b) => a - b)
+  }, [byHour, dayHours])
 
   const weekDays = useMemo(
-    () => eachDateKey(startOfWeekMonday(anchorDate), endOfWeekSunday(anchorDate)),
+    () => eachDateKey(startOfWeek(anchorDate), endOfWeek(anchorDate)),
     [anchorDate],
   )
 
   const weekdayHeaders = useMemo(() => {
-    const start = startOfWeekMonday(today)
-    return eachDateKey(start, endOfWeekSunday(start))
+    const start = startOfWeek(today)
+    return eachDateKey(start, endOfWeek(start))
   }, [today])
 
   const monthCells = useMemo(() => monthGridKeys(anchorDate), [anchorDate])
@@ -289,6 +288,12 @@ export function CalendarPage() {
 
   const openReservation = (id: string) => {
     navigate(`/app/reservations/${id}`)
+  }
+
+  /** An empty hour opens "new booking" pre-filled with that day and hour. */
+  const openNewBookingAt = (hour: number) => {
+    const start = `${anchorDate}T${String(hour).padStart(2, '0')}:00`
+    navigate(`/app/reservations?new=${encodeURIComponent(start)}`)
   }
 
   const openDay = (day: string) => {
@@ -345,34 +350,11 @@ export function CalendarPage() {
         }
       />
 
-      <div className="mb-6 grid gap-3 sm:grid-cols-3">
-        <div className="rounded-2xl border border-outline-variant/25 bg-gradient-to-br from-primary/10 via-surface-container-low to-surface-container-lowest p-4">
-          <p className="text-label-sm text-on-surface-variant">{t.calendar.periodBookings}</p>
-          <p className="mt-1 text-2xl font-bold text-on-surface tabular-nums">
-            <Num>{totalBookings}</Num>
-          </p>
-        </div>
-        <div className="rounded-2xl border border-outline-variant/25 bg-surface-container-low p-4">
-          <p className="text-label-sm text-on-surface-variant">{t.calendar.busiestDay}</p>
-          <p className="mt-1 text-body-lg font-semibold text-on-surface">
-            {daysByBookingCount[0] && daysByBookingCount[0].count > 0
-              ? formatDateLabel(daysByBookingCount[0].day, locale, {
-                  weekday: 'short',
-                  month: 'short',
-                  day: 'numeric',
-                })
-              : t.calendar.noneYet}
-          </p>
-        </div>
-        <div className="rounded-2xl border border-outline-variant/25 bg-surface-container-low p-4">
-          <p className="text-label-sm text-on-surface-variant">{t.calendar.scopeNoteShort}</p>
-          <p className="mt-1 text-body-sm text-on-surface-variant line-clamp-2">
-            {calendarSource === 'ownership-fallback'
-              ? t.calendar.ownershipFallbackNote
-              : t.calendar.branchScopeNote}
-          </p>
-        </div>
-      </div>
+      {usingFallback && (
+        <p className="mb-4 text-body-sm text-on-surface-variant">
+          {t.calendar.ownershipFallbackNote}
+        </p>
+      )}
 
       {rangeQuery.isLoading ? (
         <p className="text-body-md text-on-surface-variant">{t.common.loading}</p>
@@ -388,7 +370,7 @@ export function CalendarPage() {
           }
         />
       ) : (
-        <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_280px]">
+        <div>
           <div className="min-w-0 space-y-4">
             {view === 'daily' && (
               <>
@@ -397,17 +379,30 @@ export function CalendarPage() {
                     <h2 className="text-lg font-semibold text-on-surface">{rangeLabel}</h2>
                     <p className="text-body-sm text-on-surface-variant">
                       <Num>{countOn(anchorDate)}</Num> {t.calendar.bookingsCount}
+                      {scheduleQuery.isSuccess && scheduleQuery.data.openingTime && (
+                        <>
+                          {' · '}
+                          {t.calendar.hoursLabel
+                            .replace('{from}', scheduleQuery.data.openingTime)
+                            .replace('{to}', scheduleQuery.data.closingTime ?? '')}
+                        </>
+                      )}
                     </p>
+                    {branchClosed && (
+                      <p className="mt-1 text-body-sm font-semibold text-warning">
+                        {t.calendar.closedDay}
+                      </p>
+                    )}
                   </div>
                 </div>
 
-                {dayReservations.length === 0 && countOn(anchorDate) === 0 ? (
+                {usingFallback && dayReservations.length === 0 && countOn(anchorDate) === 0 ? (
                   <EmptyState
                     icon="event_busy"
                     title={t.calendar.emptyTitle}
                     description={t.calendar.emptyBody}
                   />
-                ) : dayReservations.length === 0 ? (
+                ) : usingFallback && dayReservations.length === 0 ? (
                   <Card>
                     <p className="text-2xl font-bold text-on-surface tabular-nums">
                       <Num>{countOn(anchorDate)}</Num>
@@ -464,6 +459,26 @@ export function CalendarPage() {
                                 )}
                               </div>
                               <div className="flex flex-col gap-2 p-2">
+                                {hourReservations.length === 0 && !usingFallback && (
+                                  <button
+                                    type="button"
+                                    onClick={() => openNewBookingAt(hour)}
+                                    aria-label={t.calendar.newBookingAt.replace(
+                                      '{time}',
+                                      formatHour(hour, locale),
+                                    )}
+                                    className="group flex min-h-14 w-full items-center justify-center gap-1 rounded-xl border border-dashed border-transparent text-label-md text-on-surface-variant transition-colors hover:border-primary/40 hover:bg-primary/5 hover:text-primary focus-visible:border-primary/40"
+                                  >
+                                    <MaterialIcon
+                                      name="add"
+                                      size={18}
+                                      className="opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100"
+                                    />
+                                    <span className="opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
+                                      {t.reservations.board.newBooking}
+                                    </span>
+                                  </button>
+                                )}
                                 {hourReservations.slice(0, 4).map((reservation) => (
                                   <div key={reservation.reservationId} className="w-full max-w-sm">
                                     <BookingChip
@@ -640,92 +655,6 @@ export function CalendarPage() {
             )}
           </div>
 
-          <aside className="space-y-4">
-            <Card className="sticky top-4">
-              <div className="mb-4 flex items-center gap-2">
-                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                  <MaterialIcon name="analytics" size={18} />
-                </span>
-                <div>
-                  <h3 className="text-sm font-semibold text-on-surface">
-                    {t.calendar.rankedByBookings}
-                  </h3>
-                  <p className="text-xs text-on-surface-variant">
-                    {t.calendar.rankedHint}
-                  </p>
-                </div>
-              </div>
-
-              {daysByBookingCount.every((d) => d.count === 0) ? (
-                <p className="text-sm text-on-surface-variant">{t.calendar.noneYet}</p>
-              ) : (
-                <ul className="space-y-2">
-                  {daysByBookingCount
-                    .filter((d) => d.count > 0)
-                    .slice(0, view === 'monthly' ? 10 : 7)
-                    .map((row, index) => {
-                      const level = densityLevel(row.count, maxDayCount)
-                      return (
-                        <li key={row.day}>
-                          <button
-                            type="button"
-                            onClick={() => openDay(row.day)}
-                            className="flex w-full items-center gap-3 rounded-xl border border-outline-variant/20 bg-surface-container-lowest px-3 py-2 text-start transition-colors hover:border-primary/30"
-                          >
-                            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-surface-container text-xs font-bold text-on-surface-variant">
-                              {index + 1}
-                            </span>
-                            <span className="min-w-0 flex-1">
-                              <span className="block truncate text-sm font-semibold text-on-surface">
-                                {formatDateLabel(row.day, locale, {
-                                  weekday: 'short',
-                                  month: 'short',
-                                  day: 'numeric',
-                                })}
-                              </span>
-                              <span className="mt-1 block h-1.5 overflow-hidden rounded-full bg-surface-container">
-                                <span
-                                  className={cn('block h-full rounded-full', densityBarClass[level])}
-                                  style={{
-                                    width: `${(row.count / Math.max(maxDayCount, 1)) * 100}%`,
-                                  }}
-                                />
-                              </span>
-                            </span>
-                            <span className="text-sm font-bold tabular-nums text-primary">
-                              <Num>{row.count}</Num>
-                            </span>
-                          </button>
-                        </li>
-                      )
-                    })}
-                </ul>
-              )}
-
-              {view === 'daily' && hoursRanked.length > 0 && (
-                <div className="mt-5 border-t border-outline-variant/20 pt-4">
-                  <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-on-surface-variant">
-                    {t.calendar.busiestHours}
-                  </h4>
-                  <ul className="space-y-1.5">
-                    {hoursRanked.slice(0, 5).map((row) => (
-                      <li
-                        key={row.hour}
-                        className="flex items-center justify-between rounded-lg bg-surface-container px-2.5 py-1.5 text-sm"
-                      >
-                        <span className="font-medium text-on-surface">
-                          {formatHour(row.hour, locale)}
-                        </span>
-                        <span className="font-bold tabular-nums text-primary">
-                          <Num>{row.count}</Num>
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </Card>
-          </aside>
         </div>
       )}
     </div>

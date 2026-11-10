@@ -20,16 +20,18 @@ export function shiftDateKey(dateKey: string, deltaDays: number): string {
 }
 
 /** Monday-first week containing `dateKey`. */
-export function startOfWeekMonday(dateKey: string): string {
+/** Weeks start on Saturday everywhere in the dashboard (CR WJ-R-2026-002). */
+export const WEEK_START_DAY = 6 // 0 Sun … 6 Sat
+
+export function startOfWeek(dateKey: string): string {
   const date = parseDateKey(dateKey)
-  const day = date.getDay() // 0 Sun … 6 Sat
-  const diffToMonday = day === 0 ? -6 : 1 - day
-  date.setDate(date.getDate() + diffToMonday)
+  const back = (date.getDay() - WEEK_START_DAY + 7) % 7
+  date.setDate(date.getDate() - back)
   return toDateKey(date)
 }
 
-export function endOfWeekSunday(dateKey: string): string {
-  return shiftDateKey(startOfWeekMonday(dateKey), 6)
+export function endOfWeek(dateKey: string): string {
+  return shiftDateKey(startOfWeek(dateKey), 6)
 }
 
 export function startOfMonth(dateKey: string): string {
@@ -64,8 +66,8 @@ export function eachDateKey(from: string, to: string): string[] {
 export function monthGridKeys(dateKey: string): string[] {
   const monthStart = startOfMonth(dateKey)
   const monthEnd = endOfMonth(dateKey)
-  const gridStart = startOfWeekMonday(monthStart)
-  const gridEnd = endOfWeekSunday(monthEnd)
+  const gridStart = startOfWeek(monthStart)
+  const gridEnd = endOfWeek(monthEnd)
   return eachDateKey(gridStart, gridEnd)
 }
 

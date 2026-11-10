@@ -19,6 +19,14 @@ import {
 } from '@/api/reservations'
 import { isApiError } from '@/api/errors'
 import { ReservationActions } from '@/components/reservations/ReservationActions'
+import { InternalNoteEditor } from '@/components/reservations/InternalNoteEditor'
+import {
+  CustomerPageLink,
+  ReservationStatusChangeNote,
+  ReservationTimingHint,
+  ReturningCustomerBadge,
+} from '@/components/reservations/ReservationContext'
+import { useNow } from '@/hooks/useNow'
 import {
   useCachedReservation,
   useMyReservationDetailQuery,
@@ -47,6 +55,13 @@ function mergeReservation(
     notes: fromDetail.notes ?? cached.notes,
     guests: fromDetail.guests || cached.guests,
     offer: fromDetail.offer ?? cached.offer,
+    // Branch-list only: the customer's own detail endpoint never carries these.
+    customerKey: cached.customerKey,
+    visitCount: cached.visitCount,
+    noShowCount: cached.noShowCount,
+    internalNote: cached.internalNote,
+    approvalDeadlineAt: cached.approvalDeadlineAt,
+    statusChange: cached.statusChange,
   }
 }
 
@@ -169,6 +184,7 @@ export function ReservationDetailPage() {
   const queryClient = useQueryClient()
   const detailQuery = useMyReservationDetailQuery(id)
   const cached = useCachedReservation(id)
+  const now = useNow()
   const reservation = useMemo(
     () => mergeReservation(detailQuery.data, cached),
     [cached, detailQuery.data],
@@ -296,11 +312,15 @@ export function ReservationDetailPage() {
               <h1 className="text-headline-md text-on-surface mt-1">
                 {reservation.customerName ?? t.reservations.board.guest}
               </h1>
-              {reservation.offer && (
-                <div className="mt-2">
-                  <ReservationOfferBadge offer={reservation.offer} />
-                </div>
-              )}
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                <ReservationOfferBadge offer={reservation.offer} />
+                <ReturningCustomerBadge reservation={reservation} />
+              </div>
+              <div className="mt-2 space-y-1">
+                <ReservationTimingHint reservation={reservation} now={now} />
+                <ReservationStatusChangeNote reservation={reservation} />
+              </div>
+              <CustomerPageLink customerKey={reservation.customerKey} />
             </div>
             <StatusBadge
               type="custom"
@@ -365,6 +385,14 @@ export function ReservationDetailPage() {
         timeZone={branchTimeZone}
         t={t}
       />
+
+      {cached && (
+        <InternalNoteEditor
+          key={`${reservation.reservationId}:${reservation.internalNote ?? ''}`}
+          reservationId={reservation.reservationId}
+          initialNote={reservation.internalNote}
+        />
+      )}
 
       {(reservation.status === 'Pending' || reservation.status === 'Approved') && (
         <section className="rounded-xl border border-outline-variant/30 bg-surface p-4">

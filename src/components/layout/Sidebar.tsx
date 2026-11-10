@@ -25,8 +25,6 @@ const opsNav: NavEntry[] = [
   { key: 'reservations', path: '/app/reservations', icon: 'event' },
   { key: 'calendar', path: '/app/calendar', icon: 'calendar_today' },
   { key: 'floorPlan', path: '/app/floor-plan', icon: 'layers' },
-  { key: 'waitlist', path: '/app/waitlist', icon: 'hourglass_empty' },
-  { key: 'walkIn', path: '/app/walk-in', icon: 'directions_walk' },
 ]
 
 const mgmtNav: NavEntry[] = [
