@@ -148,6 +148,8 @@ interface DataTableCellProps {
   muted?: boolean
   /** Allows long text to wrap instead of widening the table. */
   wrap?: boolean
+  /** Group heading rows span the whole table. */
+  colSpan?: number
 }
 
 export function DataTableCell({
@@ -156,9 +158,11 @@ export function DataTableCell({
   numeric = false,
   muted = false,
   wrap = false,
+  colSpan,
 }: DataTableCellProps) {
   return (
     <td
+      colSpan={colSpan}
       className={cn(
         'px-5 py-3.5 align-middle',
         muted ? 'text-on-surface-variant' : 'text-on-surface',

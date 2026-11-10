@@ -32,7 +32,7 @@ src/
 ├── context/        # Theme, Locale, Sidebar, Auth, RestaurantScope, Restaurant (legacy mock), Toast
 ├── data/           # mock data — feature demos only; shell scope is not mock
 ├── i18n/           # en.ts / ar.ts translation dictionaries
-├── lib/            # utilities (floorGeometry, scope selection/persistence, auth claims, cn)
+├── lib/            # utilities (floorGrid, scope selection/persistence, auth claims, cn)
 ├── pages/          # restaurant dashboard routes (`/app`) — one file per route
 └── types/          # shared TypeScript interfaces/enums
 ```

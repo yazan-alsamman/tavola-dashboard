@@ -10,7 +10,8 @@ export function tableFloor(table: Pick<TableDto, 'floor'>): number {
 
 /**
  * Floors to show as tabs: the ground floor, every floor a table stands on,
- * and floors the user opened in this session that have no table yet.
+ * and `extra` floors (area floors, or floors opened in this session that
+ * have nothing on them yet).
  */
 export function listFloors(
   tables: Pick<TableDto, 'floor'>[],

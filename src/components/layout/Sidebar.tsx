@@ -32,7 +32,6 @@ const mgmtNav: NavEntry[] = [
   { key: 'gallery', path: '/app/gallery', icon: 'photo_library' },
   { key: 'offers', path: '/app/offers', icon: 'local_offer' },
   { key: 'reviews', path: '/app/reviews', icon: 'rate_review' },
-  { key: 'tables', path: '/app/tables', icon: 'table_restaurant' },
   { key: 'messaging', path: '/app/messaging', icon: 'inbox' },
   { key: 'notifications', path: '/app/notifications', icon: 'notifications' },
 ]

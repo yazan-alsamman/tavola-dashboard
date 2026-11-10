@@ -197,9 +197,42 @@ export function useCreateTableMutation() {
   })
 }
 
+type TablesSnapshot = [readonly unknown[], TableDto[] | undefined][]
+
+/**
+ * Patches every cached table list holding `tableId` so the floor plan shows
+ * the change at once (save in the background); returns what to roll back.
+ */
+function patchCachedTable(
+  queryClient: ReturnType<typeof useQueryClient>,
+  scope: InventoryMutationScope,
+  tableId: string,
+  body: UpdateTableRequest,
+): TablesSnapshot {
+  const lists = queryClient.getQueriesData<TableDto[]>({
+    queryKey: [...inventoryKeys.all, 'tables'],
+  })
+  const snapshot: TablesSnapshot = []
+  for (const [key, data] of lists) {
+    if (!data?.some((table) => table.tableId === tableId)) continue
+    if (!key.includes(scope.restaurantId) || !key.includes(scope.branchId)) continue
+    snapshot.push([key, data])
+    queryClient.setQueryData<TableDto[]>(
+      key,
+      data.map((table) =>
+        table.tableId === tableId ? { ...table, ...body } : table,
+      ),
+    )
+  }
+  return snapshot
+}
+
+const UPDATE_TABLE_KEY = [...inventoryKeys.all, 'updateTable'] as const
+
 export function useUpdateTableMutation() {
   const queryClient = useQueryClient()
   return useMutation({
+    mutationKey: UPDATE_TABLE_KEY,
     mutationFn: (input: {
       tableId: string
       body: UpdateTableRequest
@@ -207,12 +240,24 @@ export function useUpdateTableMutation() {
       /** Floor plan before update — for list invalidation. */
       floorPlanId: string
     }) => updateTable(input.tableId, input.body),
-    onSuccess: async (table, vars) => {
+    onMutate: async (vars) => {
+      await queryClient.cancelQueries({ queryKey: [...inventoryKeys.all, 'tables'] })
+      return { snapshot: patchCachedTable(queryClient, vars.scope, vars.tableId, vars.body) }
+    },
+    onError: (_err, _vars, context) => {
+      for (const [key, data] of context?.snapshot ?? []) {
+        queryClient.setQueryData(key, data)
+      }
+    },
+    onSettled: async (table, _err, vars) => {
+      // Refetch only once the last queued save lands, so a later optimistic
+      // move is never overwritten by an older server answer.
+      if (queryClient.isMutating({ mutationKey: UPDATE_TABLE_KEY }) > 1) return
       await Promise.all([
         invalidateTableDetail(queryClient, vars.tableId),
         invalidateBranchTables(queryClient, vars.scope),
         invalidateFloorTables(queryClient, vars.scope, vars.floorPlanId),
-        vars.floorPlanId !== table.floorPlanId
+        table && vars.floorPlanId !== table.floorPlanId
           ? invalidateFloorTables(queryClient, vars.scope, table.floorPlanId)
           : Promise.resolve(),
       ])
@@ -297,14 +342,11 @@ export function useMergeTablesMutation() {
       scope: InventoryMutationScope
       floorPlanId: string
     }) => mergeTables(input.body),
-    onSuccess: async (table, vars) => {
+    onSuccess: async (unit, vars) => {
       await Promise.all([
-        invalidateTableDetail(queryClient, table.tableId),
+        ...unit.memberTableIds.map((id) => invalidateTableDetail(queryClient, id)),
         invalidateBranchTables(queryClient, vars.scope),
         invalidateFloorTables(queryClient, vars.scope, vars.floorPlanId),
-        table.floorPlanId !== vars.floorPlanId
-          ? invalidateFloorTables(queryClient, vars.scope, table.floorPlanId)
-          : Promise.resolve(),
       ])
     },
   })
@@ -318,15 +360,11 @@ export function useSplitTableMutation() {
       scope: InventoryMutationScope
       floorPlanId: string
     }) => splitTable(input.tableId),
-    onSuccess: async (table, vars) => {
+    onSuccess: async (unit, vars) => {
       await Promise.all([
-        invalidateTableDetail(queryClient, vars.tableId),
-        invalidateTableDetail(queryClient, table.tableId),
+        ...unit.memberTableIds.map((id) => invalidateTableDetail(queryClient, id)),
         invalidateBranchTables(queryClient, vars.scope),
         invalidateFloorTables(queryClient, vars.scope, vars.floorPlanId),
-        table.floorPlanId !== vars.floorPlanId
-          ? invalidateFloorTables(queryClient, vars.scope, table.floorPlanId)
-          : Promise.resolve(),
       ])
     },
   })

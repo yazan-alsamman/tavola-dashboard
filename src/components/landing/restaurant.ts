@@ -188,7 +188,7 @@ export const MOBILE_TABLES: readonly TableDef[] = [
 
 export const DEFAULT_SELECTED_TABLE_ID = 'M2'
 
-/** Status → visual language, mirroring the real FloorPlanReadView status colors (see components/floor). */
+/** Status → visual language, mirroring the venue plan grid status colors (see components/floor/FloorGridEditor). */
 export const STATUS_COLOR: Record<TableStatus, { light: string; dark: string; glow: number }> = {
   Available: { light: '#00b39f', dark: '#4db6ac', glow: 1 },
   Occupied: { light: '#8b8398', dark: '#6b5f7e', glow: 0.25 },

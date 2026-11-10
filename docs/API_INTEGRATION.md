@@ -97,11 +97,11 @@ Confirmed live OpenAPI / Postman (Owner/Admin org role):
 | Delete table | `DELETE` | `/tables/:tableId` — soft-delete, 204 |
 | Move table | `POST` | `/tables/:tableId/move` — `{ targetFloorPlanId, targetFloorPlanAreaId? }` same branch only |
 | List floor plan areas | `GET` | `.../floor-plans/:floorPlanId/areas` → `{ items }` (unpaginated, `sortOrder` then `createdAt`) |
-| Create floor plan area | `POST` | `.../areas` — `{ name, color, sortOrder }`; `color` is `#RRGGBB` |
+| Create floor plan area | `POST` | `.../areas` — `{ name, color, sortOrder, features?, floor?, positionX?, positionY?, width?, height? }`; `color` is `#RRGGBB`; the rectangle is all four or none (backend ADR-044) |
 | Get floor plan area | `GET` | `.../areas/:areaId` |
-| Update floor plan area | `PATCH` | `.../areas/:areaId` — full replace of `name`, `color`, `sortOrder` |
+| Update floor plan area | `PATCH` | `.../areas/:areaId` — replaces `name`, `color`, `sortOrder`; `features`, `floor` and the rectangle only when sent |
 | Delete floor plan area | `DELETE` | `.../areas/:areaId` — 204; **409** while any live table is still assigned |
-| Change table status | `POST` | `/tables/:tableId/status` — `{ status }`; `Available` ↔ `Occupied`/`Cleaning`/`Disabled` only |
+| Change table status | `POST` | `/tables/:tableId/status` — `{ status }`; the dashboard only toggles `Available` ↔ `Disabled` (out of service), every other status comes from bookings |
 
 **TableStatus (response):** `Available` \| `Occupied` \| `Cleaning` \| `Disabled` \| `Reserved` \| `Merged`. Only `Available` ↔ `Occupied`/`Cleaning`/`Disabled` can be set (`ManualTableStatusDto`); `Reserved` and `Merged` are read-only and offer no transitions. `TableDto` also carries `isMergePrimary`.
 

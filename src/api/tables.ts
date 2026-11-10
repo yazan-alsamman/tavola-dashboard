@@ -262,9 +262,20 @@ export interface MergeTablesRequest {
   primaryTableId?: string | null
 }
 
+/** `MergedUnitResponseDto`, returned by both merge and split. */
+export interface MergedUnitDto {
+  mergeGroupId: string
+  primaryTableId: string
+  memberTableIds: string[]
+  /** Sum of every member's capacity; no table's own capacity changes. */
+  effectiveCapacity: number
+  primary: TableDto
+  members: TableDto[]
+}
+
 /** Merge ≥2 Available tables on the same branch + floor plan. */
-export async function mergeTables(body: MergeTablesRequest): Promise<TableDto> {
-  return apiRequest<TableDto>('/tables/merge', {
+export async function mergeTables(body: MergeTablesRequest): Promise<MergedUnitDto> {
+  return apiRequest<MergedUnitDto>('/tables/merge', {
     method: 'POST',
     body: {
       tableIds: body.tableIds,
@@ -276,8 +287,8 @@ export async function mergeTables(body: MergeTablesRequest): Promise<TableDto> {
 }
 
 /** Undo a merge group — any member table id works. */
-export async function splitTable(tableId: string): Promise<TableDto> {
-  return apiRequest<TableDto>(`/tables/${tableId}/split`, {
+export async function splitTable(tableId: string): Promise<MergedUnitDto> {
+  return apiRequest<MergedUnitDto>(`/tables/${tableId}/split`, {
     method: 'POST',
   })
 }
