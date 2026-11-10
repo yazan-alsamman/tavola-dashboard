@@ -2,8 +2,10 @@
  * Auth token bridge between AuthProvider and the API client.
  *
  * Access token: in-memory only (never persisted).
- * Refresh token: localStorage so the session survives tab close and can
- * call logout-all when hitting AUTH_TOO_MANY_SESSIONS.
+ * Refresh token: sessionStorage (docs/AUTH_AND_RBAC.md). It is scoped to the
+ * tab and gone when the tab closes, so it is not left on a shared reception
+ * machine. Tab close already logs the session out on the server, so closed
+ * tabs do not pile up sessions toward AUTH_TOO_MANY_SESSIONS.
  */
 
 const REFRESH_TOKEN_STORAGE_KEY = 'tavla-refresh-token'
@@ -15,15 +17,16 @@ const sessionInvalidatedListeners = new Set<SessionInvalidatedListener>()
 
 function readRefreshTokenFromStorage(): string | null {
   try {
-    const fromLocal = localStorage.getItem(REFRESH_TOKEN_STORAGE_KEY)
-    if (fromLocal) return fromLocal
-
-    // One-time migration from the previous sessionStorage location.
     const fromSession = sessionStorage.getItem(REFRESH_TOKEN_STORAGE_KEY)
-    if (fromSession) {
-      localStorage.setItem(REFRESH_TOKEN_STORAGE_KEY, fromSession)
-      sessionStorage.removeItem(REFRESH_TOKEN_STORAGE_KEY)
-      return fromSession
+    if (fromSession) return fromSession
+
+    // One-time move from the earlier localStorage location, so a tab that
+    // was signed in before this change stays signed in.
+    const fromLocal = localStorage.getItem(REFRESH_TOKEN_STORAGE_KEY)
+    if (fromLocal) {
+      sessionStorage.setItem(REFRESH_TOKEN_STORAGE_KEY, fromLocal)
+      localStorage.removeItem(REFRESH_TOKEN_STORAGE_KEY)
+      return fromLocal
     }
 
     return null
@@ -34,12 +37,11 @@ function readRefreshTokenFromStorage(): string | null {
 
 function writeRefreshTokenToStorage(token: string | null): void {
   try {
+    localStorage.removeItem(REFRESH_TOKEN_STORAGE_KEY)
     if (token === null) {
-      localStorage.removeItem(REFRESH_TOKEN_STORAGE_KEY)
       sessionStorage.removeItem(REFRESH_TOKEN_STORAGE_KEY)
     } else {
-      localStorage.setItem(REFRESH_TOKEN_STORAGE_KEY, token)
-      sessionStorage.removeItem(REFRESH_TOKEN_STORAGE_KEY)
+      sessionStorage.setItem(REFRESH_TOKEN_STORAGE_KEY, token)
     }
   } catch {
     // Storage may be unavailable (private mode / SSR); ignore.
