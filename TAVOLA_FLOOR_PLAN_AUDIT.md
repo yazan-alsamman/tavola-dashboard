@@ -2,7 +2,7 @@
 
 **Date:** 23 September 2026  
 **Repo:** `D:\Tavola` (restaurant dashboard). The mobile app is not in this repository.  
-**Contract:** `postman/_endpoint_inventory.json` and `postman/TAVLA-API.postman_collection (2).json`.
+**Contract:** `postman/_endpoint_inventory.json` and `postman/TAVLA-API.postman_collection.json`.
 
 ## Architecture
 

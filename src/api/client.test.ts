@@ -562,16 +562,16 @@ describe('tokenStore storage rules', () => {
     expect(tokenStore.getAccessToken()).toBe('mem-only')
   })
 
-  it('persists the refresh token in localStorage only', () => {
+  it('persists the refresh token in sessionStorage only', () => {
     tokenStore.setRefreshToken('refresh-only')
-    expect(localStorage.getItem('tavla-refresh-token')).toBe('refresh-only')
-    expect(sessionStorage.getItem('tavla-refresh-token')).toBeNull()
+    expect(sessionStorage.getItem('tavla-refresh-token')).toBe('refresh-only')
+    expect(localStorage.getItem('tavla-refresh-token')).toBeNull()
   })
 
-  it('migrates a legacy sessionStorage refresh token into localStorage', () => {
-    sessionStorage.setItem('tavla-refresh-token', 'legacy-refresh')
+  it('moves a refresh token left in localStorage into sessionStorage', () => {
+    localStorage.setItem('tavla-refresh-token', 'legacy-refresh')
     expect(tokenStore.getRefreshToken()).toBe('legacy-refresh')
-    expect(localStorage.getItem('tavla-refresh-token')).toBe('legacy-refresh')
-    expect(sessionStorage.getItem('tavla-refresh-token')).toBeNull()
+    expect(sessionStorage.getItem('tavla-refresh-token')).toBe('legacy-refresh')
+    expect(localStorage.getItem('tavla-refresh-token')).toBeNull()
   })
 })
