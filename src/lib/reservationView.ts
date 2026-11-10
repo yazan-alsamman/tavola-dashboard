@@ -28,6 +28,8 @@ export interface ReservationView extends ReservationDto {
   customerName: string | null
   customerPhone: string | null
   customerKind: 'User' | 'Guest' | null
+  /** The offer the customer booked from (branch rows only), or null. */
+  offer: { offerId: string; title: string } | null
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -77,6 +79,9 @@ export function toReservationView(raw: unknown): ReservationView | null {
   const customer = isRecord(raw.customer) ? raw.customer : null
   const sourceRaw = text(raw.source) ?? text(raw.reservationSource) ?? 'Online'
   const customerKindRaw = customer ? text(customer.type) : null
+  const offerRaw = isRecord(raw.offer) ? raw.offer : null
+  const offerId = offerRaw ? text(offerRaw.offerId) : null
+  const offerTitle = offerRaw ? text(offerRaw.title) : null
 
   return {
     reservationId,
@@ -100,6 +105,7 @@ export function toReservationView(raw: unknown): ReservationView | null {
     customerPhone: customer ? text(customer.phone) : null,
     customerKind:
       customerKindRaw === 'User' || customerKindRaw === 'Guest' ? customerKindRaw : null,
+    offer: offerId && offerTitle ? { offerId, title: offerTitle } : null,
   }
 }
 

@@ -1,9 +1,15 @@
-import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
+import {
+  useEffect,
+  useRef,
+  useState,
+  type DragEvent as ReactDragEvent,
+  type PointerEvent as ReactPointerEvent,
+  type ReactNode,
+} from 'react'
 import type { FloorPlanAreaDto } from '@/api/floorPlanAreas'
 import type { TableDto } from '@/api/tables'
 import { FloorLayoutToolbar } from '@/components/floor/FloorLayoutToolbar'
 import { FloorTableGlyph } from '@/components/floor/FloorTableGlyph'
-import { Num } from '@/components/ui/Num'
 import { useLocale } from '@/context/LocaleContext'
 import {
   boxesOverlap,
@@ -52,7 +58,17 @@ interface FloorPlanReadViewProps {
   drawHall?: boolean
   onDrawHall?: (box: TableBox) => void
   sectionDrafts?: Record<string, TableBox>
+  /**
+   * Drop target for a table dragged in from the "not placed yet" queue.
+   * Called with the snapped top-left corner, only when the spot is free.
+   */
+  onDropTable?: (tableId: string, x: number, y: number) => void
+  /** Size the dropped table will take, to centre it under the pointer. */
+  dropSizeFor?: (tableId: string) => { width: number; height: number }
 }
+
+/** dataTransfer type the queue uses to carry a table id. */
+export const FLOOR_TABLE_DRAG_TYPE = 'application/x-tavola-table'
 
 interface HallDraw {
   originX: number
@@ -105,6 +121,8 @@ export function FloorPlanReadView({
   drawHall = false,
   onDrawHall,
   sectionDrafts = {},
+  onDropTable,
+  dropSizeFor,
 }: FloorPlanReadViewProps) {
   const { t } = useLocale()
   const viewportRef = useRef<HTMLDivElement>(null)
@@ -124,7 +142,6 @@ export function FloorPlanReadView({
   const snapEnabled = true
 
   const placed = tables.filter(isTablePlaced)
-  const unplaced = tables.filter((tb) => !isTablePlaced(tb))
 
   const liveBox = (tb: TableDto) => {
     if (drag?.tableId !== tb.tableId) return tableBox(tb)
@@ -256,6 +273,26 @@ export function FloorPlanReadView({
     })
   }
 
+  const [dropActive, setDropActive] = useState(false)
+
+  const acceptsTableDrag = (e: ReactDragEvent) =>
+    Boolean(onDropTable) && e.dataTransfer.types.includes(FLOOR_TABLE_DRAG_TYPE)
+
+  const handleTableDrop = (e: ReactDragEvent) => {
+    setDropActive(false)
+    if (!acceptsTableDrag(e)) return
+    e.preventDefault()
+    const tableId = e.dataTransfer.getData(FLOOR_TABLE_DRAG_TYPE)
+    if (!tableId || placing) return
+    const size = dropSizeFor?.(tableId) ?? { width: 80, height: 80 }
+    const point = worldPointFromClient(e.clientX, e.clientY)
+    const x = Math.max(0, snapCoord(point.x - size.width / 2, snapEnabled))
+    const y = Math.max(0, snapCoord(point.y - size.height / 2, snapEnabled))
+    const target = { x, y, width: size.width, height: size.height }
+    const covered = placed.some((tb) => boxesOverlap(target, tableBox(tb)))
+    if (!covered) onDropTable?.(tableId, x, y)
+  }
+
   const handleCanvasPointerUp = (e: ReactPointerEvent) => {
     if (finishHallDraw()) {
       emptyPointer.current = false
@@ -348,11 +385,23 @@ export function FloorPlanReadView({
           'relative w-full overflow-auto rounded-xl border border-outline-variant/30 bg-surface-container',
           'h-[min(78vh,920px)]',
           drawHall || placePreset || placeEnabled ? 'cursor-crosshair' : '',
+          dropActive && 'ring-2 ring-primary ring-inset',
         )}
         data-testid="floor-plan-canvas"
         dir="ltr"
         onPointerMove={applyPointerMove}
         onPointerUp={handleCanvasPointerUp}
+        onDragOver={(e) => {
+          if (!acceptsTableDrag(e)) return
+          e.preventDefault()
+          e.dataTransfer.dropEffect = 'move'
+          if (!dropActive) setDropActive(true)
+        }}
+        onDragLeave={(e) => {
+          if (e.currentTarget.contains(e.relatedTarget as Node | null)) return
+          setDropActive(false)
+        }}
+        onDrop={handleTableDrop}
         onPointerLeave={() => {
           if (drag) commitDrag(drag)
         }}
@@ -561,34 +610,6 @@ export function FloorPlanReadView({
         </div>
       </div>
 
-      {unplaced.length > 0 && (
-        <div className="rounded-xl border border-outline-variant/20 bg-surface-container-lowest p-4">
-          <p className="text-label-md text-on-surface-variant mb-1">
-            {t.floorPlan.unplacedTables}
-          </p>
-          <p className="text-label-sm text-on-surface-variant mb-3">
-            {t.floorPlan.unplacedHint}
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {unplaced.map((tb) => (
-              <button
-                key={tb.tableId}
-                type="button"
-                onClick={() => onSelectTable(tb.tableId)}
-                className={cn(
-                  'min-h-10 px-3 py-1.5 rounded-lg border text-label-md',
-                  selectedTableId === tb.tableId
-                    ? 'border-primary bg-primary/10'
-                    : 'border-outline-variant/30',
-                )}
-              >
-                {tb.tableNumber} · <Num>{tb.capacity}</Num> ·{' '}
-                {t.status[tb.status]}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   )
 }

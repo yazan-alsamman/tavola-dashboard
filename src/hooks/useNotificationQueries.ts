@@ -4,7 +4,6 @@ import {
   listNotifications,
   markAllNotificationsRead,
   markNotificationRead,
-  broadcastRestaurantNotification,
 } from '@/api/notifications'
 import { notificationKeys } from '@/lib/queryKeys'
 
@@ -53,17 +52,3 @@ export function useMarkAllNotificationsRead() {
   })
 }
 
-export function useBroadcastRestaurantNotification() {
-  const queryClient = useQueryClient()
-
-  return useMutation({
-    mutationFn: (input: { restaurantId: string; title: string; body: string }) =>
-      broadcastRestaurantNotification(input.restaurantId, {
-        title: input.title,
-        body: input.body,
-      }),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: notificationKeys.all })
-    },
-  })
-}

@@ -75,33 +75,3 @@ export async function markAllNotificationsRead(): Promise<unknown> {
   })
 }
 
-export interface BroadcastRestaurantNotificationRequest {
-  title: string
-  body: string
-}
-
-export interface BroadcastRestaurantNotificationResultDto {
-  broadcastId: string
-  totalRecipients: number
-  [key: string]: unknown
-}
-
-/**
- * Owner/Admin — queue an in-app broadcast (202 Accepted).
- * Audience is platform-wide eligible customers; restaurantId is for auth/audit.
- */
-export async function broadcastRestaurantNotification(
-  restaurantId: string,
-  body: BroadcastRestaurantNotificationRequest,
-): Promise<BroadcastRestaurantNotificationResultDto> {
-  return apiRequest<BroadcastRestaurantNotificationResultDto>(
-    `/restaurants/${restaurantId}/notifications/broadcast`,
-    {
-      method: 'POST',
-      body: {
-        title: body.title,
-        body: body.body,
-      },
-    },
-  )
-}
