@@ -25,6 +25,8 @@ export interface BranchDto {
   referencePrice?: number | null
   /** ADR-046: 1-4, the quartile of `referencePrice` among same-currency branches. */
   priceLevel?: number | null
+  /** Backend ADR-051: File id of the branch's own cover; null shows the restaurant cover. */
+  coverImageId?: string | null
   createdAt: string
   updatedAt: string
 }
@@ -126,6 +128,45 @@ export async function updateBranchWorkingHours(
       method: 'PATCH',
       body,
     },
+  )
+}
+
+/** Backend ADR-051: each branch has its own reservation rules. */
+export interface BranchSettingsDto {
+  branchId: string
+  reservationIntervalMinutes: number
+  maxGuestsPerReservation: number
+  cancellationWindowMinutes: number
+  pendingReservationTimeoutMinutes: number
+  defaultReservationDurationMinutes: number
+  autoApproval: boolean
+  reservationReminderMinutesBefore: number
+  lateArrivalGraceMinutes: number
+  updatedAt: string
+}
+
+export type BranchSettingsWriteRequest = Omit<BranchSettingsDto, 'branchId' | 'updatedAt'>
+
+export async function getBranchSettings(
+  restaurantId: string,
+  branchId: string,
+  signal?: AbortSignal,
+): Promise<BranchSettingsDto> {
+  return apiRequest<BranchSettingsDto>(
+    `/restaurants/${restaurantId}/branches/${branchId}/settings`,
+    { signal },
+  )
+}
+
+/** Full replace of this branch's rules; other branches keep theirs. */
+export async function updateBranchSettings(
+  restaurantId: string,
+  branchId: string,
+  body: BranchSettingsWriteRequest,
+): Promise<BranchSettingsDto> {
+  return apiRequest<BranchSettingsDto>(
+    `/restaurants/${restaurantId}/branches/${branchId}/settings`,
+    { method: 'PATCH', body },
   )
 }
 

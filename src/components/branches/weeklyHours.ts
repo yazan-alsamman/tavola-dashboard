@@ -13,9 +13,15 @@ export interface WeekdayHours {
 const DEFAULT_OPENING = '09:00'
 const DEFAULT_CLOSING = '22:00'
 
-/** Days 0 (Sunday) to 6 (Saturday), the backend's numbering; a day with no row is closed. */
+/**
+ * The order the editor shows the days in: the week starts on Saturday, as in
+ * Syria and the region. Numbers are the backend's, 0 (Sunday) to 6 (Saturday).
+ */
+export const WEEK_ORDER = [6, 0, 1, 2, 3, 4, 5] as const
+
+/** One row per day in `WEEK_ORDER`; a day with no backend row is closed. */
 export function entriesToWeek(entries: WorkingHoursEntry[]): WeekdayHours[] {
-  return Array.from({ length: 7 }, (_, dayOfWeek) => {
+  return WEEK_ORDER.map((dayOfWeek) => {
     const found = entries.find((e) => e.dayOfWeek === dayOfWeek)
     return found
       ? {

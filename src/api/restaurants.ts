@@ -12,6 +12,11 @@ export interface RestaurantDto {
   logoId: string | null
   coverImageId: string | null
   description: string | null
+  /** Backend ADR-052: per-language texts. `name`/`description` are the Arabic, else English, text. */
+  nameAr?: string | null
+  nameEn?: string | null
+  descriptionAr?: string | null
+  descriptionEn?: string | null
   cuisineType: string | null
   averageRating: number | null
   priceLevel: number | null
@@ -34,8 +39,13 @@ export interface CreateRestaurantRequest {
 
 /** `priceLevel` is computed per branch (ADR-046) and no longer sent. */
 export interface UpdateRestaurantRequest {
-  name: string
+  /** Legacy single name; the backend uses it only when neither nameAr nor nameEn is sent. */
+  name?: string
+  nameAr?: string | null
+  nameEn?: string | null
   description?: string | null
+  descriptionAr?: string | null
+  descriptionEn?: string | null
   cuisineType?: string | null
   status?: RestaurantStatus
 }
@@ -165,10 +175,16 @@ export function normalizeGalleryList(data: unknown): GalleryItemDto[] {
     .sort((a, b) => a.sortOrder - b.sortOrder)
 }
 
+/**
+ * Backend ADR-051: photos belong to a branch. Without `branchId` the backend
+ * answers for the restaurant's oldest branch (what the 1.0.2 app reads).
+ */
 export async function listRestaurantGallery(
   restaurantId: string,
+  branchId?: string | null,
 ): Promise<GalleryItemDto[]> {
-  const data = await apiRequest<unknown>(`/restaurants/${restaurantId}/gallery`)
+  const query = branchId ? `?branchId=${encodeURIComponent(branchId)}` : ''
+  const data = await apiRequest<unknown>(`/restaurants/${restaurantId}/gallery${query}`)
   return normalizeGalleryList(data)
 }
 
@@ -201,9 +217,12 @@ export function normalizeRestaurantCover(raw: unknown): RestaurantCoverDto {
 export async function uploadRestaurantCover(
   restaurantId: string,
   file: File,
+  /** Backend ADR-051: the branch whose cover this is; omitted, the restaurant's own. */
+  branchId?: string | null,
 ): Promise<RestaurantCoverDto> {
   const form = new FormData()
   form.append('file', file)
+  if (branchId) form.append('branchId', branchId)
   const data = await apiRequest<unknown>(`/restaurants/${restaurantId}/cover`, {
     method: 'POST',
     body: form,
@@ -219,24 +238,37 @@ export async function uploadRestaurantCover(
   return cover
 }
 
-/** Public read of the signed cover URL. Same field the guest app uses. */
-export async function getPublicRestaurantCover(
+/**
+ * Public read of a branch's signed cover, as the guest app sees it: the
+ * branch's own cover, or the restaurant cover when the branch has none.
+ */
+export async function getPublicBranchCover(
   restaurantId: string,
+  branchId: string,
   signal?: AbortSignal,
-): Promise<RestaurantCoverDto> {
+): Promise<{ coverImageUrl: string | null }> {
   const data = await apiRequest<unknown>(
-    `/discovery/restaurants/${restaurantId}`,
+    `/discovery/restaurants/${restaurantId}/branches/${branchId}`,
     { auth: false, signal },
   )
-  return normalizeRestaurantCover(data)
+  const url =
+    isRecord(data) &&
+    typeof data.coverImageUrl === 'string' &&
+    /^https?:\/\//i.test(data.coverImageUrl)
+      ? data.coverImageUrl
+      : null
+  return { coverImageUrl: url }
 }
+
 
 export async function addRestaurantGalleryImage(
   restaurantId: string,
   file: File,
+  branchId?: string | null,
 ): Promise<GalleryItemDto> {
   const form = new FormData()
   form.append('file', file)
+  if (branchId) form.append('branchId', branchId)
   const data = await apiRequest<unknown>(`/restaurants/${restaurantId}/gallery`, {
     method: 'POST',
     body: form,
@@ -269,10 +301,11 @@ export async function removeRestaurantGalleryImage(
 export async function reorderRestaurantGallery(
   restaurantId: string,
   galleryItemIds: string[],
+  branchId?: string | null,
 ): Promise<void> {
   await apiRequest<undefined>(`/restaurants/${restaurantId}/gallery/order`, {
     method: 'PUT',
-    body: { galleryItemIds },
+    body: branchId ? { galleryItemIds, branchId } : { galleryItemIds },
   })
 }
 

@@ -26,6 +26,10 @@ describe('weekly hours', () => {
     ])
   })
 
+  it('starts the week on Saturday', () => {
+    expect(entriesToWeek([]).map((day) => day.dayOfWeek)).toEqual([6, 0, 1, 2, 3, 4, 5])
+  })
+
   it('sends a newly opened day with its times', () => {
     const week = entriesToWeek([]).map((day) =>
       day.dayOfWeek === 0 ? { ...day, open: true } : day,

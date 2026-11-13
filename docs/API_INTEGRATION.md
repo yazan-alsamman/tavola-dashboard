@@ -46,10 +46,10 @@ Supporting modules:
 | `src/api/types.ts` | Envelope, `PaginatedData`, request option types |
 | `src/api/errors.ts` | `ApiError`, `isApiError` |
 | `src/api/tokenStore.ts` | In-memory access token + `sessionStorage` refresh token + session-invalidated listeners |
-| `src/api/auth.ts` | `login`, `logout`, `logoutAll`, `forgotPassword`, `resetPassword`, `changePassword`, `listSessions`, `revokeSession` |
+| `src/api/auth.ts` | `login`, `logout`, `logoutAll`, `forgotPassword`, `resetPassword`, `changePassword`, `listSessions` (each session carries `browser`, `operatingSystem`, `lastUsedAt`), `revokeSession` |
 | `src/api/users.ts` | `getCurrentUser`, `updateCurrentUser`, `getMyPreferences`, `updateMyPreferences`, `uploadMyAvatar` |
-| `src/api/restaurants.ts` | list/get/create/update/delete + settings, gallery (incl. `PUT /restaurants/:id/gallery/order`), cover (`POST /restaurants/:id/cover`), cuisine/occasion category assignment. `priceLevel` is read-only (ADR-046). |
-| `src/api/branches.ts` | list/get/create/update/delete + working-hours. Reads the computed `referencePrice`/`priceLevel` (ADR-046). |
+| `src/api/restaurants.ts` | list/get/create/update/delete + settings, gallery (incl. `PUT /restaurants/:id/gallery/order`) and cover (`POST /restaurants/:id/cover`), both per branch with `branchId` (ADR-029), `getPublicBranchCover`, cuisine/occasion category assignment. `priceLevel` is read-only (ADR-046). |
+| `src/api/branches.ts` | list/get/create/update/delete + working-hours + reservation rules (`getBranchSettings`/`updateBranchSettings`). Reads the computed `referencePrice`/`priceLevel` (ADR-046). |
 | `src/api/reservations.ts` | availability, Online + staff phone-booking create, list/get, approve/reject/cancel/reschedule/complete/no-show/table-ready |
 | `src/api/floorPlans.ts` | `listFloorPlans`, `createFloorPlan`, `activateFloorPlan` |
 | `src/api/tables.ts` | list/get + CRUD + move/status + merge/split |
@@ -158,16 +158,16 @@ Confirmed against Swagger / Postman / backend docs:
 - Query: `page`, `limit` (pagination fields in `data`: `items`, `page`, `limit`, `total`)
 - Permission: OrganizationMember **Owner** or **Admin** (Employee typically receives `FORBIDDEN`)
 - Soft-deleted restaurants excluded; `Suspended` restaurants may still appear
-- DTO fields used by the dashboard: `restaurantId`, `name`, `slug`, `logoId`, `coverImageId`, `description`, `cuisineType`, `averageRating`, `priceLevel`, `status` (`Active` \| `Suspended`), `createdAt`, `updatedAt`
-- No `nameAr` / mock `id` field — use `restaurantId` and `name`
-- Staff `PATCH /restaurants/:id` still sends `name`, `description`, `cuisineType`, `priceLevel`, and `status` only. It does not set `coverImageId`.
-- The guest cover is `POST /restaurants/:id/cover` (Owner/Admin, multipart field `file`). The 201 body is `{ coverImageId, coverImageUrl }`. `coverImageUrl` is a short-lived signed read URL. Gallery upload and `POST /restaurants/:id/logo` do not set the cover, and the app card does not show the logo.
-- The Photos page previews that same `coverImageUrl` with public `GET /discovery/restaurants/:id` (`auth: false`). Do not build a storage path from `coverImageId`. Platform Admin cover upload stays on the platform console.
+- DTO fields used by the dashboard: `restaurantId`, `name`, `nameAr`, `nameEn`, `descriptionAr`, `descriptionEn`, `slug`, `logoId`, `coverImageId`, `description`, `cuisineType`, `averageRating`, `priceLevel`, `status` (`Active` \| `Suspended`), `createdAt`, `updatedAt`
+- Name and description are bilingual (backend ADR-052). Show them with `restaurantName(r, locale)` (`src/lib/restaurantName.ts`); `name` is the fallback older data carries. No mock `id` field — use `restaurantId`.
+- Settings `PATCH /restaurants/:id` sends `nameAr`, `nameEn`, `descriptionAr`, `descriptionEn` and `cuisineType`. At least one name is required. It does not set `coverImageId`.
+- The guest cover belongs to a branch (backend ADR-051): `POST /restaurants/:id/cover` (Owner/Admin, multipart `file` + `branchId`). The 201 body is `{ coverImageId, coverImageUrl }`; `coverImageUrl` is a short-lived signed read URL. Gallery upload and `POST /restaurants/:id/logo` do not set the cover, and the app card does not show the logo.
+- The Photos page previews the cover with public `GET /discovery/restaurants/:id/branches/:branchId` (`auth: false`), reading `coverImageUrl` only (the branch cover, else the restaurant's). Do not build a storage path from `coverImageId`. Platform Admin cover upload stays on the platform console.
 
 ## `GET /restaurants/:restaurantId/branches`
 
 - Same pagination shape
-- DTO: `branchId`, `restaurantId`, `city`, `district`, `address`, `latitude`, `longitude`, `countryCode`, `currency`, `timezone`, `phone`, `createdAt`, `updatedAt`
+- DTO: `branchId`, `restaurantId`, `city`, `district`, `address`, `latitude`, `longitude`, `countryCode`, `currency`, `coverImageId`, `timezone`, `phone`, `createdAt`, `updatedAt`
 - Create and update send `latitude` and `longitude` on the same branch body. Nearby search (`GET /discovery/restaurants/nearby`) uses that pin. A branch with both values null is not on the map. The dashboard does not call the nearby endpoint to save a location.
 - **No** dedicated `name` or `status` — UI label via `formatBranchLabel` (`city — district`)
 - Path `:restaurantId` is **resource addressing**, not a tenant override header
@@ -373,12 +373,12 @@ Grouped by Postman folder. `{base}` = `VITE_API_BASE_URL` (i.e. `/api/v1`). All 
 | GET | `/restaurants/:id` | |
 | PATCH | `/restaurants/:id` | |
 | DELETE | `/restaurants/:id` | soft delete |
-| GET / PATCH | `/restaurants/:id/settings` | `RestaurantSettings` (reservationInterval, maxGuestsPerReservation, cancellationWindow, autoApproval, timezone, defaultCurrency). `timezone`/`defaultCurrency` are deprecated (backend ADR-050): not shown, sent back unchanged. |
-| POST | `/restaurants/:id/cover` | Owner/Admin multipart `file`. Sets `coverImageId`. 201 `{ coverImageId, coverImageUrl }`. |
-| GET | `/discovery/restaurants/:id` | Public. Photos page reads `coverImageUrl` only, to preview the cover. |
-| POST / DELETE | `/restaurants/:id/gallery[/:galleryItemId]` | Owner/Admin. Multipart `file` on POST. This does not set the cover. |
-| GET | `/restaurants/:id/gallery` | Public. `data` is `{ restaurantId, items }`, ordered by `sortOrder`. Each item uses signed `imageUrl`. |
-| PUT | `/restaurants/:id/gallery/order` | Owner/Admin. `{ galleryItemIds }`: every image once, in the new order; 204. A partial or stale list is a 400 (ADR-046). |
+| GET / PATCH | `/restaurants/:id/settings` | Not called by the dashboard any more: reservation rules are per branch (ADR-029). |
+| POST | `/restaurants/:id/cover` | Owner/Admin multipart `file` + `branchId`. Sets that branch's cover. 201 `{ coverImageId, coverImageUrl }`. |
+| GET | `/discovery/restaurants/:id/branches/:branchId` | Public. Photos page reads `coverImageUrl` only, to preview the branch cover. |
+| POST / DELETE | `/restaurants/:id/gallery[/:galleryItemId]` | Owner/Admin. Multipart `file` + `branchId` on POST. This does not set the cover. |
+| GET | `/restaurants/:id/gallery?branchId=` | Public. `data` is `{ restaurantId, items }` for that branch, ordered by `sortOrder`. Each item uses signed `imageUrl`. |
+| PUT | `/restaurants/:id/gallery/order` | Owner/Admin. `{ galleryItemIds, branchId }`: every image of the branch once, in the new order; 204. A partial or stale list is a 400 (ADR-046). |
 | GET / PATCH | `/restaurants/:id/cuisine-categories` | |
 | GET / PATCH | `/restaurants/:id/occasion-categories` | |
 
@@ -390,6 +390,7 @@ Grouped by Postman folder. `{base}` = `VITE_API_BASE_URL` (i.e. `/api/v1`). All 
 | GET | `/restaurants/:restaurantId/branches` | paginated |
 | GET / PATCH / DELETE | `/restaurants/:restaurantId/branches/:branchId` | |
 | GET / PATCH | `/restaurants/:restaurantId/branches/:branchId/working-hours` | The only working hours (backend ADR-050). Full replace; a weekday without an entry is closed. The restaurant-level `/restaurants/:id/working-hours` is deprecated and not called. |
+| GET / PATCH | `/restaurants/:restaurantId/branches/:branchId/settings` | Reservation rules of one branch (backend ADR-051). GET falls back to the restaurant's rules until the branch saves its own. PATCH sends all eight rule fields. |
 
 ## Floor Plans
 

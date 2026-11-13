@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
+import { restaurantName } from '@/lib/restaurantName'
 import { Link } from 'react-router-dom'
 import { isApiError } from '@/api/errors'
 import {
@@ -1315,7 +1316,7 @@ export function MenuPage() {
         title={t.menu.title}
         subtitle={
           selectedRestaurant
-            ? `${t.menu.subtitle} — ${selectedRestaurant.name}`
+            ? `${t.menu.subtitle} — ${restaurantName(selectedRestaurant, locale)}`
             : t.menu.subtitle
         }
         actions={

@@ -21,8 +21,8 @@ import { moveTo } from '@/lib/reorder'
 import { cn } from '@/lib/utils'
 import { apiErrorText } from '@/lib/apiErrorText'
 
-function galleryKeys(restaurantId: string) {
-  return ['restaurants', restaurantId, 'gallery'] as const
+function galleryKeys(restaurantId: string, branchId: string) {
+  return ['restaurants', restaurantId, 'branches', branchId, 'gallery'] as const
 }
 
 const ACCEPTED_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp'])
@@ -32,8 +32,14 @@ export function GalleryPage() {
   const { t, isRTL } = useLocale()
   const { toast } = useToast()
   const queryClient = useQueryClient()
-  const { selectedRestaurantId, selectedRestaurant, status: scopeStatus } =
-    useRestaurantScope()
+  const {
+    selectedRestaurantId,
+    selectedBranchId,
+    branches,
+    formatBranchLabel,
+    status: scopeStatus,
+  } = useRestaurantScope()
+  const selectedBranch = branches.find((b) => b.branchId === selectedBranchId) ?? null
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [removeTarget, setRemoveTarget] = useState<GalleryItemDto | null>(null)
   const [dragOver, setDragOver] = useState(false)
@@ -42,21 +48,23 @@ export function GalleryPage() {
   const [pendingOrder, setPendingOrder] = useState<string[] | null>(null)
   const [draggingId, setDraggingId] = useState<string | null>(null)
 
-  const enabled = scopeStatus === 'ready' && Boolean(selectedRestaurantId)
+  // Backend ADR-051: photos and the cover belong to the branch picked in the header.
+  const enabled =
+    scopeStatus === 'ready' && Boolean(selectedRestaurantId) && Boolean(selectedBranchId)
 
   const galleryQuery = useQuery({
-    queryKey: galleryKeys(selectedRestaurantId ?? ''),
-    queryFn: () => listRestaurantGallery(selectedRestaurantId!),
+    queryKey: galleryKeys(selectedRestaurantId ?? '', selectedBranchId ?? ''),
+    queryFn: () => listRestaurantGallery(selectedRestaurantId!, selectedBranchId),
     enabled,
   })
 
   const uploadMutation = useMutation({
     mutationFn: (file: File) =>
-      addRestaurantGalleryImage(selectedRestaurantId!, file),
+      addRestaurantGalleryImage(selectedRestaurantId!, file, selectedBranchId),
     onSuccess: async () => {
       setUploadError(null)
       await queryClient.invalidateQueries({
-        queryKey: galleryKeys(selectedRestaurantId!),
+        queryKey: galleryKeys(selectedRestaurantId!, selectedBranchId!),
       })
       toast('success', t.gallery.uploadSuccess)
     },
@@ -72,7 +80,7 @@ export function GalleryPage() {
       removeRestaurantGalleryImage(selectedRestaurantId!, galleryItemId),
     onSuccess: async () => {
       await queryClient.invalidateQueries({
-        queryKey: galleryKeys(selectedRestaurantId!),
+        queryKey: galleryKeys(selectedRestaurantId!, selectedBranchId!),
       })
       toast('success', t.gallery.removeSuccess)
       setRemoveTarget(null)
@@ -84,10 +92,10 @@ export function GalleryPage() {
 
   const reorderMutation = useMutation({
     mutationFn: (galleryItemIds: string[]) =>
-      reorderRestaurantGallery(selectedRestaurantId!, galleryItemIds),
+      reorderRestaurantGallery(selectedRestaurantId!, galleryItemIds, selectedBranchId),
     onSuccess: async () => {
       await queryClient.invalidateQueries({
-        queryKey: galleryKeys(selectedRestaurantId!),
+        queryKey: galleryKeys(selectedRestaurantId!, selectedBranchId!),
       })
       toast('success', t.gallery.reorderSuccess)
     },
@@ -132,11 +140,19 @@ export function GalleryPage() {
     return (
       <div>
         <PageHeader title={t.gallery.title} subtitle={t.gallery.subtitle} />
-        <EmptyState
-          icon="photo_library"
-          title={t.scope.noRestaurantsTitle}
-          description={t.scope.noRestaurantsBody}
-        />
+        {selectedRestaurantId && scopeStatus !== 'loading' ? (
+          <EmptyState
+            icon="store"
+            title={t.branches.emptyTitle}
+            description={t.branches.emptyBody}
+          />
+        ) : (
+          <EmptyState
+            icon="photo_library"
+            title={t.scope.noRestaurantsTitle}
+            description={t.scope.noRestaurantsBody}
+          />
+        )}
       </div>
     )
   }
@@ -153,8 +169,8 @@ export function GalleryPage() {
       <PageHeader
         title={t.gallery.title}
         subtitle={
-          selectedRestaurant
-            ? `${t.gallery.subtitle} — ${selectedRestaurant.name}`
+          selectedBranch
+            ? `${t.gallery.subtitle} — ${formatBranchLabel(selectedBranch)}`
             : t.gallery.subtitle
         }
         actions={
@@ -179,7 +195,10 @@ export function GalleryPage() {
         }
       />
 
-      <RestaurantCoverSection restaurantId={selectedRestaurantId!} />
+      <RestaurantCoverSection
+        restaurantId={selectedRestaurantId!}
+        branchId={selectedBranchId!}
+      />
 
       <p className="text-body-sm text-on-surface-variant mb-2 max-w-2xl">
         {t.gallery.hint}

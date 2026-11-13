@@ -619,3 +619,15 @@ Decision:
 
 Consequences: the restaurant-level `GET/PATCH /restaurants/:id/working-hours` calls are gone from the dashboard. In Arabic, a validation error shows a general translated sentence instead of the backend's specific English detail.
 
+
+## ADR-029 — Rules, photos and cover per branch; bilingual restaurant profile; Settings as in the owner's sheets
+
+Context: the owner's Settings and Branches sheets (2026-11-13) move reservation rules, photos and the cover to each branch, keep name, description, cuisine and categories on the restaurant, and ask for every label in the selected language. The backend now stores rules per branch (`/branches/:branchId/settings`), takes `branchId` on gallery and cover calls (backend ADR-051), stores the name and description in Arabic and English (backend ADR-052), and describes each session's browser and system.
+
+Decision:
+1. Branches gets a Reservation rules dialog (`BranchRulesForm`) with ready-made choices for length, slot interval, cancellation window, pending timeout, late grace and reminder (`formatDuration`, `withCurrent` in `src/lib/durationLabel.ts` keep a saved value that is not a preset). Settings loses its Rules tab and no longer calls `/restaurants/:id/settings`. This replaces ADR-028 point 1.
+2. The Photos page works on the selected branch: gallery list, upload, delete, order and cover all send `branchId`; the cover preview reads the public branch discovery endpoint. The Branches page has a Photos button that selects the branch and opens it. Settings loses its Gallery tab (ADR-026 point 4 no longer applies).
+3. Settings → Profile edits the name and description in Arabic and in English (`splitByLanguage` files older single-language text by script). The shell, Dashboard, Menu and Branches show the name in the selected language with `restaurantName`.
+4. Hours start on Saturday (`WEEK_ORDER`). Account language and preferred currency are dropdowns (`src/lib/currencies.ts`, names from `Intl.DisplayNames`). Security lists each session as "browser on system" with sign-in and last-used dates.
+
+Consequences: a branch that never saved rules shows the restaurant's rules until it does. Without `branchId` the backend answers gallery reads for the oldest branch, which keeps the 1.0.2 app working.

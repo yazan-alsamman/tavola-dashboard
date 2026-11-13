@@ -199,8 +199,13 @@ export interface AuthSessionDto {
   deviceName?: string | null
   deviceType?: string | null
   createdAt?: string
-  lastSeenAt?: string | null
+  /** Confirmed field name in `ActiveSessionResponseDto` (was read as lastSeenAt). */
+  lastUsedAt?: string | null
   expiresAt?: string | null
+  ipAddress?: string | null
+  /** Parsed by the backend from the User-Agent at sign-in; product names only. */
+  browser?: string | null
+  operatingSystem?: string | null
 }
 
 export interface ListSessionsResponse {

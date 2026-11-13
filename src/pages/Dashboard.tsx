@@ -1,4 +1,5 @@
 import { useMemo, type ReactNode } from 'react'
+import { restaurantName } from '@/lib/restaurantName'
 import { Link } from 'react-router-dom'
 import { Num } from '@/components/ui/Num'
 import { Button } from '@/components/ui/Button'
@@ -286,7 +287,7 @@ export function DashboardPage() {
   const firstName = user?.displayName?.split(' ')[0] ?? ''
   const place = selectedBranch
     ? formatBranchLabel(selectedBranch)
-    : selectedRestaurant?.name
+    : selectedRestaurant && restaurantName(selectedRestaurant, locale)
   const usingFallback = bookingsQuery.data?.source === 'ownership-fallback'
 
   return (

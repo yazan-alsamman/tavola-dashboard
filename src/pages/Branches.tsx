@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { MaterialIcon } from '@/components/ui/Icon'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { PriceLevelStars } from '@/components/branches/PriceLevelStars'
 import { Button } from '@/components/ui/Button'
 import { Card, CardTitle } from '@/components/ui/Card'
-import { Input } from '@/components/ui/Input'
+import { Input, Select } from '@/components/ui/Input'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Modal } from '@/components/ui/Modal'
 import { useLocale } from '@/context/LocaleContext'
@@ -21,12 +22,15 @@ import {
 } from '@/api/branches'
 import { BranchLocationField } from '@/components/branches/BranchLocationField'
 import { WeeklyHoursEditor } from '@/components/branches/WeeklyHoursEditor'
+import { BranchRulesForm } from '@/components/branches/BranchRulesForm'
 import {
   entriesToWeek,
   weekToEntries,
   type WeekdayHours,
 } from '@/components/branches/weeklyHours'
 import { apiErrorText } from '@/lib/apiErrorText'
+import { restaurantName } from '@/lib/restaurantName'
+import { currencyLabel, currencyOptions } from '@/lib/currencies'
 
 const emptyForm: BranchWriteRequest = {
   city: '',
@@ -64,7 +68,7 @@ function branchToForm(branch: BranchDto): BranchWriteRequest {
 }
 
 export function BranchesPage() {
-  const { t } = useLocale()
+  const { t, locale } = useLocale()
   const { toast } = useToast()
   const {
     status,
@@ -73,10 +77,13 @@ export function BranchesPage() {
     selectedRestaurant,
     formatBranchLabel,
     refreshScope,
+    selectBranch,
   } = useRestaurantScope()
+  const navigate = useNavigate()
   const [showForm, setShowForm] = useState(false)
   const [editingBranch, setEditingBranch] = useState<BranchDto | null>(null)
   const [hoursBranch, setHoursBranch] = useState<BranchDto | null>(null)
+  const [rulesBranch, setRulesBranch] = useState<BranchDto | null>(null)
   const [form, setForm] = useState<BranchWriteRequest>(emptyForm)
   const [hours, setHours] = useState<WeekdayHours[]>(entriesToWeek([]))
   const [hoursLoading, setHoursLoading] = useState(false)
@@ -106,6 +113,12 @@ export function BranchesPage() {
       })
     return () => ac.abort()
   }, [restaurantId, hoursBranch, t.login.errors.unknown, toast])
+
+  /** Photos and cover live on the Photos page, scoped to the selected branch. */
+  const openPhotos = (branch: BranchDto) => {
+    selectBranch(branch.branchId)
+    navigate('/app/gallery')
+  }
 
   const openCreate = () => {
     setEditingBranch(null)
@@ -201,7 +214,7 @@ export function BranchesPage() {
         title={t.branches.title}
         subtitle={
           selectedRestaurant
-            ? `${t.branches.subtitle} · ${selectedRestaurant.name}`
+            ? `${t.branches.subtitle} · ${restaurantName(selectedRestaurant, locale)}`
             : t.branches.subtitle
         }
         actions={
@@ -264,7 +277,7 @@ export function BranchesPage() {
                 {branch.currency && (
                   <div className="flex justify-between gap-2">
                     <dt>{t.branches.fields.currency}</dt>
-                    <dd className="text-on-surface">{branch.currency}</dd>
+                    <dd className="text-on-surface">{currencyLabel(branch.currency, locale)}</dd>
                   </div>
                 )}
                 <div className="flex justify-between gap-2">
@@ -296,6 +309,20 @@ export function BranchesPage() {
                   onClick={() => setHoursBranch(branch)}
                 >
                   {t.branches.workingHours}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setRulesBranch(branch)}
+                >
+                  {t.branches.rules.title}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => openPhotos(branch)}
+                >
+                  {t.branches.photos}
                 </Button>
                 <Button
                   size="sm"
@@ -357,11 +384,17 @@ export function BranchesPage() {
               onChange={(v) => setForm({ ...form, timezone: v })}
               required
             />
-            <Field
+            <Select
               label={t.branches.fields.currency}
               value={form.currency ?? ''}
-              onChange={(v) => setForm({ ...form, currency: v })}
-            />
+              onChange={(e) => setForm({ ...form, currency: e.target.value })}
+            >
+              {currencyOptions(form.currency).map((code) => (
+                <option key={code} value={code}>
+                  {currencyLabel(code, locale)}
+                </option>
+              ))}
+            </Select>
           </div>
           <BranchLocationField
             latitude={form.latitude ?? null}
@@ -412,6 +445,21 @@ export function BranchesPage() {
               </Button>
             </div>
           </form>
+        )}
+      </Modal>
+
+      <Modal
+        open={Boolean(rulesBranch)}
+        onClose={() => setRulesBranch(null)}
+        title={t.branches.rules.title}
+        description={rulesBranch ? formatBranchLabel(rulesBranch) : undefined}
+      >
+        {rulesBranch && restaurantId && (
+          <BranchRulesForm
+            restaurantId={restaurantId}
+            branchId={rulesBranch.branchId}
+            onDone={() => setRulesBranch(null)}
+          />
         )}
       </Modal>
     </div>
