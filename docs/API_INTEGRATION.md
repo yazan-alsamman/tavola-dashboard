@@ -55,7 +55,7 @@ Supporting modules:
 | `src/api/tables.ts` | list/get + CRUD + move/status + merge/split |
 | `src/api/employees.ts` | `listEmployees`, `listRestaurantRoles`, `inviteEmployee`, `assignEmployeeRole`, `assignEmployeeToBranch`, `removeEmployeeFromBranch`, `removeEmployee` |
 | `src/api/taxonomy.ts` | `listCuisineCategories`, `listOccasionCategories` |
-| `src/api/notifications.ts` | list, unread-count, identity-token, mark read / read-all; `StaffMessageReceived` helpers (ADR-027) |
+| `src/api/notifications.ts` | list, unread-count, identity-token, mark read / read-all; `StaffMessageReceived` helpers (ADR-027). Known staff types are displayed with dashboard-translated words by `type`, not the server `title`/`body` (`src/lib/notificationText.ts`, ADR-032) |
 | `src/api/waitlist.ts` | `listBranchWaitlist` (branch day board), join, cancel, promote |
 | `src/api/health.ts` | health / liveness / readiness (non-envelope) |
 | `src/api/analytics.ts` | customers, reservation summary, branch trends/peak-hours, waitlist, reviews-summary (`ReviewsSummaryDto`: 6-month average shown from 5 reviews, axis averages, strongest/weakest axis), org reservation summary |

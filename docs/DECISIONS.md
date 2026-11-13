@@ -655,3 +655,14 @@ Decision:
 3. The category checklists in the Categories tab use the same Arabic labels.
 
 Consequences: a new cuisine needs a backend seed change, not a dashboard release. Older hand-typed values remain until an owner picks from the list.
+
+## ADR-032 — Staff notifications are worded by type in the selected language
+
+Context: the backend snapshots a notification's `title`/`body` from its template in the recipient account's stored `language` when the notification is created. Staff accounts default to English and the dashboard's language switch does not change that field, so the bell and the Notifications page showed English text in the Arabic UI, and already-created notifications could never change language.
+
+Decision:
+1. For the six fixed restaurant-side types (`StaffReservationCreated`, `StaffReservationCancelled`, `StaffWaitlistEntryCreated`, `StaffReviewCreated`, `StaffLowReviewCreated`, `StaffMessageReceived`) the dashboard shows its own words from `t.notifications.types`, chosen by `type` (`src/lib/notificationText.ts`). The wording mirrors the backend seed templates.
+2. Broadcasts and any type the dashboard does not know keep the server's `title`/`body`, so a new backend type still shows readable text.
+3. The Notifications page gives review and message notifications their own icon and colour.
+
+Consequences: switching the language re-words every staff notification at once, old ones included. A new staff notification type needs words in `en.ts`/`ar.ts` to follow the language; until then it shows the server text.
