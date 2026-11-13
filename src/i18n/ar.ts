@@ -918,7 +918,11 @@ export const ar: TranslationKeys = {
     profileForm: {
       name: 'اسم المطعم',
       description: 'الوصف',
-      cuisineType: 'نوع المطبخ (نص حر)',
+      cuisineType: 'نوع المطبخ',
+      cuisineTypeNone: 'غير محدد',
+      cuisineTypeLoadFailed: 'تعذّر تحميل قائمة المطابخ. حاول لاحقاً.',
+      cuisineTypeLegacy: 'قيمة سابقة',
+      cuisineTypeLegacyHint: 'هذه القيمة كُتبت يدوياً سابقاً، وتبقى كما هي حتى تختار مطبخاً من القائمة.',
     },
     galleryForm: {
       upload: 'رفع صورة',

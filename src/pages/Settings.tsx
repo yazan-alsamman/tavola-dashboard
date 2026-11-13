@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Card, CardTitle } from '@/components/ui/Card'
-import { Input } from '@/components/ui/Input'
+import { Input, Select } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { MaterialIcon } from '@/components/ui/Icon'
@@ -45,8 +45,10 @@ import {
   type WorkingHoursEntry,
 } from '@/api/restaurants'
 import {
+  cuisineTypeChoices,
   listCuisineCategories,
   listOccasionCategories,
+  taxonomyLabel,
 } from '@/api/taxonomy'
 import {
   getCurrentUser,
@@ -204,8 +206,14 @@ export function SettingsPage() {
   const cuisineCatalogQuery = useQuery({
     queryKey: ['taxonomy', 'cuisine'],
     queryFn: ({ signal }) => listCuisineCategories(signal),
-    enabled: activeTab === 'categories',
+    // The profile tab's cuisine-type dropdown uses the same catalog.
+    enabled: activeTab === 'categories' || activeTab === 'profile',
   })
+  const cuisineChoices = cuisineTypeChoices(
+    cuisineCatalogQuery.data ?? [],
+    profile.cuisineType,
+    locale,
+  )
   const occasionCatalogQuery = useQuery({
     queryKey: ['taxonomy', 'occasion'],
     queryFn: ({ signal }) => listOccasionCategories(signal),
@@ -524,11 +532,34 @@ export function SettingsPage() {
               onChange={(v) => setProfile({ ...profile, description: v })}
               multiline
             />
-            <FormField
+            <Select
               label={t.settings.profileForm.cuisineType}
-              value={profile.cuisineType}
-              onChange={(v) => setProfile({ ...profile, cuisineType: v })}
-            />
+              value={cuisineChoices.selectedValue}
+              onChange={(e) => setProfile({ ...profile, cuisineType: e.target.value })}
+              disabled={cuisineCatalogQuery.isLoading}
+              error={
+                cuisineCatalogQuery.isError
+                  ? t.settings.profileForm.cuisineTypeLoadFailed
+                  : undefined
+              }
+              hint={
+                cuisineChoices.legacyValue !== null
+                  ? t.settings.profileForm.cuisineTypeLegacyHint
+                  : undefined
+              }
+            >
+              <option value="">{t.settings.profileForm.cuisineTypeNone}</option>
+              {cuisineChoices.legacyValue !== null && (
+                <option value={cuisineChoices.legacyValue}>
+                  {`${cuisineChoices.legacyValue} (${t.settings.profileForm.cuisineTypeLegacy})`}
+                </option>
+              )}
+              {cuisineChoices.options.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </Select>
             <Button type="submit" disabled={saving}>
               {saving ? t.common.loading : t.common.save}
             </Button>
@@ -625,7 +656,7 @@ export function SettingsPage() {
               loading={cuisineCatalogQuery.isLoading}
               options={(cuisineCatalogQuery.data ?? []).map((c) => ({
                 id: c.cuisineCategoryId,
-                label: c.name,
+                label: taxonomyLabel(c, locale),
               }))}
               selected={selectedCuisineIds}
               onToggle={(id) =>
@@ -637,7 +668,7 @@ export function SettingsPage() {
               loading={occasionCatalogQuery.isLoading}
               options={(occasionCatalogQuery.data ?? []).map((c) => ({
                 id: c.occasionCategoryId,
-                label: c.name,
+                label: taxonomyLabel(c, locale),
               }))}
               selected={selectedOccasionIds}
               onToggle={(id) =>
