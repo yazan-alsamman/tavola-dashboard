@@ -737,6 +737,34 @@ export const ar: TranslationKeys = {
     empty: 'لا توجد إشعارات بعد',
     untitled: 'إشعار',
     loadError: 'تعذر تحميل الإشعارات',
+    staff: {
+      StaffReservationCreated: {
+        title: 'حجز جديد',
+        body: 'حجز زبون طاولة من التطبيق.',
+      },
+      StaffReservationCancelled: {
+        title: 'إلغاء حجز',
+        body: 'ألغى زبون حجزه.',
+      },
+      StaffWaitlistEntryCreated: {
+        title: 'انضمام لقائمة الانتظار',
+        body: 'انضم زبون لقائمة الانتظار من التطبيق.',
+      },
+      StaffReviewCreated: {
+        title: 'تقييم جديد',
+        body: 'قيّم زبون زيارته.',
+      },
+      StaffLowReviewCreated: {
+        title: 'تقييم منخفض',
+        body: 'أعطى زبون زيارته تقييماً منخفضاً. يستحق الرد.',
+      },
+      StaffMessageReceived: {
+        title: 'رسالة جديدة',
+        body: 'أرسل لك زبون رسالة.',
+      },
+    },
+    messageFrom: 'رسالة جديدة من {name}',
+    messageFromBody: 'أرسل لك {name} رسالة. اضغط لفتح المحادثة.',
   },
   messaging: {
     title: 'صندوق الوارد',

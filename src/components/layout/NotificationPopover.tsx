@@ -1,8 +1,10 @@
 import { useState, useRef, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useLocale } from '@/context/LocaleContext'
 import { formatInstantInTimeZone } from '@/lib/branchDateTime'
 import { cn } from '@/lib/utils'
+import { notificationTarget, notificationText } from '@/lib/notificationDisplay'
+import type { NotificationDto } from '@/api/notifications'
 import { MaterialIcon } from '@/components/ui/Icon'
 import { Num } from '@/components/ui/Num'
 import {
@@ -15,6 +17,7 @@ import {
 export function NotificationPopover() {
   const { t, locale } = useLocale()
   const [open, setOpen] = useState(false)
+  const navigate = useNavigate()
   const ref = useRef<HTMLDivElement>(null)
 
   const listQuery = useNotificationsList(1, 6, undefined, open)
@@ -24,6 +27,16 @@ export function NotificationPopover() {
 
   const notifications = listQuery.data?.items ?? []
   const unreadCount = unreadCountQuery.data ?? 0
+
+  /** Marks it read and opens what it is about (a conversation, a booking…). */
+  const handleOpen = (notification: NotificationDto): void => {
+    if (!notification.readAt) markRead.mutate(notification.id)
+    const target = notificationTarget(notification)
+    if (target) {
+      setOpen(false)
+      navigate(target)
+    }
+  }
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -71,10 +84,12 @@ export function NotificationPopover() {
             )}
             {notifications.map((n) => {
               const isUnread = !n.readAt
+              const text = notificationText(n, t)
               return (
                 <button
                   key={n.id}
-                  onClick={() => markRead.mutate(n.id)}
+                  type="button"
+                  onClick={() => handleOpen(n)}
                   className={cn(
                     'w-full flex items-start gap-3 p-4 hover:bg-surface-container-high transition-colors text-start border-b border-outline-variant/20 last:border-0',
                     isUnread && 'bg-primary-container/5',
@@ -88,11 +103,11 @@ export function NotificationPopover() {
                   />
                   <div className="flex-1 min-w-0">
                     <p className="text-body-md font-medium">
-                      {n.title ?? t.notifications.untitled}
+                      {text.title}
                     </p>
-                    {n.body && (
+                    {text.body && (
                       <p className="text-body-sm text-on-surface-variant mt-0.5 line-clamp-2">
-                        {n.body}
+                        {text.body}
                       </p>
                     )}
                     {n.createdAt && (

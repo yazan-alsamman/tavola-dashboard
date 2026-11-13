@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom'
 import { MaterialIcon } from '@/components/ui/Icon'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Button } from '@/components/ui/Button'
@@ -6,6 +7,8 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { useLocale } from '@/context/LocaleContext'
 import { formatInstantInTimeZone } from '@/lib/branchDateTime'
 import { cn } from '@/lib/utils'
+import { notificationTarget, notificationText } from '@/lib/notificationDisplay'
+import type { NotificationDto } from '@/api/notifications'
 import {
   useMarkAllNotificationsRead,
   useMarkNotificationRead,
@@ -20,6 +23,9 @@ const typeIcons: Record<string, string> = {
   StaffReservationCreated: 'event_available',
   StaffReservationCancelled: 'cancel',
   StaffWaitlistEntryCreated: 'hourglass_empty',
+  StaffReviewCreated: 'star',
+  StaffLowReviewCreated: 'star',
+  StaffMessageReceived: 'chat',
   OrganizationMemberBroadcast: 'campaign',
   PlatformAdminBroadcast: 'campaign',
 }
@@ -28,6 +34,9 @@ const typeColors: Record<string, string> = {
   StaffReservationCreated: 'bg-info-light text-info',
   StaffReservationCancelled: 'bg-danger-light text-danger',
   StaffWaitlistEntryCreated: 'bg-success-light text-success',
+  StaffReviewCreated: 'bg-info-light text-info',
+  StaffLowReviewCreated: 'bg-danger-light text-danger',
+  StaffMessageReceived: 'bg-primary-light text-primary',
   OrganizationMemberBroadcast: 'bg-primary-light text-primary',
   PlatformAdminBroadcast: 'bg-primary-light text-primary',
 }
@@ -44,6 +53,7 @@ function notificationColor(type: string | null | undefined): string {
 
 export function NotificationsPage() {
   const { t, locale } = useLocale()
+  const navigate = useNavigate()
   const listQuery = useNotificationsList(1, 50)
   const unreadCountQuery = useUnreadNotificationCount()
   const markRead = useMarkNotificationRead()
@@ -52,8 +62,11 @@ export function NotificationsPage() {
   const notifications = listQuery.data?.items ?? []
   const unreadCount = unreadCountQuery.data ?? 0
 
-  const handleMarkRead = (id: string): void => {
-    markRead.mutate(id)
+  /** Marks it read and opens what it is about (a conversation, a booking…). */
+  const handleOpen = (notification: NotificationDto): void => {
+    if (!notification.readAt) markRead.mutate(notification.id)
+    const target = notificationTarget(notification)
+    if (target) navigate(target)
   }
 
   const handleMarkAllRead = (): void => {
@@ -101,6 +114,7 @@ export function NotificationsPage() {
       <div className="space-y-3 max-w-3xl">
         {notifications.map((n) => {
           const isUnread = !n.readAt
+          const text = notificationText(n, t)
           return (
             <Card
               key={n.id}
@@ -108,7 +122,15 @@ export function NotificationsPage() {
                 'transition-colors cursor-pointer',
                 isUnread && 'border-primary/30 bg-primary-light/30',
               )}
-              onClick={() => handleMarkRead(n.id)}
+              role="button"
+              tabIndex={0}
+              onClick={() => handleOpen(n)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault()
+                  handleOpen(n)
+                }
+              }}
             >
               <div className="flex items-start gap-4">
                 <div className={cn('p-2.5 rounded-lg shrink-0', notificationColor(n.type))}>
@@ -121,12 +143,12 @@ export function NotificationsPage() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <p className="font-semibold text-on-surface text-sm">
-                      {n.title ?? t.notifications.untitled}
+                      {text.title}
                     </p>
                     {isUnread && <span className="w-2 h-2 rounded-full bg-primary shrink-0" />}
                   </div>
-                  {n.body && (
-                    <p className="text-sm text-on-surface-variant mt-1">{n.body}</p>
+                  {text.body && (
+                    <p className="text-sm text-on-surface-variant mt-1">{text.body}</p>
                   )}
                   {n.createdAt && (
                     <p className="text-xs text-on-surface-variant mt-2">
