@@ -1,3 +1,4 @@
+import { useLocale } from '@/context/LocaleContext'
 import { cn } from '@/lib/utils'
 import { MaterialIcon } from '@/components/ui/Icon'
 import { Skeleton } from '@/components/ui/Skeleton'
@@ -195,15 +196,16 @@ export function DataTableRowActions({
 export function DataTableSkeleton({
   columns,
   rows = 5,
-  label = 'Loading',
+  label,
 }: {
   columns: number
   rows?: number
   label?: string
 }) {
+  const { t } = useLocale()
   return (
     <div role="status" aria-live="polite" aria-busy="true">
-      <span className="sr-only">{label}</span>
+      <span className="sr-only">{label ?? t.common.loading}</span>
       <div className="space-y-2 p-4">
         {Array.from({ length: rows }, (_, row) => (
           <div key={row} className="flex gap-3">

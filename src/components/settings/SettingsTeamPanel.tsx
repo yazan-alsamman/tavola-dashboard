@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import type { OrganizationInviteRole } from '@/api/organizations'
-import { isApiError } from '@/api/errors'
 import { Button } from '@/components/ui/Button'
 import { Card, CardTitle } from '@/components/ui/Card'
 import { EmptyState } from '@/components/ui/EmptyState'
@@ -17,6 +16,7 @@ import {
   useRevokeOrganizationInvitation,
   useTransferOrganizationOwnership,
 } from '@/hooks/useOrganizationQueries'
+import { apiErrorText } from '@/lib/apiErrorText'
 
 const INVITE_ROLES: OrganizationInviteRole[] = ['Admin', 'Billing', 'Staff']
 
@@ -51,7 +51,7 @@ export function SettingsTeamPanel() {
           setEmail('')
         },
         onError: (err) => {
-          toast('error', isApiError(err) ? err.message : tf.inviteError)
+          toast('error', apiErrorText(err, t, tf.inviteError))
         },
       },
     )
@@ -144,7 +144,7 @@ export function SettingsTeamPanel() {
                               onError: (err) =>
                                 toast(
                                   'error',
-                                  isApiError(err) ? err.message : tf.roleChangeError,
+                                  apiErrorText(err, t, tf.roleChangeError),
                                 ),
                             },
                           )
@@ -169,7 +169,7 @@ export function SettingsTeamPanel() {
                             onError: (err) =>
                               toast(
                                 'error',
-                                isApiError(err) ? err.message : tf.transferError,
+                                apiErrorText(err, t, tf.transferError),
                               ),
                           })
                         }}
@@ -189,7 +189,7 @@ export function SettingsTeamPanel() {
                             onError: (err) =>
                               toast(
                                 'error',
-                                isApiError(err) ? err.message : tf.removeError,
+                                apiErrorText(err, t, tf.removeError),
                               ),
                           })
                         }}
@@ -242,7 +242,7 @@ export function SettingsTeamPanel() {
                           onError: (err) =>
                             toast(
                               'error',
-                              isApiError(err) ? err.message : tf.revokeError,
+                              apiErrorText(err, t, tf.revokeError),
                             ),
                         })
                       }}

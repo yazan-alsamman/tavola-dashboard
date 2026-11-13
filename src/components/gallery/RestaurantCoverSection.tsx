@@ -1,8 +1,7 @@
 import { useRef } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { isApiError } from '@/api/errors'
 import {
-  getPublicRestaurantCover,
+  getPublicBranchCover,
   uploadRestaurantCover,
 } from '@/api/restaurants'
 import { Button } from '@/components/ui/Button'
@@ -10,14 +9,25 @@ import { MaterialIcon } from '@/components/ui/Icon'
 import { useAuth } from '@/context/AuthContext'
 import { useLocale } from '@/context/LocaleContext'
 import { useToast } from '@/context/ToastContext'
+import { apiErrorText } from '@/lib/apiErrorText'
 
-function coverKey(restaurantId: string) {
-  return ['restaurants', restaurantId, 'cover'] as const
+function coverKey(restaurantId: string, branchId: string) {
+  return ['restaurants', restaurantId, 'branches', branchId, 'cover'] as const
 }
 
 const ACCEPTED_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp'])
 
-export function RestaurantCoverSection({ restaurantId }: { restaurantId: string }) {
+/**
+ * The cover of one branch (backend ADR-051), as the guest app shows it: the
+ * branch's own cover, or the restaurant cover until the branch has one.
+ */
+export function RestaurantCoverSection({
+  restaurantId,
+  branchId,
+}: {
+  restaurantId: string
+  branchId: string
+}) {
   const { t } = useLocale()
   const { toast } = useToast()
   const { user } = useAuth()
@@ -28,18 +38,20 @@ export function RestaurantCoverSection({ restaurantId }: { restaurantId: string 
   const canUpload = role === 'Owner' || role === 'Admin'
 
   const coverQuery = useQuery({
-    queryKey: coverKey(restaurantId),
-    queryFn: ({ signal }) => getPublicRestaurantCover(restaurantId, signal),
+    queryKey: coverKey(restaurantId, branchId),
+    queryFn: ({ signal }) => getPublicBranchCover(restaurantId, branchId, signal),
   })
 
   const uploadMutation = useMutation({
-    mutationFn: (file: File) => uploadRestaurantCover(restaurantId, file),
+    mutationFn: (file: File) => uploadRestaurantCover(restaurantId, file, branchId),
     onSuccess: (cover) => {
-      queryClient.setQueryData(coverKey(restaurantId), cover)
+      queryClient.setQueryData(coverKey(restaurantId, branchId), {
+        coverImageUrl: cover.coverImageUrl,
+      })
       toast('success', copy.success)
     },
     onError: (err) => {
-      toast('error', isApiError(err) ? err.message : t.gallery.errors.unknown)
+      toast('error', apiErrorText(err, t, t.gallery.errors.unknown))
     },
   })
 

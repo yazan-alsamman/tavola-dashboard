@@ -9,6 +9,7 @@ import { useLocale } from '@/context/LocaleContext'
 import type { AreaDraft } from '@/hooks/useFloorPlanEditor'
 import { AREA_COLOR_PRESETS } from '@/lib/floorGrid'
 import { cn } from '@/lib/utils'
+import { apiErrorText } from '@/lib/apiErrorText'
 
 interface FloorAreaDialogProps {
   open: boolean
@@ -77,7 +78,7 @@ export function FloorAreaDialog({
       await onSubmit({ name: trimmed, color, features })
       onClose()
     } catch (err) {
-      setError(err instanceof Error ? err.message : t.inventory.errors.unknown)
+      setError(apiErrorText(err, t, t.inventory.errors.unknown))
     } finally {
       setPending(false)
     }

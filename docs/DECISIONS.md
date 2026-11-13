@@ -516,7 +516,7 @@ Consequences:
 Both pages need the backend release that adds these routes. Against an older backend they show the load-error state.
 
 
-> **Numbering note.** The CR round 2 decisions below reuse the numbers ADR-016 to ADR-020, which earlier entries above also use. Cite these as "ADR-0NN (CR round 2)". The next new decision is ADR-029.
+> **Numbering note.** The CR round 2 decisions below reuse the numbers ADR-016 to ADR-020, which earlier entries above also use. Cite these as "ADR-0NN (CR round 2)". The next new decision is ADR-032.
 
 ## ADR-016 — Floors, the table queue, offer bookings and no broadcast (CR round 2)
 
@@ -607,7 +607,45 @@ Decision:
 
 Consequences: one notification request per 20 seconds per open dashboard. A message can take up to 20 seconds to alert. Sound only plays after the user has interacted with the page, as browsers require.
 
-## ADR-028 — Cuisine type is picked from the cuisine category list
+## ADR-028 — Working hours, currency and timezone per branch; every text in both languages
+
+Context: the owner wants working hours, currency and timezone to belong to each branch, not the whole restaurant (backend ADR-050), and every word of the dashboard to show in the selected language. Restaurant settings still had a restaurant-wide hours tab and English-only reservation rule labels; the hours editors had English weekday names and no way to close a day; and errors showed the backend's English `message` even in Arabic.
+
+Decision:
+1. Settings drops the Working Hours tab and the timezone/currency fields. The Reservation Rules tab says these are set per branch and links to Branches. `PATCH /restaurants/:id/settings` still sends the loaded `timezone`/`defaultCurrency` back unchanged, because the backend body requires them.
+2. Branches edits hours with `WeeklyHoursEditor` (`src/components/branches/`): translated weekday names, an open/closed switch per day, and a note that a closing time before the opening time runs past midnight. A closed day is sent as no entry (`weekToEntries`), matching the backend rule that a weekday without a row is closed.
+3. `apiErrorText(err, t, fallback)` (`src/lib/apiErrorText.ts`) picks an error's text: the dictionary's `apiErrors.serverMessages` is `show` in English (the backend's specific message) and `hide` in Arabic, where the translated `apiErrors.codes[code]` is used, falling back to the caller's translated text. Every page and component uses it instead of `err.message`.
+4. UI primitives (`Skeleton`, `DataTableSkeleton`, `ErrorState`, `PageHeader`) default their screen-reader and retry labels from `t.common`; the calendar arrows and the menu availability weekdays use translated labels.
+
+Consequences: the restaurant-level `GET/PATCH /restaurants/:id/working-hours` calls are gone from the dashboard. In Arabic, a validation error shows a general translated sentence instead of the backend's specific English detail.
+
+
+## ADR-029 — Rules, photos and cover per branch; bilingual restaurant profile; Settings as in the owner's sheets
+
+Context: the owner's Settings and Branches sheets (2026-11-13) move reservation rules, photos and the cover to each branch, keep name, description, cuisine and categories on the restaurant, and ask for every label in the selected language. The backend now stores rules per branch (`/branches/:branchId/settings`), takes `branchId` on gallery and cover calls (backend ADR-051), stores the name and description in Arabic and English (backend ADR-052), and describes each session's browser and system.
+
+Decision:
+1. Branches gets a Reservation rules dialog (`BranchRulesForm`) with ready-made choices for length, slot interval, cancellation window, pending timeout, late grace and reminder (`formatDuration`, `withCurrent` in `src/lib/durationLabel.ts` keep a saved value that is not a preset). Settings loses its Rules tab and no longer calls `/restaurants/:id/settings`. This replaces ADR-028 point 1.
+2. The Photos page works on the selected branch: gallery list, upload, delete, order and cover all send `branchId`; the cover preview reads the public branch discovery endpoint. The Branches page has a Photos button that selects the branch and opens it. Settings loses its Gallery tab (ADR-026 point 4 no longer applies).
+3. Settings → Profile edits the name and description in Arabic and in English (`splitByLanguage` files older single-language text by script). The shell, Dashboard, Menu and Branches show the name in the selected language with `restaurantName`.
+4. Hours start on Saturday (`WEEK_ORDER`). Account language and preferred currency are dropdowns (`src/lib/currencies.ts`, names from `Intl.DisplayNames`). Security lists each session as "browser on system" with sign-in and last-used dates.
+
+Consequences: a branch that never saved rules shows the restaurant's rules until it does. Without `branchId` the backend answers gallery reads for the oldest branch, which keeps the 1.0.2 app working.
+
+## ADR-030 — Venue type, closures, booking limits, branch plan, front desk and setup guide
+
+Context: the owner asked for the proposed additions to Branches and Settings, except the map items. The backend adds them in ADR-053: venue type and features per branch, temporary closures, an auto-approval party limit, minimum notice, furthest day ahead and a daily guest cap, a free trial and pause per branch, and a Front Desk role with the `reservations:today-only` permission.
+
+Decision:
+1. The branch form edits venue type and features (`BranchVenueFields`); the branch card shows them with the plan badge (`BranchPlanBadge`).
+2. Branches has a Temporary closure dialog (`BranchClosuresPanel`) and a Pause/Resume button (`BranchPauseButton`). Settings → Subscription lists every branch's plan with the same button (`BranchPlansCard`). Billing stays with the organization.
+3. `BranchRulesForm` adds the auto-approval limit and an "Extra booking limits" group. These limits apply to bookings from the app only; staff can still book by phone.
+4. Staff shows role names and descriptions in the selected language (`roleLabel`). A user holding `reservations:today-only` (`useIsTodayOnly`) sees Reservations locked to today with a note; the backend enforces the same window.
+5. The Dashboard shows a setup guide (`SetupGuideCard`, `useSetupProgress`, `src/lib/setupProgress.ts`) with nine steps, a percentage and the next step. It hides at 100% or when dismissed.
+
+Consequences: a paused branch disappears from guest discovery and takes no online bookings; staff keep its reservations. The Front Desk role exists only after `prisma db seed` runs on the server.
+
+## ADR-031 — Cuisine type is picked from the cuisine category list
 
 Context: the restaurant profile had a free-text "cuisine type", so owners typed values the app could not group or translate. The backend now accepts only the name or slug of an active cuisine category for `cuisineType`, and cuisine/occasion categories carry an Arabic `nameAr`.
 

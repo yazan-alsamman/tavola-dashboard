@@ -10,13 +10,13 @@ import {
   rejectReservation,
   type ReservationStatusDto,
 } from '@/api/reservations'
-import { isApiError } from '@/api/errors'
 import { Button } from '@/components/ui/Button'
 import { ConfirmDialog } from '@/components/ui/Modal'
 import { DropdownMenu, DropdownMenuItem } from '@/components/ui/DropdownMenu'
 import { useLocale } from '@/context/LocaleContext'
 import { useToast } from '@/context/ToastContext'
 import { reservationKeys } from '@/lib/queryKeys'
+import { apiErrorText } from '@/lib/apiErrorText'
 
 type ActionKey = 'approve' | 'reject' | 'complete' | 'noshow' | 'arrived' | 'cancel'
 type DestructiveAction = 'reject' | 'noshow' | 'cancel'
@@ -97,7 +97,7 @@ export function ReservationActions({
                   : t.reservations.actions.cancelSuccess
       toast('success', message)
     } catch (err) {
-      toast('error', isApiError(err) ? err.message : t.reservations.errors.unknown)
+      toast('error', apiErrorText(err, t, t.reservations.errors.unknown))
     } finally {
       setBusy(null)
     }

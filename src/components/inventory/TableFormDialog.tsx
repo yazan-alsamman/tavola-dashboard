@@ -12,6 +12,7 @@ import {
   type TableShapeChoice,
 } from '@/lib/floorGrid'
 import { cn } from '@/lib/utils'
+import { apiErrorText } from '@/lib/apiErrorText'
 
 const SHAPES: TableShapeChoice[] = ['square', 'round', 'long']
 
@@ -119,7 +120,7 @@ export function TableFormDialog({
       })
       onClose()
     } catch (err) {
-      setError(err instanceof Error ? err.message : t.inventory.errors.unknown)
+      setError(apiErrorText(err, t, t.inventory.errors.unknown))
     } finally {
       setPending(false)
     }

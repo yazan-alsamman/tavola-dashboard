@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { isApiError } from '@/api/errors'
 import type { BranchWaitlistItemDto } from '@/api/waitlist'
 import { Drawer } from '@/components/ui/Drawer'
 import { MaterialIcon } from '@/components/ui/Icon'
@@ -22,6 +21,7 @@ import {
 import { formatDate, formatRelative, formatTime } from '@/lib/format'
 import { cn, getTodayISO } from '@/lib/utils'
 import { Num } from '@/components/ui/Num'
+import { apiErrorText } from '@/lib/apiErrorText'
 
 /** Still in the queue: everything else (seated, cancelled, expired) has left it. */
 const ACTIVE_STATUSES = new Set(['Waiting', 'Notified'])
@@ -67,7 +67,7 @@ export function WaitlistPage({ embedded = false }: WaitlistPageProps) {
   const cancelMutation = useCancelWaitlistEntryMutation()
 
   const errorMessage = (err: unknown): string =>
-    isApiError(err) ? err.message : t.waitlist.errors.unknown
+    apiErrorText(err, t, t.waitlist.errors.unknown)
 
   const handleJoin = async (e: React.FormEvent): Promise<void> => {
     e.preventDefault()
