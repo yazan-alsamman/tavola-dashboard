@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { MaterialIcon } from '@/components/ui/Icon'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { PriceLevelStars } from '@/components/branches/PriceLevelStars'
 import { Button } from '@/components/ui/Button'
 import { Card, CardTitle } from '@/components/ui/Card'
-import { Input } from '@/components/ui/Input'
+import { Input, Select } from '@/components/ui/Input'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Modal } from '@/components/ui/Modal'
 import { useLocale } from '@/context/LocaleContext'
@@ -19,9 +20,20 @@ import {
   type BranchDto,
   type BranchWriteRequest,
 } from '@/api/branches'
-import type { WorkingHoursEntry } from '@/api/restaurants'
-import { isApiError } from '@/api/errors'
 import { BranchLocationField } from '@/components/branches/BranchLocationField'
+import { WeeklyHoursEditor } from '@/components/branches/WeeklyHoursEditor'
+import { BranchRulesForm } from '@/components/branches/BranchRulesForm'
+import { BranchVenueFields } from '@/components/branches/BranchVenueFields'
+import { BranchClosuresPanel } from '@/components/branches/BranchClosuresPanel'
+import { BranchPauseButton, BranchPlanBadge } from '@/components/branches/BranchPlanStatus'
+import {
+  entriesToWeek,
+  weekToEntries,
+  type WeekdayHours,
+} from '@/components/branches/weeklyHours'
+import { apiErrorText } from '@/lib/apiErrorText'
+import { restaurantName } from '@/lib/restaurantName'
+import { currencyLabel, currencyOptions } from '@/lib/currencies'
 
 const emptyForm: BranchWriteRequest = {
   city: '',
@@ -31,6 +43,8 @@ const emptyForm: BranchWriteRequest = {
   currency: 'SYP',
   timezone: 'Asia/Damascus',
   phone: '',
+  venueType: null,
+  features: [],
 }
 
 function branchPinIsValid(
@@ -44,31 +58,6 @@ function branchPinIsValid(
   return latitude >= -90 && latitude <= 90 && longitude >= -180 && longitude <= 180
 }
 
-const DAY_LABELS = [
-  'Sunday',
-  'Monday',
-  'Tuesday',
-  'Wednesday',
-  'Thursday',
-  'Friday',
-  'Saturday',
-]
-
-function entriesToWeek(entries: WorkingHoursEntry[]): WorkingHoursEntry[] {
-  return DAY_LABELS.map((_, dayOfWeek) => {
-    const found = entries.find((e) => e.dayOfWeek === dayOfWeek)
-    return (
-      found ?? {
-        dayOfWeek,
-        openingTime: '09:00',
-        closingTime: '22:00',
-        breakStartTime: null,
-        breakEndTime: null,
-      }
-    )
-  })
-}
-
 function branchToForm(branch: BranchDto): BranchWriteRequest {
   return {
     city: branch.city,
@@ -80,11 +69,13 @@ function branchToForm(branch: BranchDto): BranchWriteRequest {
     currency: branch.currency ?? '',
     timezone: branch.timezone,
     phone: branch.phone ?? '',
+    venueType: branch.venueType ?? null,
+    features: branch.features ?? [],
   }
 }
 
 export function BranchesPage() {
-  const { t } = useLocale()
+  const { t, locale } = useLocale()
   const { toast } = useToast()
   const {
     status,
@@ -93,12 +84,16 @@ export function BranchesPage() {
     selectedRestaurant,
     formatBranchLabel,
     refreshScope,
+    selectBranch,
   } = useRestaurantScope()
+  const navigate = useNavigate()
   const [showForm, setShowForm] = useState(false)
   const [editingBranch, setEditingBranch] = useState<BranchDto | null>(null)
   const [hoursBranch, setHoursBranch] = useState<BranchDto | null>(null)
+  const [rulesBranch, setRulesBranch] = useState<BranchDto | null>(null)
+  const [closuresBranch, setClosuresBranch] = useState<BranchDto | null>(null)
   const [form, setForm] = useState<BranchWriteRequest>(emptyForm)
-  const [hours, setHours] = useState<WorkingHoursEntry[]>(entriesToWeek([]))
+  const [hours, setHours] = useState<WeekdayHours[]>(entriesToWeek([]))
   const [hoursLoading, setHoursLoading] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
@@ -118,7 +113,7 @@ export function BranchesPage() {
       })
       .catch((err) => {
         if (!ac.signal.aborted) {
-          toast('error', isApiError(err) ? err.message : t.login.errors.unknown)
+          toast('error', apiErrorText(err, t, t.login.errors.unknown))
         }
       })
       .finally(() => {
@@ -126,6 +121,12 @@ export function BranchesPage() {
       })
     return () => ac.abort()
   }, [restaurantId, hoursBranch, t.login.errors.unknown, toast])
+
+  /** Photos and cover live on the Photos page, scoped to the selected branch. */
+  const openPhotos = (branch: BranchDto) => {
+    selectBranch(branch.branchId)
+    navigate('/app/gallery')
+  }
 
   const openCreate = () => {
     setEditingBranch(null)
@@ -175,7 +176,7 @@ export function BranchesPage() {
       closeForm()
       refreshScope()
     } catch (err) {
-      toast('error', isApiError(err) ? err.message : t.login.errors.unknown)
+      toast('error', apiErrorText(err, t, t.login.errors.unknown))
     } finally {
       setSubmitting(false)
     }
@@ -189,7 +190,7 @@ export function BranchesPage() {
       toast('success', t.common.delete)
       refreshScope()
     } catch (err) {
-      toast('error', isApiError(err) ? err.message : t.login.errors.unknown)
+      toast('error', apiErrorText(err, t, t.login.errors.unknown))
     } finally {
       setDeletingId(null)
     }
@@ -203,13 +204,13 @@ export function BranchesPage() {
       const updated = await updateBranchWorkingHours(
         restaurantId,
         hoursBranch.branchId,
-        { entries: hours },
+        { entries: weekToEntries(hours) },
       )
-      setHours(entriesToWeek(updated.entries ?? hours))
+      setHours(entriesToWeek(updated.entries ?? weekToEntries(hours)))
       toast('success', t.common.save)
       setHoursBranch(null)
     } catch (err) {
-      toast('error', isApiError(err) ? err.message : t.login.errors.unknown)
+      toast('error', apiErrorText(err, t, t.login.errors.unknown))
     } finally {
       setSubmitting(false)
     }
@@ -221,7 +222,7 @@ export function BranchesPage() {
         title={t.branches.title}
         subtitle={
           selectedRestaurant
-            ? `${t.branches.subtitle} · ${selectedRestaurant.name}`
+            ? `${t.branches.subtitle} · ${restaurantName(selectedRestaurant, locale)}`
             : t.branches.subtitle
         }
         actions={
@@ -265,12 +266,33 @@ export function BranchesPage() {
                   <p className="text-sm text-on-surface-variant mt-1">
                     {branch.address}
                   </p>
+                  <div className="mt-2">
+                    <BranchPlanBadge branch={branch} />
+                  </div>
                 </div>
                 <div className="p-2 rounded-lg bg-primary/10 text-primary">
                   <MaterialIcon name="store" size={20} />
                 </div>
               </div>
               <dl className="text-sm space-y-1 text-on-surface-variant">
+                <div className="flex justify-between gap-2">
+                  <dt>{t.branches.venue.type}</dt>
+                  <dd className="text-on-surface">
+                    {branch.venueType
+                      ? t.branches.venue.types[branch.venueType]
+                      : t.branches.venue.typeNone}
+                  </dd>
+                </div>
+                {(branch.features ?? []).length > 0 && (
+                  <div className="flex justify-between gap-2">
+                    <dt>{t.branches.venue.features}</dt>
+                    <dd className="text-on-surface text-end">
+                      {(branch.features ?? [])
+                        .map((feature) => t.branches.venue.featureNames[feature])
+                        .join(t.common.listSeparator)}
+                    </dd>
+                  </div>
+                )}
                 <div className="flex justify-between gap-2">
                   <dt>{t.branches.fields.timezone}</dt>
                   <dd className="text-on-surface">{branch.timezone}</dd>
@@ -284,7 +306,7 @@ export function BranchesPage() {
                 {branch.currency && (
                   <div className="flex justify-between gap-2">
                     <dt>{t.branches.fields.currency}</dt>
-                    <dd className="text-on-surface">{branch.currency}</dd>
+                    <dd className="text-on-surface">{currencyLabel(branch.currency, locale)}</dd>
                   </div>
                 )}
                 <div className="flex justify-between gap-2">
@@ -317,6 +339,30 @@ export function BranchesPage() {
                 >
                   {t.branches.workingHours}
                 </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setRulesBranch(branch)}
+                >
+                  {t.branches.rules.title}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setClosuresBranch(branch)}
+                >
+                  {t.branches.closures.button}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => openPhotos(branch)}
+                >
+                  {t.branches.photos}
+                </Button>
+                {restaurantId && (
+                  <BranchPauseButton restaurantId={restaurantId} branch={branch} />
+                )}
                 <Button
                   size="sm"
                   variant="secondary"
@@ -377,12 +423,24 @@ export function BranchesPage() {
               onChange={(v) => setForm({ ...form, timezone: v })}
               required
             />
-            <Field
+            <Select
               label={t.branches.fields.currency}
               value={form.currency ?? ''}
-              onChange={(v) => setForm({ ...form, currency: v })}
-            />
+              onChange={(e) => setForm({ ...form, currency: e.target.value })}
+            >
+              {currencyOptions(form.currency).map((code) => (
+                <option key={code} value={code}>
+                  {currencyLabel(code, locale)}
+                </option>
+              ))}
+            </Select>
           </div>
+          <BranchVenueFields
+            venueType={form.venueType ?? null}
+            features={form.features ?? []}
+            disabled={submitting}
+            onChange={(venue) => setForm((current) => ({ ...current, ...venue }))}
+          />
           <BranchLocationField
             latitude={form.latitude ?? null}
             longitude={form.longitude ?? null}
@@ -418,45 +476,7 @@ export function BranchesPage() {
           </p>
         ) : (
           <form className="space-y-3" onSubmit={(e) => void saveHours(e)}>
-            {hours.map((entry) => (
-              <div
-                key={entry.dayOfWeek}
-                className="flex flex-wrap items-center gap-3"
-              >
-                <span className="w-28 text-sm font-medium text-on-surface">
-                  {DAY_LABELS[entry.dayOfWeek]}
-                </span>
-                <Input
-                  type="time"
-                  value={entry.openingTime}
-                  className="w-32"
-                  onChange={(e) => {
-                    const next = [...hours]
-                    next[entry.dayOfWeek] = {
-                      ...entry,
-                      openingTime: e.target.value,
-                    }
-                    setHours(next)
-                  }}
-                />
-                <span className="text-on-surface-variant text-sm">
-                  {t.branches.to}
-                </span>
-                <Input
-                  type="time"
-                  value={entry.closingTime}
-                  className="w-32"
-                  onChange={(e) => {
-                    const next = [...hours]
-                    next[entry.dayOfWeek] = {
-                      ...entry,
-                      closingTime: e.target.value,
-                    }
-                    setHours(next)
-                  }}
-                />
-              </div>
-            ))}
+            <WeeklyHoursEditor value={hours} onChange={setHours} disabled={submitting} />
             <div className="flex justify-end gap-3 pt-2">
               <Button
                 type="button"
@@ -470,6 +490,32 @@ export function BranchesPage() {
               </Button>
             </div>
           </form>
+        )}
+      </Modal>
+
+      <Modal
+        open={Boolean(rulesBranch)}
+        onClose={() => setRulesBranch(null)}
+        title={t.branches.rules.title}
+        description={rulesBranch ? formatBranchLabel(rulesBranch) : undefined}
+      >
+        {rulesBranch && restaurantId && (
+          <BranchRulesForm
+            restaurantId={restaurantId}
+            branchId={rulesBranch.branchId}
+            onDone={() => setRulesBranch(null)}
+          />
+        )}
+      </Modal>
+
+      <Modal
+        open={Boolean(closuresBranch)}
+        onClose={() => setClosuresBranch(null)}
+        title={t.branches.closures.title}
+        description={closuresBranch ? formatBranchLabel(closuresBranch) : undefined}
+      >
+        {closuresBranch && restaurantId && (
+          <BranchClosuresPanel restaurantId={restaurantId} branchId={closuresBranch.branchId} />
         )}
       </Modal>
     </div>

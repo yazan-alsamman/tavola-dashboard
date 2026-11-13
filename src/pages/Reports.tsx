@@ -21,7 +21,6 @@ import { Button } from '@/components/ui/Button'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { useLocale } from '@/context/LocaleContext'
 import { useRestaurantScope } from '@/context/RestaurantScopeContext'
-import { isApiError } from '@/api/errors'
 import {
   useAnalyticsDateRange,
   useCustomerInsightsQuery,
@@ -43,6 +42,7 @@ import {
   formatRate,
 } from '@/lib/analyticsPayload'
 import { reservationStatusLabel } from '@/lib/statusLabel'
+import { apiErrorText } from '@/lib/apiErrorText'
 
 const COLORS = ['#461599', '#5e35b1', '#6c45c0', '#ecdeee', '#7d5f9a', '#dc2626']
 
@@ -88,9 +88,7 @@ export function ReportsPage() {
   )
 
   const primaryError =
-    summaryQuery.error && isApiError(summaryQuery.error)
-      ? summaryQuery.error.message
-      : null
+    summaryQuery.error && apiErrorText(summaryQuery.error, t, t.login.errors.unknown)
 
   if (scopeLoading) {
     return (

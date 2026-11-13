@@ -19,6 +19,7 @@ import { FilterChip } from '@/components/ui/FilterChip'
 import { Input, Select } from '@/components/ui/Input'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { Num } from '@/components/ui/Num'
+import { useIsTodayOnly } from '@/hooks/usePermissions'
 import { useLocale } from '@/context/LocaleContext'
 import { useRestaurantScope } from '@/context/RestaurantScopeContext'
 import {
@@ -262,7 +263,9 @@ function BookingsTab({ initialNewBookingStart }: { initialNewBookingStart: strin
   } = useRestaurantScope()
 
   const [statusFilter, setStatusFilter] = useState<ReservationStatusDto | ''>('')
-  const [windowFilter, setWindowFilter] = useState<WindowFilter>('today')
+  const todayOnly = useIsTodayOnly()
+  const [chosenWindow, setWindowFilter] = useState<WindowFilter>('today')
+  const windowFilter: WindowFilter = todayOnly ? 'today' : chosenWindow
   const [searchText, setSearchText] = useState('')
   const [createOpen, setCreateOpen] = useState(initialNewBookingStart !== null)
 
@@ -402,6 +405,9 @@ function BookingsTab({ initialNewBookingStart }: { initialNewBookingStart: strin
 
       {listQuery.isSuccess && (
         <>
+          {todayOnly ? (
+            <p className="mb-3 text-sm text-on-surface-variant">{t.reservations.list.todayOnlyNote}</p>
+          ) : (
           <div className="mb-3 flex flex-wrap gap-2" role="group" aria-label={t.reservations.list.filterStatus}>
             {(
               [
@@ -418,6 +424,7 @@ function BookingsTab({ initialNewBookingStart }: { initialNewBookingStart: strin
               />
             ))}
           </div>
+          )}
           <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center">
             <Input
               className="sm:max-w-xs"

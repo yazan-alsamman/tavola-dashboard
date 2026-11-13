@@ -1,3 +1,4 @@
+import { useLocale } from '@/context/LocaleContext'
 import { MaterialIcon } from '@/components/ui/Icon'
 import { Button } from '@/components/ui/Button'
 import { cn } from '@/lib/utils'
@@ -23,12 +24,13 @@ export function ErrorState({
   title,
   description,
   detail,
-  retryLabel = 'Try again',
+  retryLabel,
   onRetry,
   action,
   size = 'inline',
   className,
 }: ErrorStateProps) {
+  const { t } = useLocale()
   return (
     <div
       role="alert"
@@ -74,7 +76,7 @@ export function ErrorState({
           {onRetry && (
             <Button variant="outline" size="md" onClick={onRetry}>
               <MaterialIcon name="sync" size={16} />
-              {retryLabel}
+              {retryLabel ?? t.common.retry}
             </Button>
           )}
           {action}

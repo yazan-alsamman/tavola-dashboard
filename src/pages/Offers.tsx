@@ -49,6 +49,7 @@ import {
 } from '@/hooks/useOfferMutations'
 import { useCanManageOffers } from '@/hooks/usePermissions'
 import { formatDate, formatDateRange } from '@/lib/format'
+import { apiErrorText } from '@/lib/apiErrorText'
 
 const PAGE_SIZE = 20
 
@@ -155,7 +156,7 @@ export function OffersPage() {
   const deleteMutation = useDeleteOfferMutation()
 
   const mapError = (err: unknown): string =>
-    isApiError(err) ? err.message : t.offers.errors.unknown
+    apiErrorText(err, t, t.offers.errors.unknown)
 
   const openCreate = () => {
     setEditingOffer(null)

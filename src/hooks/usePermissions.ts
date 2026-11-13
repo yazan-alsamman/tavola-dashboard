@@ -74,3 +74,11 @@ export function useCanManageMenu(): boolean {
   if (orgRole === 'Owner' || orgRole === 'Admin') return true
   return user.permissions.includes('menu:manage')
 }
+
+/** Backend ADR-053: the Front Desk role reads only today's reservations. */
+export const TODAY_ONLY_PERMISSION = 'reservations:today-only'
+
+/** Advisory: the server already limits the list; this only hides the other windows. */
+export function useIsTodayOnly(): boolean {
+  return useHasPermission(TODAY_ONLY_PERMISSION)
+}

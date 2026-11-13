@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { restaurantName } from '@/lib/restaurantName'
 import { Link } from 'react-router-dom'
 import { useTheme } from '@/context/ThemeContext'
 import { useLocale } from '@/context/LocaleContext'
@@ -64,7 +65,7 @@ function useIsLargeScreen() {
 
 export function Header() {
   const { theme, toggleTheme } = useTheme()
-  const { t, toggleLocale } = useLocale()
+  const { t, locale, toggleLocale } = useLocale()
   const { toggle, isCollapsed, toggleCollapse } = useSidebar()
   const { user, logout } = useAuth()
   const {
@@ -225,7 +226,7 @@ export function Header() {
             >
               {restaurants.map((r) => (
                 <option key={r.restaurantId} value={r.restaurantId}>
-                  {r.name}
+                  {restaurantName(r, locale)}
                 </option>
               ))}
             </select>
@@ -253,7 +254,7 @@ export function Header() {
         {!showBranchSwitcher && selectedRestaurant && status === 'ready' && (
           <ScopeChip icon="storefront" className="pe-3">
             <span className="max-w-[150px] truncate text-label-md text-on-surface">
-              {selectedRestaurant.name}
+              {restaurantName(selectedRestaurant, locale)}
             </span>
           </ScopeChip>
         )}
@@ -314,7 +315,7 @@ export function Header() {
                   {selectedRestaurant && (
                     <div className="flex items-center gap-2 text-body-sm text-on-surface-variant">
                       <MaterialIcon name="storefront" size={14} className="text-outline" />
-                      <span className="truncate">{selectedRestaurant.name}</span>
+                      <span className="truncate">{restaurantName(selectedRestaurant, locale)}</span>
                     </div>
                   )}
                   {selectedBranch && (
@@ -379,7 +380,7 @@ export function Header() {
               >
                 {restaurants.map((r) => (
                   <option key={r.restaurantId} value={r.restaurantId}>
-                    {r.name}
+                    {restaurantName(r, locale)}
                   </option>
                 ))}
               </select>
@@ -404,7 +405,7 @@ export function Header() {
             </label>
           )}
           {!showRestaurantSwitcher && selectedRestaurant && (
-            <p className="text-label-md text-on-surface">{selectedRestaurant.name}</p>
+            <p className="text-label-md text-on-surface">{restaurantName(selectedRestaurant, locale)}</p>
           )}
           {!showBranchSwitcher && selectedBranch && (
             <p className="text-body-sm text-on-surface-variant">{formatBranchLabel(selectedBranch)}</p>

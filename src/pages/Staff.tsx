@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 import type { EmployeeDto, EmployeeStatus } from '@/api/employees'
-import { isApiError } from '@/api/errors'
 import type { BranchDto } from '@/api/branches'
 import { Badge, type BadgeTone } from '@/components/ui/Badge'
 import { MaterialIcon } from '@/components/ui/Icon'
@@ -10,6 +9,7 @@ import { Card, CardTitle } from '@/components/ui/Card'
 import { Input, Select } from '@/components/ui/Input'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Skeleton } from '@/components/ui/Skeleton'
+import { roleDescription, roleLabel } from '@/lib/roleLabel'
 import { useLocale } from '@/context/LocaleContext'
 import { useRestaurantScope } from '@/context/RestaurantScopeContext'
 import { useToast } from '@/context/ToastContext'
@@ -20,6 +20,7 @@ import {
   useRemoveEmployeeMutation,
   useRestaurantRolesQuery,
 } from '@/hooks/useEmployeeQueries'
+import { apiErrorText } from '@/lib/apiErrorText'
 
 function statusTone(status: EmployeeStatus | string): BadgeTone {
   if (status === 'Active') return 'success'
@@ -66,7 +67,9 @@ export function StaffPage() {
   const removeMutation = useRemoveEmployeeMutation()
 
   const roles = rolesQuery.data ?? []
-  const roleNameById = new Map(roles.map((role) => [role.roleId, role.name]))
+  const roleWords = { names: t.staff.roleNames, descriptions: t.staff.roleDescriptions }
+  const roleNameById = new Map(roles.map((role) => [role.roleId, roleLabel(role, roleWords)]))
+  const chosenRole = roles.find((role) => role.roleId === roleId)
 
   useEffect(() => {
     setBranchId(selectedBranchId ?? '')
@@ -78,7 +81,7 @@ export function StaffPage() {
   }, [roleId, firstRoleId])
 
   const mapError = (err: unknown): string =>
-    isApiError(err) ? err.message : t.staff.errors.unknown
+    apiErrorText(err, t, t.staff.errors.unknown)
 
   const handleInvite = async (event: React.FormEvent): Promise<void> => {
     event.preventDefault()
@@ -108,7 +111,7 @@ export function StaffPage() {
       if (result.branchAssigned) {
         toast('success', t.staff.inviteSuccess)
       } else {
-        toast('error', isApiError(result.error) ? result.error.message : t.staff.assignFailed)
+        toast('error', apiErrorText(result.error, t, t.staff.assignFailed))
       }
     } catch (err) {
       toast('error', mapError(err))
@@ -230,7 +233,9 @@ export function StaffPage() {
                 ? t.staff.rolesLoading
                 : rolesQuery.isError
                   ? undefined
-                  : t.staff.roleHint
+                  : chosenRole
+                    ? roleDescription(chosenRole, roleWords)
+                    : t.staff.roleHint
             }
             error={rolesQuery.isError ? t.staff.rolesFailed : undefined}
             value={roleId}
@@ -240,7 +245,7 @@ export function StaffPage() {
           >
             {roles.map((role) => (
               <option key={role.roleId} value={role.roleId}>
-                {role.name}
+                {roleLabel(role, roleWords)}
               </option>
             ))}
           </Select>

@@ -1,4 +1,5 @@
 import { useMemo, type ReactNode } from 'react'
+import { restaurantName } from '@/lib/restaurantName'
 import { Link } from 'react-router-dom'
 import { Num } from '@/components/ui/Num'
 import { Button } from '@/components/ui/Button'
@@ -12,6 +13,7 @@ import { ErrorState } from '@/components/ui/ErrorState'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { SkeletonStats, SkeletonText } from '@/components/ui/Skeleton'
 import { LiveServiceBar } from '@/components/layout/LiveServiceBar'
+import { SetupGuideCard } from '@/components/dashboard/SetupGuideCard'
 import { useLocale } from '@/context/LocaleContext'
 import { useAuth } from '@/context/AuthContext'
 import { useRestaurantScope } from '@/context/RestaurantScopeContext'
@@ -286,7 +288,7 @@ export function DashboardPage() {
   const firstName = user?.displayName?.split(' ')[0] ?? ''
   const place = selectedBranch
     ? formatBranchLabel(selectedBranch)
-    : selectedRestaurant?.name
+    : selectedRestaurant && restaurantName(selectedRestaurant, locale)
   const usingFallback = bookingsQuery.data?.source === 'ownership-fallback'
 
   return (
@@ -306,6 +308,8 @@ export function DashboardPage() {
       />
 
       <LiveServiceBar />
+
+      <SetupGuideCard />
 
       {usingFallback && (
         <p className="text-body-sm text-on-surface-variant">{t.calendar.ownershipFallbackNote}</p>

@@ -1,4 +1,5 @@
 import { useLocale } from '@/context/LocaleContext'
+import { restaurantName } from '@/lib/restaurantName'
 import { useSidebar } from '@/context/SidebarContext'
 import { useAuth } from '@/context/AuthContext'
 import { useRestaurantScope } from '@/context/RestaurantScopeContext'
@@ -44,7 +45,7 @@ const adminNav: NavEntry[] = [
 ]
 
 export function Sidebar() {
-  const { t } = useLocale()
+  const { t, locale } = useLocale()
   const { isOpen, isCollapsed, close } = useSidebar()
   const { user, logout } = useAuth()
   const { selectedRestaurant, status: scopeStatus } = useRestaurantScope()
@@ -69,7 +70,7 @@ export function Sidebar() {
     ))
 
   const brandContext =
-    scopeStatus === 'loading' ? t.scope.loading : (selectedRestaurant?.name ?? undefined)
+    scopeStatus === 'loading' ? t.scope.loading : (selectedRestaurant ? restaurantName(selectedRestaurant, locale) : undefined)
 
   return (
     <SidebarShell isOpen={isOpen} onClose={close} ariaLabel={t.nav.dashboard}>

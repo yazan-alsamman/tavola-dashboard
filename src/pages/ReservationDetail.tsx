@@ -37,6 +37,7 @@ import { formatDate, formatDateTime } from '@/lib/format'
 import { formatInstantInTimeZone } from '@/lib/branchDateTime'
 import { useRestaurantScope } from '@/context/RestaurantScopeContext'
 import { reservationStatusLabel } from '@/lib/statusLabel'
+import { apiErrorText } from '@/lib/apiErrorText'
 
 function mergeReservation(
   detail: ReservationDto | undefined,
@@ -219,7 +220,7 @@ export function ReservationDetailPage() {
       await invalidateReservation()
       toast('success', t.reservations.actions.rescheduleSuccess)
     } catch (err) {
-      toast('error', isApiError(err) ? err.message : t.reservations.errors.unknown)
+      toast('error', apiErrorText(err, t, t.reservations.errors.unknown))
     } finally {
       setBusy(false)
     }

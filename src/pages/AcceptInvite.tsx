@@ -1,13 +1,13 @@
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { acceptOrganizationInvitation } from '@/api/organizations'
-import { isApiError } from '@/api/errors'
 import { Button } from '@/components/ui/Button'
 import { Card, CardTitle } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
 import { useAuth } from '@/context/AuthContext'
 import { useLocale } from '@/context/LocaleContext'
 import { useToast } from '@/context/ToastContext'
+import { apiErrorText } from '@/lib/apiErrorText'
 
 /**
  * Public invitation accept page — Postman `POST /invitations/:token/accept`.
@@ -45,7 +45,7 @@ export function AcceptInvitePage() {
       toast('success', copy.success)
       navigate(isAuthenticated ? '/app' : '/login', { replace: true })
     } catch (err) {
-      toast('error', isApiError(err) ? err.message : copy.error)
+      toast('error', apiErrorText(err, t, copy.error))
     } finally {
       setSubmitting(false)
     }

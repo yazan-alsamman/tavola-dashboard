@@ -3,11 +3,12 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Card, CardTitle } from '@/components/ui/Card'
-import { Input } from '@/components/ui/Input'
+import { Input, Select } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { MaterialIcon } from '@/components/ui/Icon'
 import { useAuth } from '@/context/AuthContext'
+import { BranchPlansCard } from '@/components/branches/BranchPlansCard'
 import { useLocale } from '@/context/LocaleContext'
 import { useRestaurantScope } from '@/context/RestaurantScopeContext'
 import { useToast } from '@/context/ToastContext'
@@ -26,23 +27,13 @@ import { SettingsTeamPanel } from '@/components/settings/SettingsTeamPanel'
 import { displayPayloadFields } from '@/lib/analyticsPayload'
 import { formatDateTime } from '@/lib/format'
 import {
-  addRestaurantGalleryImage,
   getRestaurant,
   getRestaurantCuisineCategories,
   getRestaurantOccasionCategories,
-  getRestaurantSettings,
-  getRestaurantWorkingHours,
-  listRestaurantGallery,
-  removeRestaurantGalleryImage,
   setRestaurantCuisineCategories,
   setRestaurantOccasionCategories,
   updateRestaurant,
-  updateRestaurantSettings,
-  updateRestaurantWorkingHours,
-  type GalleryItemDto,
   type RestaurantDto,
-  type RestaurantSettingsDto,
-  type WorkingHoursEntry,
 } from '@/api/restaurants'
 import {
   listCuisineCategories,
@@ -56,47 +47,24 @@ import {
   uploadMyAvatar,
   type UserPreferences,
 } from '@/api/users'
-import { isApiError } from '@/api/errors'
 import { cn } from '@/lib/utils'
+import { apiErrorText } from '@/lib/apiErrorText'
+import { splitByLanguage } from '@/lib/restaurantName'
+import { SUPPORTED_LANGUAGES, currencyLabel, currencyOptions } from '@/lib/currencies'
 
+/**
+ * Restaurant-level settings only. Hours, reservation rules, currency,
+ * timezone and photos belong to each branch (backend ADR-050/051) and are set
+ * from the Branches and Photos pages.
+ */
 const tabs = [
   'profile',
-  'gallery',
   'categories',
-  'hours',
-  'rules',
   'account',
   'team',
   'subscription',
   'security',
 ] as const
-const DAY_LABELS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
-
-const defaultSettings: RestaurantSettingsDto = {
-  reservationIntervalMinutes: 30,
-  maxGuestsPerReservation: 20,
-  cancellationWindowMinutes: 60,
-  pendingReservationTimeoutMinutes: 15,
-  defaultReservationDurationMinutes: 90,
-  autoApproval: false,
-  timezone: 'UTC',
-  defaultCurrency: 'USD',
-}
-
-function entriesToWeek(entries: WorkingHoursEntry[]): WorkingHoursEntry[] {
-  return DAY_LABELS.map((_, dayOfWeek) => {
-    const found = entries.find((e) => e.dayOfWeek === dayOfWeek)
-    return (
-      found ?? {
-        dayOfWeek,
-        openingTime: '09:00',
-        closingTime: '22:00',
-        breakStartTime: null,
-        breakEndTime: null,
-      }
-    )
-  })
-}
 
 export function SettingsPage() {
   const { t, locale } = useLocale()
@@ -140,7 +108,7 @@ export function SettingsPage() {
     onError: (err) => {
       toast(
         'error',
-        isApiError(err) ? err.message : t.settings.securityForm.passwordChangeFailed,
+        apiErrorText(err, t, t.settings.securityForm.passwordChangeFailed),
       )
     },
   })
@@ -154,7 +122,7 @@ export function SettingsPage() {
     onError: (err) => {
       toast(
         'error',
-        isApiError(err) ? err.message : t.settings.securityForm.sessionRevokeFailed,
+        apiErrorText(err, t, t.settings.securityForm.sessionRevokeFailed),
       )
     },
   })
@@ -168,20 +136,18 @@ export function SettingsPage() {
     onError: (err) => {
       toast(
         'error',
-        isApiError(err) ? err.message : t.settings.securityForm.logoutAllFailed,
+        apiErrorText(err, t, t.settings.securityForm.logoutAllFailed),
       )
     },
   })
 
   const [profile, setProfile] = useState({
-    name: '',
-    description: '',
+    nameAr: '',
+    nameEn: '',
+    descriptionAr: '',
+    descriptionEn: '',
     cuisineType: '',
   })
-  const [settings, setSettings] = useState<RestaurantSettingsDto>(defaultSettings)
-  const [hours, setHours] = useState<WorkingHoursEntry[]>(entriesToWeek([]))
-  const [gallery, setGallery] = useState<GalleryItemDto[]>([])
-  const [galleryLoading, setGalleryLoading] = useState(false)
   const [selectedCuisineIds, setSelectedCuisineIds] = useState<string[]>([])
   const [selectedOccasionIds, setSelectedOccasionIds] = useState<string[]>([])
   const [accountForm, setAccountForm] = useState({
@@ -196,7 +162,6 @@ export function SettingsPage() {
     notificationOptIn: true,
     marketingOptIn: false,
   })
-  const galleryInputRef = useRef<HTMLInputElement>(null)
   const avatarInputRef = useRef<HTMLInputElement>(null)
 
   const restaurantId = selectedRestaurantId
@@ -234,30 +199,11 @@ export function SettingsPage() {
       lastName: p.lastName ?? '',
       countryCode: match?.[1]?.replace('+', '') || 'SY',
       phoneNumber: (match?.[2] ?? phone).trim(),
-      language: p.language || 'en',
+      language: p.language === 'ar' ? 'ar' : 'en',
       preferredCurrency: p.preferredCurrency || 'USD',
     })
     setPreferences(prefs)
   }, [accountQuery.data])
-
-  useEffect(() => {
-    if (!restaurantId || activeTab !== 'gallery') return
-    const ac = new AbortController()
-    setGalleryLoading(true)
-    void listRestaurantGallery(restaurantId)
-      .then((items) => {
-        if (!ac.signal.aborted) setGallery(items)
-      })
-      .catch((err) => {
-        if (!ac.signal.aborted) {
-          toast('error', isApiError(err) ? err.message : t.login.errors.unknown)
-        }
-      })
-      .finally(() => {
-        if (!ac.signal.aborted) setGalleryLoading(false)
-      })
-    return () => ac.abort()
-  }, [restaurantId, activeTab, t.login.errors.unknown, toast])
 
   useEffect(() => {
     if (!restaurantId || activeTab !== 'categories') return
@@ -273,7 +219,7 @@ export function SettingsPage() {
         setSelectedOccasionIds(occasion.occasionCategoryIds)
       } catch (err) {
         if (!ac.signal.aborted) {
-          toast('error', isApiError(err) ? err.message : t.login.errors.unknown)
+          toast('error', apiErrorText(err, t, t.login.errors.unknown))
         }
       }
     })()
@@ -288,20 +234,14 @@ export function SettingsPage() {
 
     void (async () => {
       try {
-        const [restaurant, restaurantSettings, workingHours] = await Promise.all([
-          getRestaurant(restaurantId),
-          getRestaurantSettings(restaurantId),
-          getRestaurantWorkingHours(restaurantId),
-        ])
+        const restaurant = await getRestaurant(restaurantId)
         if (ac.signal.aborted) return
         applyRestaurant(restaurant)
-        setSettings(restaurantSettings)
-        setHours(entriesToWeek(workingHours.entries ?? []))
       } catch (err) {
         if (ac.signal.aborted) return
         // Fall back to scoped restaurant snapshot for profile fields.
         if (selectedRestaurant) applyRestaurant(selectedRestaurant)
-        toast('error', isApiError(err) ? err.message : t.login.errors.unknown)
+        toast('error', apiErrorText(err, t, t.login.errors.unknown))
       } finally {
         if (!ac.signal.aborted) setLoading(false)
       }
@@ -311,9 +251,17 @@ export function SettingsPage() {
   }, [restaurantId, status, selectedRestaurant, t.login.errors.unknown, toast])
 
   function applyRestaurant(restaurant: RestaurantDto): void {
+    const names = splitByLanguage(restaurant.name, restaurant.nameAr, restaurant.nameEn)
+    const descriptions = splitByLanguage(
+      restaurant.description,
+      restaurant.descriptionAr,
+      restaurant.descriptionEn,
+    )
     setProfile({
-      name: restaurant.name,
-      description: restaurant.description ?? '',
+      nameAr: names.ar,
+      nameEn: names.en,
+      descriptionAr: descriptions.ar,
+      descriptionEn: descriptions.en,
       cuisineType: restaurant.cuisineType ?? '',
     })
   }
@@ -321,11 +269,20 @@ export function SettingsPage() {
   const saveProfile = async (e: React.FormEvent): Promise<void> => {
     e.preventDefault()
     if (!restaurantId || saving) return
+    if (!profile.nameAr.trim() && !profile.nameEn.trim()) {
+      toast('error', t.settings.profileForm.nameRequired)
+      return
+    }
     setSaving(true)
     try {
+      const descriptionAr = profile.descriptionAr.trim() || null
+      const descriptionEn = profile.descriptionEn.trim() || null
       const updated = await updateRestaurant(restaurantId, {
-        name: profile.name.trim(),
-        description: profile.description.trim() || null,
+        nameAr: profile.nameAr.trim() || null,
+        nameEn: profile.nameEn.trim() || null,
+        description: descriptionAr ?? descriptionEn,
+        descriptionAr,
+        descriptionEn,
         cuisineType: profile.cuisineType.trim() || null,
         status: selectedRestaurant?.status ?? 'Active',
       })
@@ -333,39 +290,7 @@ export function SettingsPage() {
       refreshScope()
       toast('success', t.common.save)
     } catch (err) {
-      toast('error', isApiError(err) ? err.message : t.login.errors.unknown)
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  const saveHours = async (e: React.FormEvent): Promise<void> => {
-    e.preventDefault()
-    if (!restaurantId || saving) return
-    setSaving(true)
-    try {
-      const updated = await updateRestaurantWorkingHours(restaurantId, {
-        entries: hours,
-      })
-      setHours(entriesToWeek(updated.entries ?? hours))
-      toast('success', t.common.save)
-    } catch (err) {
-      toast('error', isApiError(err) ? err.message : t.login.errors.unknown)
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  const saveSettings = async (e: React.FormEvent): Promise<void> => {
-    e.preventDefault()
-    if (!restaurantId || saving) return
-    setSaving(true)
-    try {
-      const updated = await updateRestaurantSettings(restaurantId, settings)
-      setSettings(updated)
-      toast('success', t.common.save)
-    } catch (err) {
-      toast('error', isApiError(err) ? err.message : t.login.errors.unknown)
+      toast('error', apiErrorText(err, t, t.login.errors.unknown))
     } finally {
       setSaving(false)
     }
@@ -384,7 +309,7 @@ export function SettingsPage() {
       setSelectedOccasionIds(occasion.occasionCategoryIds)
       toast('success', t.common.save)
     } catch (err) {
-      toast('error', isApiError(err) ? err.message : t.login.errors.unknown)
+      toast('error', apiErrorText(err, t, t.login.errors.unknown))
     } finally {
       setSaving(false)
     }
@@ -407,39 +332,7 @@ export function SettingsPage() {
       await accountQuery.refetch()
       toast('success', t.common.save)
     } catch (err) {
-      toast('error', isApiError(err) ? err.message : t.login.errors.unknown)
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  const handleGalleryUpload = async (
-    e: React.ChangeEvent<HTMLInputElement>,
-  ): Promise<void> => {
-    const file = e.target.files?.[0]
-    e.target.value = ''
-    if (!file || !restaurantId) return
-    setSaving(true)
-    try {
-      const item = await addRestaurantGalleryImage(restaurantId, file)
-      setGallery((prev) => [...prev, item])
-      toast('success', t.settings.galleryForm.uploadSuccess)
-    } catch (err) {
-      toast('error', isApiError(err) ? err.message : t.login.errors.unknown)
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  const handleGalleryRemove = async (galleryItemId: string): Promise<void> => {
-    if (!restaurantId || saving) return
-    setSaving(true)
-    try {
-      await removeRestaurantGalleryImage(restaurantId, galleryItemId)
-      setGallery((prev) => prev.filter((g) => g.galleryItemId !== galleryItemId))
-      toast('success', t.settings.galleryForm.removeSuccess)
-    } catch (err) {
-      toast('error', isApiError(err) ? err.message : t.login.errors.unknown)
+      toast('error', apiErrorText(err, t, t.login.errors.unknown))
     } finally {
       setSaving(false)
     }
@@ -457,7 +350,7 @@ export function SettingsPage() {
       await accountQuery.refetch()
       toast('success', t.settings.accountForm.avatarSuccess)
     } catch (err) {
-      toast('error', isApiError(err) ? err.message : t.login.errors.unknown)
+      toast('error', apiErrorText(err, t, t.login.errors.unknown))
     } finally {
       setSaving(false)
     }
@@ -512,16 +405,35 @@ export function SettingsPage() {
         <Card className="max-w-2xl">
           <CardTitle className="mb-6">{t.settings.profile}</CardTitle>
           <form className="space-y-4" onSubmit={(e) => void saveProfile(e)}>
+            <p className="text-sm text-on-surface-variant">
+              {t.settings.profileForm.bilingualHint}
+            </p>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <FormField
+                label={t.settings.profileForm.nameAr}
+                value={profile.nameAr}
+                dir="rtl"
+                onChange={(v) => setProfile({ ...profile, nameAr: v })}
+              />
+              <FormField
+                label={t.settings.profileForm.nameEn}
+                value={profile.nameEn}
+                dir="ltr"
+                onChange={(v) => setProfile({ ...profile, nameEn: v })}
+              />
+            </div>
             <FormField
-              label={t.settings.profileForm.name}
-              value={profile.name}
-              onChange={(v) => setProfile({ ...profile, name: v })}
-              required
+              label={t.settings.profileForm.descriptionAr}
+              value={profile.descriptionAr}
+              dir="rtl"
+              onChange={(v) => setProfile({ ...profile, descriptionAr: v })}
+              multiline
             />
             <FormField
-              label={t.settings.profileForm.description}
-              value={profile.description}
-              onChange={(v) => setProfile({ ...profile, description: v })}
+              label={t.settings.profileForm.descriptionEn}
+              value={profile.descriptionEn}
+              dir="ltr"
+              onChange={(v) => setProfile({ ...profile, descriptionEn: v })}
               multiline
             />
             <FormField
@@ -533,83 +445,6 @@ export function SettingsPage() {
               {saving ? t.common.loading : t.common.save}
             </Button>
           </form>
-        </Card>
-      )}
-
-      {activeTab === 'gallery' && (
-        <Card className="max-w-4xl">
-          <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
-            <div>
-              <CardTitle>{t.settings.gallery}</CardTitle>
-              <p className="text-sm text-on-surface-variant mt-1">
-                {t.settings.galleryForm.emptyBody}
-              </p>
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <a
-                href="/app/gallery"
-                className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-primary hover:bg-primary/10"
-              >
-                <MaterialIcon name="open_in_new" size={18} />
-                {t.menu.openGallery}
-              </a>
-              <input
-                ref={galleryInputRef}
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                className="hidden"
-                onChange={(e) => void handleGalleryUpload(e)}
-              />
-              <Button
-                type="button"
-                disabled={saving}
-                onClick={() => galleryInputRef.current?.click()}
-              >
-                <MaterialIcon name="add_photo_alternate" size={18} className="me-2" />
-                {t.settings.galleryForm.upload}
-              </Button>
-            </div>
-          </div>
-          {galleryLoading ? (
-            <p className="text-sm text-on-surface-variant">{t.common.loading}</p>
-          ) : gallery.length === 0 ? (
-            <EmptyState
-              icon="photo_library"
-              title={t.settings.galleryForm.emptyTitle}
-              description={t.settings.galleryForm.emptyBody}
-              className="py-10"
-            />
-          ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-              {gallery.map((item) => (
-                <div
-                  key={item.galleryItemId}
-                  className="relative group aspect-square rounded-xl overflow-hidden border border-outline-variant/30 bg-surface-container-low"
-                >
-                  {item.imageUrl ? (
-                    <img
-                      src={item.imageUrl}
-                      alt=""
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    <div className="h-full w-full flex items-center justify-center text-on-surface-variant">
-                      <MaterialIcon name="image" size={28} />
-                    </div>
-                  )}
-                  <button
-                    type="button"
-                    className="absolute top-2 end-2 h-8 w-8 rounded-full bg-error text-on-error flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow"
-                    title={t.common.delete}
-                    disabled={saving}
-                    onClick={() => void handleGalleryRemove(item.galleryItemId)}
-                  >
-                    <MaterialIcon name="delete" size={16} />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
         </Card>
       )}
 
@@ -659,9 +494,7 @@ export function SettingsPage() {
               <p className="text-sm text-on-surface-variant">{t.common.loading}</p>
             ) : accountQuery.isError ? (
               <p className="text-sm text-error">
-                {isApiError(accountQuery.error)
-                  ? accountQuery.error.message
-                  : t.settings.accountForm.loadFailed}
+                {apiErrorText(accountQuery.error, t, t.settings.accountForm.loadFailed)}
               </p>
             ) : (
               <form className="space-y-4" onSubmit={(e) => void saveAccount(e)}>
@@ -697,20 +530,34 @@ export function SettingsPage() {
                     />
                   </div>
                 </div>
-                <FormField
-                  label={t.settings.accountForm.language}
-                  value={accountForm.language}
-                  onChange={(v) => setAccountForm({ ...accountForm, language: v })}
-                  required
-                />
-                <FormField
-                  label={t.settings.accountForm.currency}
-                  value={accountForm.preferredCurrency}
-                  onChange={(v) =>
-                    setAccountForm({ ...accountForm, preferredCurrency: v })
-                  }
-                  required
-                />
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <Select
+                    label={t.settings.accountForm.language}
+                    value={accountForm.language}
+                    onChange={(e) =>
+                      setAccountForm({ ...accountForm, language: e.target.value })
+                    }
+                  >
+                    {SUPPORTED_LANGUAGES.map((code) => (
+                      <option key={code} value={code}>
+                        {t.settings.accountForm.languages[code]}
+                      </option>
+                    ))}
+                  </Select>
+                  <Select
+                    label={t.settings.accountForm.currency}
+                    value={accountForm.preferredCurrency}
+                    onChange={(e) =>
+                      setAccountForm({ ...accountForm, preferredCurrency: e.target.value })
+                    }
+                  >
+                    {currencyOptions(accountForm.preferredCurrency).map((code) => (
+                      <option key={code} value={code}>
+                        {currencyLabel(code, locale)}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
                 <label className="flex items-center gap-2 text-sm text-on-surface">
                   <input
                     type="checkbox"
@@ -767,51 +614,6 @@ export function SettingsPage() {
         </div>
       )}
 
-      {activeTab === 'hours' && (
-        <Card className="max-w-2xl">
-          <CardTitle className="mb-6">{t.settings.hours}</CardTitle>
-          <form className="space-y-3" onSubmit={(e) => void saveHours(e)}>
-            {hours.map((entry) => (
-              <div key={entry.dayOfWeek} className="flex flex-wrap items-center gap-3">
-                <span className="w-28 text-sm font-medium text-text-primary">
-                  {DAY_LABELS[entry.dayOfWeek]}
-                </span>
-                <Input
-                  type="time"
-                  value={entry.openingTime}
-                  className="w-32"
-                  onChange={(e) => {
-                    const next = [...hours]
-                    next[entry.dayOfWeek] = {
-                      ...entry,
-                      openingTime: e.target.value,
-                    }
-                    setHours(next)
-                  }}
-                />
-                <span className="text-text-muted">to</span>
-                <Input
-                  type="time"
-                  value={entry.closingTime}
-                  className="w-32"
-                  onChange={(e) => {
-                    const next = [...hours]
-                    next[entry.dayOfWeek] = {
-                      ...entry,
-                      closingTime: e.target.value,
-                    }
-                    setHours(next)
-                  }}
-                />
-              </div>
-            ))}
-            <Button className="mt-4" type="submit" disabled={saving}>
-              {saving ? t.common.loading : t.common.save}
-            </Button>
-          </form>
-        </Card>
-      )}
-
       {activeTab === 'team' && canManageOrg && <SettingsTeamPanel />}
 
       {activeTab === 'subscription' && (
@@ -820,9 +622,7 @@ export function SettingsPage() {
             title={t.settings.subscriptionPlan.planTitle}
             loading={subscriptionQuery.isLoading}
             error={
-              subscriptionQuery.error && isApiError(subscriptionQuery.error)
-                ? subscriptionQuery.error.message
-                : null
+              subscriptionQuery.error && apiErrorText(subscriptionQuery.error, t, t.login.errors.unknown)
             }
             fields={displayPayloadFields(subscriptionQuery.data ?? {}, locale)}
             emptyTitle={t.settings.subscriptionPlan.noData}
@@ -831,13 +631,12 @@ export function SettingsPage() {
             title={t.settings.subscriptionPlan.usageTitle}
             loading={usageQuery.isLoading}
             error={
-              usageQuery.error && isApiError(usageQuery.error)
-                ? usageQuery.error.message
-                : null
+              usageQuery.error && apiErrorText(usageQuery.error, t, t.login.errors.unknown)
             }
             fields={displayPayloadFields(usageQuery.data ?? {}, locale)}
             emptyTitle={t.settings.subscriptionPlan.noData}
           />
+          <BranchPlansCard />
         </div>
       )}
 
@@ -914,9 +713,7 @@ export function SettingsPage() {
               <p className="text-sm text-on-surface-variant">{t.common.loading}</p>
             ) : sessionsQuery.error ? (
               <p className="text-sm text-error">
-                {isApiError(sessionsQuery.error)
-                  ? sessionsQuery.error.message
-                  : t.settings.securityForm.sessionsLoadFailed}
+                {apiErrorText(sessionsQuery.error, t, t.settings.securityForm.sessionsLoadFailed)}
               </p>
             ) : (sessionsQuery.data?.sessions ?? []).length === 0 ? (
               <EmptyState
@@ -943,69 +740,6 @@ export function SettingsPage() {
         </div>
       )}
 
-      {activeTab === 'rules' && (
-        <Card className="max-w-2xl">
-          <CardTitle className="mb-6">{t.settings.rules}</CardTitle>
-          <form className="space-y-4" onSubmit={(e) => void saveSettings(e)}>
-            <NumberField
-              label="Max guests per reservation"
-              value={settings.maxGuestsPerReservation}
-              onChange={(v) => setSettings({ ...settings, maxGuestsPerReservation: v })}
-            />
-            <NumberField
-              label="Default reservation duration (minutes)"
-              value={settings.defaultReservationDurationMinutes}
-              onChange={(v) =>
-                setSettings({ ...settings, defaultReservationDurationMinutes: v })
-              }
-            />
-            <NumberField
-              label="Reservation interval (minutes)"
-              value={settings.reservationIntervalMinutes}
-              onChange={(v) =>
-                setSettings({ ...settings, reservationIntervalMinutes: v })
-              }
-            />
-            <NumberField
-              label="Cancellation window (minutes)"
-              value={settings.cancellationWindowMinutes}
-              onChange={(v) =>
-                setSettings({ ...settings, cancellationWindowMinutes: v })
-              }
-            />
-            <NumberField
-              label="Pending timeout (minutes)"
-              value={settings.pendingReservationTimeoutMinutes}
-              onChange={(v) =>
-                setSettings({ ...settings, pendingReservationTimeoutMinutes: v })
-              }
-            />
-            <FormField
-              label="Timezone"
-              value={settings.timezone}
-              onChange={(v) => setSettings({ ...settings, timezone: v })}
-            />
-            <FormField
-              label="Default currency"
-              value={settings.defaultCurrency}
-              onChange={(v) => setSettings({ ...settings, defaultCurrency: v })}
-            />
-            <label className="flex items-center gap-2 text-sm text-on-surface">
-              <input
-                type="checkbox"
-                checked={settings.autoApproval}
-                onChange={(e) =>
-                  setSettings({ ...settings, autoApproval: e.target.checked })
-                }
-              />
-              Auto-approve reservations
-            </label>
-            <Button type="submit" disabled={saving}>
-              {saving ? t.common.loading : t.common.save}
-            </Button>
-          </form>
-        </Card>
-      )}
     </div>
   )
 }
@@ -1110,12 +844,22 @@ function SessionRow({
   revoking: boolean
   onRevoke: () => void
 }) {
+  const { t } = useLocale()
+  const copy = t.settings.securityForm
+  const deviceTypes: Record<string, string> = copy.deviceTypes
   const device =
-    session.deviceName ??
-    session.deviceType ??
-    session.sessionId.slice(0, 8)
+    session.browser && session.operatingSystem
+      ? copy.deviceOn
+          .replace('{browser}', session.browser)
+          .replace('{system}', session.operatingSystem)
+      : (session.browser ??
+        session.operatingSystem ??
+        session.deviceName ??
+        deviceTypes[session.deviceType ?? 'unknown'] ??
+        deviceTypes.unknown)
 
-  const lastSeen = session.lastSeenAt ? formatDateTime(session.lastSeenAt, locale) : null
+  const signedIn = session.createdAt ? formatDateTime(session.createdAt, locale) : null
+  const lastUsed = session.lastUsedAt ? formatDateTime(session.lastUsedAt, locale) : null
 
   return (
     <div className="flex items-center justify-between gap-4 p-3 rounded-lg border border-outline-variant/30">
@@ -1124,9 +868,18 @@ function SessionRow({
           <MaterialIcon name="devices" size={18} />
         </div>
         <div className="min-w-0">
-          <p className="text-sm font-semibold text-on-surface truncate">{device}</p>
-          {lastSeen && (
-            <p className="text-xs text-on-surface-variant">{lastSeen}</p>
+          <p className="text-sm font-semibold text-on-surface truncate">
+            <bdi>{device}</bdi>
+          </p>
+          {signedIn && (
+            <p className="text-xs text-on-surface-variant">
+              {copy.signedIn.replace('{date}', signedIn)}
+            </p>
+          )}
+          {lastUsed && (
+            <p className="text-xs text-on-surface-variant">
+              {copy.lastUsed.replace('{date}', lastUsed)}
+            </p>
           )}
           {session.isCurrentSession && (
             <span className="text-[10px] font-bold uppercase text-primary">
@@ -1156,6 +909,7 @@ function FormField({
   multiline,
   required,
   type,
+  dir,
 }: {
   label: string
   value: string
@@ -1163,12 +917,15 @@ function FormField({
   multiline?: boolean
   required?: boolean
   type?: string
+  /** Fixed text direction for a field in one language. */
+  dir?: 'rtl' | 'ltr'
 }) {
   return (
     <div>
       <label className="text-sm font-medium text-text-secondary mb-1.5 block">{label}</label>
       {multiline ? (
         <textarea
+          dir={dir}
           value={value}
           onChange={(e) => onChange(e.target.value)}
           rows={3}
@@ -1178,6 +935,7 @@ function FormField({
       ) : (
         <Input
           type={type}
+          dir={dir}
           value={value}
           onChange={(e) => onChange(e.target.value)}
           required={required}
@@ -1187,23 +945,3 @@ function FormField({
   )
 }
 
-function NumberField({
-  label,
-  value,
-  onChange,
-}: {
-  label: string
-  value: number
-  onChange: (v: number) => void
-}) {
-  return (
-    <div>
-      <label className="text-sm font-medium text-text-secondary mb-1.5 block">{label}</label>
-      <Input
-        type="number"
-        value={value}
-        onChange={(e) => onChange(Number(e.target.value) || 0)}
-      />
-    </div>
-  )
-}

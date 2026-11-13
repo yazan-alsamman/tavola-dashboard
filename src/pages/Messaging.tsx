@@ -27,9 +27,9 @@ import {
   type ConversationDto,
   type MessageDto,
 } from '@/api/messaging'
-import { isApiError } from '@/api/errors'
 import { formatInstantInTimeZone } from '@/lib/branchDateTime'
 import { cn } from '@/lib/utils'
+import { apiErrorText } from '@/lib/apiErrorText'
 
 function isConversationClosed(conversation: ConversationDto): boolean {
   const status = conversation.status
@@ -180,7 +180,7 @@ export function MessagingPage() {
     } catch (err) {
       toast(
         'error',
-        isApiError(err) ? err.message : t.messaging.startError,
+        apiErrorText(err, t, t.messaging.startError),
       )
     }
   }
