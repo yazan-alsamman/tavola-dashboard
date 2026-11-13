@@ -8,11 +8,13 @@ import { useLocale } from '@/context/LocaleContext'
 import { cn } from '@/lib/utils'
 import { MaterialIcon } from '@/components/ui/Icon'
 import { usePendingReservationAlerts } from '@/hooks/usePendingReservationAlerts'
+import { useNewMessageAlerts } from '@/hooks/useNewMessageAlerts'
 
 export function DashboardLayout() {
   const { isCollapsed } = useSidebar()
   const { t } = useLocale()
   usePendingReservationAlerts()
+  useNewMessageAlerts()
 
   /** Service-critical destinations only — mobile is a thumb-reach surface. */
   const mobileNav = [
