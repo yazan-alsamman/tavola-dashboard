@@ -1046,7 +1046,12 @@ export const en = {
       descriptionAr: 'Description in Arabic',
       descriptionEn: 'Description in English',
       bilingualHint: 'The app shows each guest the name and description in their language.',
-      cuisineType: 'Cuisine type (free text)',
+      cuisineType: 'Cuisine type',
+      cuisineTypeNone: 'Not set',
+      cuisineTypeLoadFailed: 'Could not load the cuisine list. Try again later.',
+      cuisineTypeLegacy: 'previous value',
+      cuisineTypeLegacyHint:
+        'This value was typed by hand before. It is kept until you pick a cuisine from the list.',
     },
     categoriesForm: {
       subtitle: 'Assign taxonomy categories guests see when browsing.',

@@ -364,6 +364,9 @@ Grouped by Postman folder. `{base}` = `VITE_API_BASE_URL` (i.e. `/api/v1`). All 
 | GET | `/cuisine-categories` | Reference data, safe to cache |
 | GET | `/occasion-categories` | Reference data, safe to cache |
 
+- Each item carries `name` (English) and a nullable `nameAr`. Show categories with `taxonomyLabel(category, locale)`: `nameAr` in Arabic, else `name`.
+- `cuisineType` on `POST`/`PATCH /restaurants` is a closed list: it must be the name (or slug) of an active cuisine category, and the backend stores the category `name` (`VALIDATION_ERROR` otherwise). The profile form is a dropdown built by `cuisineTypeChoices()`, sending the category `name`. A restaurant's older hand-typed value is shown as a "previous value" option and is accepted only when sent back unchanged.
+
 ## Restaurants
 
 | Method | Path | Notes |

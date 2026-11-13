@@ -516,7 +516,7 @@ Consequences:
 Both pages need the backend release that adds these routes. Against an older backend they show the load-error state.
 
 
-> **Numbering note.** The CR round 2 decisions below reuse the numbers ADR-016 to ADR-020, which earlier entries above also use. Cite these as "ADR-0NN (CR round 2)". The next new decision is ADR-028.
+> **Numbering note.** The CR round 2 decisions below reuse the numbers ADR-016 to ADR-020, which earlier entries above also use. Cite these as "ADR-0NN (CR round 2)". The next new decision is ADR-032.
 
 ## ADR-016 — Floors, the table queue, offer bookings and no broadcast (CR round 2)
 
@@ -645,3 +645,13 @@ Decision:
 
 Consequences: a paused branch disappears from guest discovery and takes no online bookings; staff keep its reservations. The Front Desk role exists only after `prisma db seed` runs on the server.
 
+## ADR-031 — Cuisine type is picked from the cuisine category list
+
+Context: the restaurant profile had a free-text "cuisine type", so owners typed values the app could not group or translate. The backend now accepts only the name or slug of an active cuisine category for `cuisineType`, and cuisine/occasion categories carry an Arabic `nameAr`.
+
+Decision:
+1. The profile's cuisine type is a dropdown of `GET /cuisine-categories`, sending the category's `name`. Option labels follow the UI language (`taxonomyLabel`).
+2. A value saved before the restriction stays selectable as "previous value", since the backend keeps it when it is sent back unchanged. Picking any other option replaces it.
+3. The category checklists in the Categories tab use the same Arabic labels.
+
+Consequences: a new cuisine needs a backend seed change, not a dashboard release. Older hand-typed values remain until an owner picks from the list.

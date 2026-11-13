@@ -1046,7 +1046,11 @@ export const ar: TranslationKeys = {
       descriptionAr: 'الوصف بالعربية',
       descriptionEn: 'الوصف بالإنجليزية',
       bilingualHint: 'يعرض التطبيق لكل ضيف الاسم والوصف بلغته.',
-      cuisineType: 'نوع المطبخ (نص حر)',
+      cuisineType: 'نوع المطبخ',
+      cuisineTypeNone: 'غير محدد',
+      cuisineTypeLoadFailed: 'تعذّر تحميل قائمة المطابخ. حاول لاحقاً.',
+      cuisineTypeLegacy: 'قيمة سابقة',
+      cuisineTypeLegacyHint: 'هذه القيمة كُتبت يدوياً سابقاً، وتبقى كما هي حتى تختار مطبخاً من القائمة.',
     },
     categoriesForm: {
       subtitle: 'عيّن تصنيفات التصنيف التي يراها الضيوف عند التصفح.',
