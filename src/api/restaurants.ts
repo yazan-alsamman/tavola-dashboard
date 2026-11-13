@@ -48,8 +48,10 @@ export interface RestaurantSettingsDto {
   pendingReservationTimeoutMinutes: number
   defaultReservationDurationMinutes: number
   autoApproval: boolean
+  /** Deprecated by backend ADR-050: each branch has its own timezone. Sent back unchanged. */
   timezone: string
-  defaultCurrency: string
+  /** Deprecated by backend ADR-050: each branch has its own currency. Sent back unchanged. */
+  defaultCurrency: string | null
 }
 
 export type UpdateRestaurantSettingsRequest = RestaurantSettingsDto
@@ -129,22 +131,6 @@ export async function updateRestaurantSettings(
   body: UpdateRestaurantSettingsRequest,
 ): Promise<RestaurantSettingsDto> {
   return apiRequest<RestaurantSettingsDto>(`/restaurants/${restaurantId}/settings`, {
-    method: 'PATCH',
-    body,
-  })
-}
-
-export async function getRestaurantWorkingHours(
-  restaurantId: string,
-): Promise<WorkingHoursDto> {
-  return apiRequest<WorkingHoursDto>(`/restaurants/${restaurantId}/working-hours`)
-}
-
-export async function updateRestaurantWorkingHours(
-  restaurantId: string,
-  body: WorkingHoursDto,
-): Promise<WorkingHoursDto> {
-  return apiRequest<WorkingHoursDto>(`/restaurants/${restaurantId}/working-hours`, {
     method: 'PATCH',
     body,
   })

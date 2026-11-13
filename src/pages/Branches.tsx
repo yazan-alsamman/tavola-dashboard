@@ -19,9 +19,14 @@ import {
   type BranchDto,
   type BranchWriteRequest,
 } from '@/api/branches'
-import type { WorkingHoursEntry } from '@/api/restaurants'
 import { isApiError } from '@/api/errors'
 import { BranchLocationField } from '@/components/branches/BranchLocationField'
+import { WeeklyHoursEditor } from '@/components/branches/WeeklyHoursEditor'
+import {
+  entriesToWeek,
+  weekToEntries,
+  type WeekdayHours,
+} from '@/components/branches/weeklyHours'
 
 const emptyForm: BranchWriteRequest = {
   city: '',
@@ -42,31 +47,6 @@ function branchPinIsValid(
   if (!hasLat && !hasLng) return true
   if (!hasLat || !hasLng) return false
   return latitude >= -90 && latitude <= 90 && longitude >= -180 && longitude <= 180
-}
-
-const DAY_LABELS = [
-  'Sunday',
-  'Monday',
-  'Tuesday',
-  'Wednesday',
-  'Thursday',
-  'Friday',
-  'Saturday',
-]
-
-function entriesToWeek(entries: WorkingHoursEntry[]): WorkingHoursEntry[] {
-  return DAY_LABELS.map((_, dayOfWeek) => {
-    const found = entries.find((e) => e.dayOfWeek === dayOfWeek)
-    return (
-      found ?? {
-        dayOfWeek,
-        openingTime: '09:00',
-        closingTime: '22:00',
-        breakStartTime: null,
-        breakEndTime: null,
-      }
-    )
-  })
 }
 
 function branchToForm(branch: BranchDto): BranchWriteRequest {
@@ -98,7 +78,7 @@ export function BranchesPage() {
   const [editingBranch, setEditingBranch] = useState<BranchDto | null>(null)
   const [hoursBranch, setHoursBranch] = useState<BranchDto | null>(null)
   const [form, setForm] = useState<BranchWriteRequest>(emptyForm)
-  const [hours, setHours] = useState<WorkingHoursEntry[]>(entriesToWeek([]))
+  const [hours, setHours] = useState<WeekdayHours[]>(entriesToWeek([]))
   const [hoursLoading, setHoursLoading] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
@@ -203,9 +183,9 @@ export function BranchesPage() {
       const updated = await updateBranchWorkingHours(
         restaurantId,
         hoursBranch.branchId,
-        { entries: hours },
+        { entries: weekToEntries(hours) },
       )
-      setHours(entriesToWeek(updated.entries ?? hours))
+      setHours(entriesToWeek(updated.entries ?? weekToEntries(hours)))
       toast('success', t.common.save)
       setHoursBranch(null)
     } catch (err) {
@@ -418,45 +398,7 @@ export function BranchesPage() {
           </p>
         ) : (
           <form className="space-y-3" onSubmit={(e) => void saveHours(e)}>
-            {hours.map((entry) => (
-              <div
-                key={entry.dayOfWeek}
-                className="flex flex-wrap items-center gap-3"
-              >
-                <span className="w-28 text-sm font-medium text-on-surface">
-                  {DAY_LABELS[entry.dayOfWeek]}
-                </span>
-                <Input
-                  type="time"
-                  value={entry.openingTime}
-                  className="w-32"
-                  onChange={(e) => {
-                    const next = [...hours]
-                    next[entry.dayOfWeek] = {
-                      ...entry,
-                      openingTime: e.target.value,
-                    }
-                    setHours(next)
-                  }}
-                />
-                <span className="text-on-surface-variant text-sm">
-                  {t.branches.to}
-                </span>
-                <Input
-                  type="time"
-                  value={entry.closingTime}
-                  className="w-32"
-                  onChange={(e) => {
-                    const next = [...hours]
-                    next[entry.dayOfWeek] = {
-                      ...entry,
-                      closingTime: e.target.value,
-                    }
-                    setHours(next)
-                  }}
-                />
-              </div>
-            ))}
+            <WeeklyHoursEditor value={hours} onChange={setHours} disabled={submitting} />
             <div className="flex justify-end gap-3 pt-2">
               <Button
                 type="button"

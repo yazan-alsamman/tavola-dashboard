@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Card, CardTitle } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
@@ -31,18 +31,15 @@ import {
   getRestaurantCuisineCategories,
   getRestaurantOccasionCategories,
   getRestaurantSettings,
-  getRestaurantWorkingHours,
   listRestaurantGallery,
   removeRestaurantGalleryImage,
   setRestaurantCuisineCategories,
   setRestaurantOccasionCategories,
   updateRestaurant,
   updateRestaurantSettings,
-  updateRestaurantWorkingHours,
   type GalleryItemDto,
   type RestaurantDto,
   type RestaurantSettingsDto,
-  type WorkingHoursEntry,
 } from '@/api/restaurants'
 import {
   listCuisineCategories,
@@ -63,14 +60,12 @@ const tabs = [
   'profile',
   'gallery',
   'categories',
-  'hours',
   'rules',
   'account',
   'team',
   'subscription',
   'security',
 ] as const
-const DAY_LABELS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
 const defaultSettings: RestaurantSettingsDto = {
   reservationIntervalMinutes: 30,
@@ -80,22 +75,7 @@ const defaultSettings: RestaurantSettingsDto = {
   defaultReservationDurationMinutes: 90,
   autoApproval: false,
   timezone: 'UTC',
-  defaultCurrency: 'USD',
-}
-
-function entriesToWeek(entries: WorkingHoursEntry[]): WorkingHoursEntry[] {
-  return DAY_LABELS.map((_, dayOfWeek) => {
-    const found = entries.find((e) => e.dayOfWeek === dayOfWeek)
-    return (
-      found ?? {
-        dayOfWeek,
-        openingTime: '09:00',
-        closingTime: '22:00',
-        breakStartTime: null,
-        breakEndTime: null,
-      }
-    )
-  })
+  defaultCurrency: null,
 }
 
 export function SettingsPage() {
@@ -179,7 +159,6 @@ export function SettingsPage() {
     cuisineType: '',
   })
   const [settings, setSettings] = useState<RestaurantSettingsDto>(defaultSettings)
-  const [hours, setHours] = useState<WorkingHoursEntry[]>(entriesToWeek([]))
   const [gallery, setGallery] = useState<GalleryItemDto[]>([])
   const [galleryLoading, setGalleryLoading] = useState(false)
   const [selectedCuisineIds, setSelectedCuisineIds] = useState<string[]>([])
@@ -288,15 +267,13 @@ export function SettingsPage() {
 
     void (async () => {
       try {
-        const [restaurant, restaurantSettings, workingHours] = await Promise.all([
+        const [restaurant, restaurantSettings] = await Promise.all([
           getRestaurant(restaurantId),
           getRestaurantSettings(restaurantId),
-          getRestaurantWorkingHours(restaurantId),
         ])
         if (ac.signal.aborted) return
         applyRestaurant(restaurant)
         setSettings(restaurantSettings)
-        setHours(entriesToWeek(workingHours.entries ?? []))
       } catch (err) {
         if (ac.signal.aborted) return
         // Fall back to scoped restaurant snapshot for profile fields.
@@ -331,23 +308,6 @@ export function SettingsPage() {
       })
       applyRestaurant(updated)
       refreshScope()
-      toast('success', t.common.save)
-    } catch (err) {
-      toast('error', isApiError(err) ? err.message : t.login.errors.unknown)
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  const saveHours = async (e: React.FormEvent): Promise<void> => {
-    e.preventDefault()
-    if (!restaurantId || saving) return
-    setSaving(true)
-    try {
-      const updated = await updateRestaurantWorkingHours(restaurantId, {
-        entries: hours,
-      })
-      setHours(entriesToWeek(updated.entries ?? hours))
       toast('success', t.common.save)
     } catch (err) {
       toast('error', isApiError(err) ? err.message : t.login.errors.unknown)
@@ -767,51 +727,6 @@ export function SettingsPage() {
         </div>
       )}
 
-      {activeTab === 'hours' && (
-        <Card className="max-w-2xl">
-          <CardTitle className="mb-6">{t.settings.hours}</CardTitle>
-          <form className="space-y-3" onSubmit={(e) => void saveHours(e)}>
-            {hours.map((entry) => (
-              <div key={entry.dayOfWeek} className="flex flex-wrap items-center gap-3">
-                <span className="w-28 text-sm font-medium text-text-primary">
-                  {DAY_LABELS[entry.dayOfWeek]}
-                </span>
-                <Input
-                  type="time"
-                  value={entry.openingTime}
-                  className="w-32"
-                  onChange={(e) => {
-                    const next = [...hours]
-                    next[entry.dayOfWeek] = {
-                      ...entry,
-                      openingTime: e.target.value,
-                    }
-                    setHours(next)
-                  }}
-                />
-                <span className="text-text-muted">to</span>
-                <Input
-                  type="time"
-                  value={entry.closingTime}
-                  className="w-32"
-                  onChange={(e) => {
-                    const next = [...hours]
-                    next[entry.dayOfWeek] = {
-                      ...entry,
-                      closingTime: e.target.value,
-                    }
-                    setHours(next)
-                  }}
-                />
-              </div>
-            ))}
-            <Button className="mt-4" type="submit" disabled={saving}>
-              {saving ? t.common.loading : t.common.save}
-            </Button>
-          </form>
-        </Card>
-      )}
-
       {activeTab === 'team' && canManageOrg && <SettingsTeamPanel />}
 
       {activeTab === 'subscription' && (
@@ -945,50 +860,46 @@ export function SettingsPage() {
 
       {activeTab === 'rules' && (
         <Card className="max-w-2xl">
-          <CardTitle className="mb-6">{t.settings.rules}</CardTitle>
+          <CardTitle className="mb-2">{t.settings.rules}</CardTitle>
+          <p className="mb-6 text-sm text-on-surface-variant">
+            {t.settings.rulesForm.perBranchHint}{' '}
+            <Link to="/app/branches" className="font-medium text-primary hover:underline">
+              {t.settings.rulesForm.openBranches}
+            </Link>
+          </p>
           <form className="space-y-4" onSubmit={(e) => void saveSettings(e)}>
             <NumberField
-              label="Max guests per reservation"
+              label={t.settings.rulesForm.maxGuests}
               value={settings.maxGuestsPerReservation}
               onChange={(v) => setSettings({ ...settings, maxGuestsPerReservation: v })}
             />
             <NumberField
-              label="Default reservation duration (minutes)"
+              label={t.settings.rulesForm.duration}
               value={settings.defaultReservationDurationMinutes}
               onChange={(v) =>
                 setSettings({ ...settings, defaultReservationDurationMinutes: v })
               }
             />
             <NumberField
-              label="Reservation interval (minutes)"
+              label={t.settings.rulesForm.interval}
               value={settings.reservationIntervalMinutes}
               onChange={(v) =>
                 setSettings({ ...settings, reservationIntervalMinutes: v })
               }
             />
             <NumberField
-              label="Cancellation window (minutes)"
+              label={t.settings.rulesForm.cancellationWindow}
               value={settings.cancellationWindowMinutes}
               onChange={(v) =>
                 setSettings({ ...settings, cancellationWindowMinutes: v })
               }
             />
             <NumberField
-              label="Pending timeout (minutes)"
+              label={t.settings.rulesForm.pendingTimeout}
               value={settings.pendingReservationTimeoutMinutes}
               onChange={(v) =>
                 setSettings({ ...settings, pendingReservationTimeoutMinutes: v })
               }
-            />
-            <FormField
-              label="Timezone"
-              value={settings.timezone}
-              onChange={(v) => setSettings({ ...settings, timezone: v })}
-            />
-            <FormField
-              label="Default currency"
-              value={settings.defaultCurrency}
-              onChange={(v) => setSettings({ ...settings, defaultCurrency: v })}
             />
             <label className="flex items-center gap-2 text-sm text-on-surface">
               <input
@@ -998,7 +909,7 @@ export function SettingsPage() {
                   setSettings({ ...settings, autoApproval: e.target.checked })
                 }
               />
-              Auto-approve reservations
+              {t.settings.rulesForm.autoApproval}
             </label>
             <Button type="submit" disabled={saving}>
               {saving ? t.common.loading : t.common.save}
