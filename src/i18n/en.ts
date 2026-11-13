@@ -769,6 +769,10 @@ export const en = {
     branch: 'Branch',
     reservationOptional: 'Reservation ID (optional)',
     reservationIdPlaceholder: 'Reservation UUID',
+    alerts: {
+      newTitle: 'New message',
+      newBody: 'A customer sent a message. Open the inbox to reply.',
+    },
   },
   staff: {
     title: 'Staff',

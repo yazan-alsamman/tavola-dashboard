@@ -769,6 +769,10 @@ export const ar: TranslationKeys = {
     branch: 'الفرع',
     reservationOptional: 'معرّف الحجز (اختياري)',
     reservationIdPlaceholder: 'معرّف الحجز UUID',
+    alerts: {
+      newTitle: 'رسالة جديدة',
+      newBody: 'أرسل زبون رسالة. افتح صندوق الرسائل للرد.',
+    },
   },
   staff: {
     title: 'الموظفون',

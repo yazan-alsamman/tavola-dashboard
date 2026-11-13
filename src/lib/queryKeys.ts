@@ -67,6 +67,7 @@ export const notificationKeys = {
   list: (page: number, pageSize: number, unread?: boolean) =>
     [...notificationKeys.all, 'list', page, pageSize, unread ?? false] as const,
   unreadCount: () => [...notificationKeys.all, 'unread-count'] as const,
+  watch: () => [...notificationKeys.all, 'watch'] as const,
 }
 
 export const waitlistKeys = {

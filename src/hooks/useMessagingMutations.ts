@@ -7,7 +7,14 @@ import {
   type SendMessageRequest,
   type StartConversationRequest,
 } from '@/api/messaging'
-import { messagingKeys } from '@/lib/queryKeys'
+import {
+  isStaffMessageReceived,
+  markNotificationRead,
+  notificationConversationId,
+  type NotificationDto,
+} from '@/api/notifications'
+import type { PaginatedData } from '@/api/types'
+import { messagingKeys, notificationKeys } from '@/lib/queryKeys'
 
 export interface MessagingMutationScope {
   restaurantId: string
@@ -47,6 +54,20 @@ export function useMarkConversationReadMutation() {
       scope: MessagingMutationScope
     }) => markConversationRead(input.conversationId),
     onSuccess: async (_data, vars) => {
+      // Reading a conversation also clears its "new message" notifications
+      // the shell watch has seen, so the badge does not keep counting them.
+      const watched =
+        queryClient.getQueryData<PaginatedData<NotificationDto>>(notificationKeys.watch())
+          ?.items ?? []
+      const handled = watched.filter(
+        (item) =>
+          isStaffMessageReceived(item) &&
+          notificationConversationId(item) === vars.conversationId,
+      )
+      if (handled.length > 0) {
+        await Promise.allSettled(handled.map((item) => markNotificationRead(item.id)))
+        void queryClient.invalidateQueries({ queryKey: notificationKeys.all })
+      }
       await Promise.all([
         queryClient.invalidateQueries({
           queryKey: messagingKeys.conversation(vars.conversationId),

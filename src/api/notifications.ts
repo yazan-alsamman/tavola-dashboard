@@ -7,9 +7,27 @@ export interface NotificationDto {
   title?: string | null
   body?: string | null
   type?: string | null
+  /** Ids the notification points at, e.g. `conversationId`, `reservationId`. */
+  data?: Record<string, unknown> | null
   readAt?: string | null
   createdAt?: string
   [key: string]: unknown
+}
+
+/**
+ * Backend ADR-049: a customer wrote in one of the restaurant's conversations.
+ * In-App only; `data.conversationId` names the conversation.
+ */
+export const STAFF_MESSAGE_RECEIVED = 'StaffMessageReceived'
+
+export function isStaffMessageReceived(notification: NotificationDto): boolean {
+  return notification.type === STAFF_MESSAGE_RECEIVED
+}
+
+/** The conversation a notification points at, if any. */
+export function notificationConversationId(notification: NotificationDto): string | null {
+  const value = notification.data?.conversationId
+  return typeof value === 'string' && value.length > 0 ? value : null
 }
 
 export interface ListNotificationsParams {

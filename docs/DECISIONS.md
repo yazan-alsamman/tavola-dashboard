@@ -516,7 +516,7 @@ Consequences:
 Both pages need the backend release that adds these routes. Against an older backend they show the load-error state.
 
 
-> **Numbering note.** The CR round 2 decisions below reuse the numbers ADR-016 to ADR-020, which earlier entries above also use. Cite these as "ADR-0NN (CR round 2)". The next new decision is ADR-027.
+> **Numbering note.** The CR round 2 decisions below reuse the numbers ADR-016 to ADR-020, which earlier entries above also use. Cite these as "ADR-0NN (CR round 2)". The next new decision is ADR-028.
 
 ## ADR-016 — Floors, the table queue, offer bookings and no broadcast (CR round 2)
 
@@ -595,3 +595,14 @@ Decision:
 5. Offers: the four current kinds (older kinds still display), percentage or amount in the covered branches' currency, days/hours/conditions, the server's status (Ended past the period). Edit, delete, publish and impact are visible buttons. The impact card reads `GET /restaurants/:id/offers/:offerId/impact`.
 
 Consequences: a shared menu over branches with different currencies shows prices without a currency unless the item has one. The impact card is fetched only while open.
+
+## ADR-027 — Alert staff when a customer sends a message
+
+Context: a customer's message from the app reached nobody until someone refreshed the inbox. The backend now creates a `StaffMessageReceived` In-App notification for each person who may answer (backend ADR-049). The dashboard has no socket client.
+
+Decision:
+1. The dashboard shell watches the newest 20 unread notifications every 20 seconds (`useUnreadNotificationsWatchQuery`, key `notificationKeys.watch()`). The first load only records what is already unread.
+2. A new notification refreshes the unread badge and the notification list. A new `StaffMessageReceived` also refreshes the inbox and any open conversation, plays the chime and shows a toast (`useNewMessageAlerts`).
+3. Opening a conversation marks its `StaffMessageReceived` notifications from the watch as read, so the badge does not keep counting messages already seen.
+
+Consequences: one notification request per 20 seconds per open dashboard. A message can take up to 20 seconds to alert. Sound only plays after the user has interacted with the page, as browsers require.
