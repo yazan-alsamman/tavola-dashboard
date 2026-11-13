@@ -128,6 +128,8 @@ import {
   XCircle,
   ZoomIn,
   ZoomOut,
+  Circle,
+  CircleArrowRight,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -278,6 +280,8 @@ const ICON_MAP: Record<string, LucideIcon> = {
   zoom_out: ZoomOut,
   rotate_right: RotateCw,
   more_horiz: Ellipsis,
+  radio_button_unchecked: Circle,
+  arrow_circle_right: CircleArrowRight,
 }
 
 export function MaterialIcon({ name, filled, className, size = 20 }: MaterialIconProps) {

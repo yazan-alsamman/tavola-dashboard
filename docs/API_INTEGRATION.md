@@ -388,9 +388,12 @@ Grouped by Postman folder. `{base}` = `VITE_API_BASE_URL` (i.e. `/api/v1`). All 
 |---|---|---|
 | POST | `/restaurants/:restaurantId/branches` | |
 | GET | `/restaurants/:restaurantId/branches` | paginated |
-| GET / PATCH / DELETE | `/restaurants/:restaurantId/branches/:branchId` | |
+| GET / PATCH / DELETE | `/restaurants/:restaurantId/branches/:branchId` | Create and update also send `venueType` and `features` (backend ADR-053). |
 | GET / PATCH | `/restaurants/:restaurantId/branches/:branchId/working-hours` | The only working hours (backend ADR-050). Full replace; a weekday without an entry is closed. The restaurant-level `/restaurants/:id/working-hours` is deprecated and not called. |
-| GET / PATCH | `/restaurants/:restaurantId/branches/:branchId/settings` | Reservation rules of one branch (backend ADR-051). GET falls back to the restaurant's rules until the branch saves its own. PATCH sends all eight rule fields. |
+| GET / PATCH | `/restaurants/:restaurantId/branches/:branchId/settings` | Reservation rules of one branch (backend ADR-051). GET falls back to the restaurant's rules until the branch saves its own. PATCH sends all eight rule fields plus the four limits of backend ADR-053 (`autoApprovalMaxGuests`, `minLeadTimeMinutes`, `maxDaysAhead`, `dailyGuestCap`; `null` means no limit). |
+| GET / POST | `/restaurants/:restaurantId/branches/:branchId/closures` | Temporary closures (backend ADR-053). GET lists closures that have not ended. POST `{ startDate, endDate, reason? }`, dates `YYYY-MM-DD` in the branch timezone, both inclusive. |
+| DELETE | `/restaurants/:restaurantId/branches/:branchId/closures/:closureId` | 204. Reopens those days. |
+| POST | `/restaurants/:restaurantId/branches/:branchId/pause` and `/resume` | Pause or resume one branch (backend ADR-053). Returns the branch with `subscriptionStatus` (`Trial`, `Active`, `Paused`) and `trialEndsAt`. |
 
 ## Floor Plans
 

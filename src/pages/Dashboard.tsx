@@ -13,6 +13,7 @@ import { ErrorState } from '@/components/ui/ErrorState'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { SkeletonStats, SkeletonText } from '@/components/ui/Skeleton'
 import { LiveServiceBar } from '@/components/layout/LiveServiceBar'
+import { SetupGuideCard } from '@/components/dashboard/SetupGuideCard'
 import { useLocale } from '@/context/LocaleContext'
 import { useAuth } from '@/context/AuthContext'
 import { useRestaurantScope } from '@/context/RestaurantScopeContext'
@@ -307,6 +308,8 @@ export function DashboardPage() {
       />
 
       <LiveServiceBar />
+
+      <SetupGuideCard />
 
       {usingFallback && (
         <p className="text-body-sm text-on-surface-variant">{t.calendar.ownershipFallbackNote}</p>

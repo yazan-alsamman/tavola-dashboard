@@ -9,6 +9,7 @@ import { Card, CardTitle } from '@/components/ui/Card'
 import { Input, Select } from '@/components/ui/Input'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Skeleton } from '@/components/ui/Skeleton'
+import { roleDescription, roleLabel } from '@/lib/roleLabel'
 import { useLocale } from '@/context/LocaleContext'
 import { useRestaurantScope } from '@/context/RestaurantScopeContext'
 import { useToast } from '@/context/ToastContext'
@@ -66,7 +67,9 @@ export function StaffPage() {
   const removeMutation = useRemoveEmployeeMutation()
 
   const roles = rolesQuery.data ?? []
-  const roleNameById = new Map(roles.map((role) => [role.roleId, role.name]))
+  const roleWords = { names: t.staff.roleNames, descriptions: t.staff.roleDescriptions }
+  const roleNameById = new Map(roles.map((role) => [role.roleId, roleLabel(role, roleWords)]))
+  const chosenRole = roles.find((role) => role.roleId === roleId)
 
   useEffect(() => {
     setBranchId(selectedBranchId ?? '')
@@ -230,7 +233,9 @@ export function StaffPage() {
                 ? t.staff.rolesLoading
                 : rolesQuery.isError
                   ? undefined
-                  : t.staff.roleHint
+                  : chosenRole
+                    ? roleDescription(chosenRole, roleWords)
+                    : t.staff.roleHint
             }
             error={rolesQuery.isError ? t.staff.rolesFailed : undefined}
             value={roleId}
@@ -240,7 +245,7 @@ export function StaffPage() {
           >
             {roles.map((role) => (
               <option key={role.roleId} value={role.roleId}>
-                {role.name}
+                {roleLabel(role, roleWords)}
               </option>
             ))}
           </Select>

@@ -23,6 +23,9 @@ import {
 import { BranchLocationField } from '@/components/branches/BranchLocationField'
 import { WeeklyHoursEditor } from '@/components/branches/WeeklyHoursEditor'
 import { BranchRulesForm } from '@/components/branches/BranchRulesForm'
+import { BranchVenueFields } from '@/components/branches/BranchVenueFields'
+import { BranchClosuresPanel } from '@/components/branches/BranchClosuresPanel'
+import { BranchPauseButton, BranchPlanBadge } from '@/components/branches/BranchPlanStatus'
 import {
   entriesToWeek,
   weekToEntries,
@@ -40,6 +43,8 @@ const emptyForm: BranchWriteRequest = {
   currency: 'SYP',
   timezone: 'Asia/Damascus',
   phone: '',
+  venueType: null,
+  features: [],
 }
 
 function branchPinIsValid(
@@ -64,6 +69,8 @@ function branchToForm(branch: BranchDto): BranchWriteRequest {
     currency: branch.currency ?? '',
     timezone: branch.timezone,
     phone: branch.phone ?? '',
+    venueType: branch.venueType ?? null,
+    features: branch.features ?? [],
   }
 }
 
@@ -84,6 +91,7 @@ export function BranchesPage() {
   const [editingBranch, setEditingBranch] = useState<BranchDto | null>(null)
   const [hoursBranch, setHoursBranch] = useState<BranchDto | null>(null)
   const [rulesBranch, setRulesBranch] = useState<BranchDto | null>(null)
+  const [closuresBranch, setClosuresBranch] = useState<BranchDto | null>(null)
   const [form, setForm] = useState<BranchWriteRequest>(emptyForm)
   const [hours, setHours] = useState<WeekdayHours[]>(entriesToWeek([]))
   const [hoursLoading, setHoursLoading] = useState(false)
@@ -258,12 +266,33 @@ export function BranchesPage() {
                   <p className="text-sm text-on-surface-variant mt-1">
                     {branch.address}
                   </p>
+                  <div className="mt-2">
+                    <BranchPlanBadge branch={branch} />
+                  </div>
                 </div>
                 <div className="p-2 rounded-lg bg-primary/10 text-primary">
                   <MaterialIcon name="store" size={20} />
                 </div>
               </div>
               <dl className="text-sm space-y-1 text-on-surface-variant">
+                <div className="flex justify-between gap-2">
+                  <dt>{t.branches.venue.type}</dt>
+                  <dd className="text-on-surface">
+                    {branch.venueType
+                      ? t.branches.venue.types[branch.venueType]
+                      : t.branches.venue.typeNone}
+                  </dd>
+                </div>
+                {(branch.features ?? []).length > 0 && (
+                  <div className="flex justify-between gap-2">
+                    <dt>{t.branches.venue.features}</dt>
+                    <dd className="text-on-surface text-end">
+                      {(branch.features ?? [])
+                        .map((feature) => t.branches.venue.featureNames[feature])
+                        .join(t.common.listSeparator)}
+                    </dd>
+                  </div>
+                )}
                 <div className="flex justify-between gap-2">
                   <dt>{t.branches.fields.timezone}</dt>
                   <dd className="text-on-surface">{branch.timezone}</dd>
@@ -320,10 +349,20 @@ export function BranchesPage() {
                 <Button
                   size="sm"
                   variant="outline"
+                  onClick={() => setClosuresBranch(branch)}
+                >
+                  {t.branches.closures.button}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
                   onClick={() => openPhotos(branch)}
                 >
                   {t.branches.photos}
                 </Button>
+                {restaurantId && (
+                  <BranchPauseButton restaurantId={restaurantId} branch={branch} />
+                )}
                 <Button
                   size="sm"
                   variant="secondary"
@@ -396,6 +435,12 @@ export function BranchesPage() {
               ))}
             </Select>
           </div>
+          <BranchVenueFields
+            venueType={form.venueType ?? null}
+            features={form.features ?? []}
+            disabled={submitting}
+            onChange={(venue) => setForm((current) => ({ ...current, ...venue }))}
+          />
           <BranchLocationField
             latitude={form.latitude ?? null}
             longitude={form.longitude ?? null}
@@ -460,6 +505,17 @@ export function BranchesPage() {
             branchId={rulesBranch.branchId}
             onDone={() => setRulesBranch(null)}
           />
+        )}
+      </Modal>
+
+      <Modal
+        open={Boolean(closuresBranch)}
+        onClose={() => setClosuresBranch(null)}
+        title={t.branches.closures.title}
+        description={closuresBranch ? formatBranchLabel(closuresBranch) : undefined}
+      >
+        {closuresBranch && restaurantId && (
+          <BranchClosuresPanel restaurantId={restaurantId} branchId={closuresBranch.branchId} />
         )}
       </Modal>
     </div>

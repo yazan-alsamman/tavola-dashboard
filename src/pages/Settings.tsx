@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/Button'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { MaterialIcon } from '@/components/ui/Icon'
 import { useAuth } from '@/context/AuthContext'
+import { BranchPlansCard } from '@/components/branches/BranchPlansCard'
 import { useLocale } from '@/context/LocaleContext'
 import { useRestaurantScope } from '@/context/RestaurantScopeContext'
 import { useToast } from '@/context/ToastContext'
@@ -635,6 +636,7 @@ export function SettingsPage() {
             fields={displayPayloadFields(usageQuery.data ?? {}, locale)}
             emptyTitle={t.settings.subscriptionPlan.noData}
           />
+          <BranchPlansCard />
         </div>
       )}
 

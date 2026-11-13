@@ -631,3 +631,17 @@ Decision:
 4. Hours start on Saturday (`WEEK_ORDER`). Account language and preferred currency are dropdowns (`src/lib/currencies.ts`, names from `Intl.DisplayNames`). Security lists each session as "browser on system" with sign-in and last-used dates.
 
 Consequences: a branch that never saved rules shows the restaurant's rules until it does. Without `branchId` the backend answers gallery reads for the oldest branch, which keeps the 1.0.2 app working.
+
+## ADR-030 — Venue type, closures, booking limits, branch plan, front desk and setup guide
+
+Context: the owner asked for the proposed additions to Branches and Settings, except the map items. The backend adds them in ADR-053: venue type and features per branch, temporary closures, an auto-approval party limit, minimum notice, furthest day ahead and a daily guest cap, a free trial and pause per branch, and a Front Desk role with the `reservations:today-only` permission.
+
+Decision:
+1. The branch form edits venue type and features (`BranchVenueFields`); the branch card shows them with the plan badge (`BranchPlanBadge`).
+2. Branches has a Temporary closure dialog (`BranchClosuresPanel`) and a Pause/Resume button (`BranchPauseButton`). Settings → Subscription lists every branch's plan with the same button (`BranchPlansCard`). Billing stays with the organization.
+3. `BranchRulesForm` adds the auto-approval limit and an "Extra booking limits" group. These limits apply to bookings from the app only; staff can still book by phone.
+4. Staff shows role names and descriptions in the selected language (`roleLabel`). A user holding `reservations:today-only` (`useIsTodayOnly`) sees Reservations locked to today with a note; the backend enforces the same window.
+5. The Dashboard shows a setup guide (`SetupGuideCard`, `useSetupProgress`, `src/lib/setupProgress.ts`) with nine steps, a percentage and the next step. It hides at 100% or when dismissed.
+
+Consequences: a paused branch disappears from guest discovery and takes no online bookings; staff keep its reservations. The Front Desk role exists only after `prisma db seed` runs on the server.
+
