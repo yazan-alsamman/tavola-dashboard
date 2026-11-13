@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { useLocale } from '@/context/LocaleContext'
 import { formatInstantInTimeZone } from '@/lib/branchDateTime'
 import { cn } from '@/lib/utils'
+import { notificationText } from '@/lib/notificationText'
 import { MaterialIcon } from '@/components/ui/Icon'
 import { Num } from '@/components/ui/Num'
 import {
@@ -71,6 +72,7 @@ export function NotificationPopover() {
             )}
             {notifications.map((n) => {
               const isUnread = !n.readAt
+              const text = notificationText(n, t.notifications.types, t.notifications.untitled)
               return (
                 <button
                   key={n.id}
@@ -88,11 +90,11 @@ export function NotificationPopover() {
                   />
                   <div className="flex-1 min-w-0">
                     <p className="text-body-md font-medium">
-                      {n.title ?? t.notifications.untitled}
+                      {text.title}
                     </p>
-                    {n.body && (
+                    {text.body && (
                       <p className="text-body-sm text-on-surface-variant mt-0.5 line-clamp-2">
-                        {n.body}
+                        {text.body}
                       </p>
                     )}
                     {n.createdAt && (
