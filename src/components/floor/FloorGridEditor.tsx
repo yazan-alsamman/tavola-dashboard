@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } f
 import type { FloorPlanAreaDto } from '@/api/floorPlanAreas'
 import type { TableDto, TableStatusDto } from '@/api/tables'
 import { FloorTableQueue } from '@/components/floor/FloorTableQueue'
+import { useEdgeAutoScroll, type PointerPoint } from '@/hooks/useEdgeAutoScroll'
 import { MaterialIcon } from '@/components/ui/Icon'
 import { Num } from '@/components/ui/Num'
 import { useLocale } from '@/context/LocaleContext'
@@ -10,6 +11,8 @@ import {
   areaRect,
   canPlace,
   isPlaced,
+  MAX_GRID_COLS,
+  MAX_GRID_ROWS,
   occupiedRects,
   rectFromCorners,
   tableRect,
@@ -44,6 +47,8 @@ type Drag = {
   moved: boolean
   pointer: { x: number; y: number }
   target: CellRect | null
+  /** Furthest cell span the drag has reached; the grid never shrinks mid-drag. */
+  reach: CellSpan
 }
 
 type Draw = { start: { col: number; row: number }; end: { col: number; row: number } }
@@ -122,15 +127,30 @@ export function FloorGridEditor({
   const [draw, setDraw] = useState<Draw | null>(null)
   const [menuTableId, setMenuTableId] = useState<string | null>(null)
   const [pickedId, setPickedId] = useState<string | null>(null)
+  // Grid size a dropped table reached, held until the saved position shows up
+  // in `tables`; otherwise the grid shrinks for a frame and the page scroll
+  // jumps back up.
+  const [heldReach, setHeldReach] = useState<CellSpan | null>(null)
+  useEffect(() => setHeldReach(null), [tables])
 
   const cellPx = Math.min(
     MAX_CELL_PX,
     Math.max(MIN_CELL_PX, Math.floor((wrapWidth || 960) / bounds.cols)),
   )
-  // A spare row/column so the plan can grow while dragging toward the edge.
-  const cols = Math.max(bounds.cols, Math.floor((wrapWidth || 0) / cellPx))
-  const rows = bounds.rows
-  const placeBounds = { cols: cols + 1, rows: rows + 1 }
+  // While a table or an area is being dragged toward the end of the plan,
+  // the grid keeps one spare row/column past it, so it grows as the drag
+  // (and the edge auto-scroll) carries on; the saved plan size follows the
+  // tables and areas once dropped.
+  const drawRect = draw ? rectFromCorners(draw.start, draw.end) : null
+  const drawReach: CellSpan = drawRect
+    ? { cols: drawRect.col + drawRect.cols + 1, rows: drawRect.row + drawRect.rows + 1 }
+    : { cols: 0, rows: 0 }
+  const reach: CellSpan = drag?.moved ? drag.reach : (heldReach ?? drawReach)
+  const cols = Math.min(
+    MAX_GRID_COLS,
+    Math.max(bounds.cols, Math.floor((wrapWidth || 0) / cellPx), reach.cols),
+  )
+  const rows = Math.min(MAX_GRID_ROWS, Math.max(bounds.rows, reach.rows))
 
   const floorTables = tables.filter(
     (table) => isPlaced(table) && tableFloor(table) === currentFloor,
@@ -147,19 +167,28 @@ export function FloorGridEditor({
     return () => observer.disconnect()
   }, [])
 
-  const cellAt = (clientX: number, clientY: number) => {
+  /**
+   * Grid cell under a viewport point. With `growing`, a point just below the
+   * grid (within one square) maps to the row past its end, so dragging down
+   * past the last row keeps extending the plan.
+   */
+  const cellAt = (clientX: number, clientY: number, growing = false) => {
     const rect = gridRef.current?.getBoundingClientRect()
     if (!rect) return null
     const x = clientX - rect.left
     const y = clientY - rect.top
-    if (x < 0 || y < 0 || x > rect.width || y > rect.height) return null
+    if (x < 0 || y < 0 || x > rect.width) return null
+    if (y > rect.height) {
+      if (!growing || y > rect.height + cellPx) return null
+      return { col: Math.floor(x / cellPx), row: Math.min(rows, MAX_GRID_ROWS - 1) }
+    }
     return { col: Math.floor(x / cellPx), row: Math.floor(y / cellPx) }
   }
 
   const tableById = (id: string) => tables.find((table) => table.tableId === id)
 
   const validTarget = (tableId: string, rect: CellRect) =>
-    canPlace(rect, occupiedRects(tables, currentFloor, tableId), placeBounds)
+    canPlace(rect, occupiedRects(tables, currentFloor, tableId))
 
   // The live drag sits in a ref so pointer handlers never act inside a state
   // updater; state only mirrors it for rendering.
@@ -169,6 +198,53 @@ export function FloorGridEditor({
     setDrag(next)
   }
 
+  /** Last pointer position of a drag or area draw, for the edge auto-scroll. */
+  const pointerRef = useRef<PointerPoint | null>(null)
+
+  /** Re-aims the live drag at the cell under `point`. */
+  const aimDrag = (current: Drag, point: PointerPoint) => {
+    const moved =
+      current.moved ||
+      Math.hypot(point.x - current.startX, point.y - current.startY) > DRAG_THRESHOLD_PX
+    const table = tableById(current.tableId)
+    const cell = cellAt(point.x, point.y, true)
+    const target =
+      table && cell
+        ? { col: cell.col - current.grab.col, row: cell.row - current.grab.row, ...tableSpan(table) }
+        : null
+    const same =
+      moved === current.moved &&
+      point.x === current.pointer.x &&
+      point.y === current.pointer.y &&
+      target?.col === current.target?.col &&
+      target?.row === current.target?.row
+    if (same) return
+    const reach = target
+      ? {
+          cols: Math.max(current.reach.cols, target.col + target.cols + 1),
+          rows: Math.max(current.reach.rows, target.row + target.rows + 1),
+        }
+      : current.reach
+    setLiveDrag({ ...current, moved, target, reach, pointer: point })
+  }
+
+  useEdgeAutoScroll(
+    (drag?.moved ?? false) || draw != null,
+    wrapRef,
+    pointerRef,
+    () => {
+      const point = pointerRef.current
+      if (!point) return
+      if (dragRef.current) aimDrag(dragRef.current, point)
+      else if (draw) {
+        const cell = cellAt(point.x, point.y, true)
+        if (cell && (cell.col !== draw.end.col || cell.row !== draw.end.row)) {
+          setDraw({ ...draw, end: cell })
+        }
+      }
+    },
+  )
+
   // Window listeners keep a drag alive when the pointer leaves the grid or
   // starts in the side queue.
   const dragging = drag != null
@@ -177,25 +253,21 @@ export function FloorGridEditor({
     const move = (e: PointerEvent) => {
       const current = dragRef.current
       if (!current) return
-      const moved =
-        current.moved ||
-        Math.hypot(e.clientX - current.startX, e.clientY - current.startY) > DRAG_THRESHOLD_PX
-      const table = tableById(current.tableId)
-      const cell = cellAt(e.clientX, e.clientY)
-      const target =
-        table && cell
-          ? { col: cell.col - current.grab.col, row: cell.row - current.grab.row, ...tableSpan(table) }
-          : null
-      setLiveDrag({ ...current, moved, target, pointer: { x: e.clientX, y: e.clientY } })
+      pointerRef.current = { x: e.clientX, y: e.clientY }
+      aimDrag(current, pointerRef.current)
     }
     const up = () => {
       const current = dragRef.current
+      pointerRef.current = null
       setLiveDrag(null)
       if (!current) return
       const table = tableById(current.tableId)
       if (!table) return
       if (current.moved) {
-        if (current.target && onPlace(table, current.target)) setPickedId(null)
+        if (current.target && onPlace(table, current.target)) {
+          setPickedId(null)
+          setHeldReach(current.reach)
+        }
       } else if (current.source === 'grid') {
         setMenuTableId((open) => (open === table.tableId ? null : table.tableId))
       } else {
@@ -212,7 +284,7 @@ export function FloorGridEditor({
     }
     // Handlers read the drag from the ref; they re-bind when the grid changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dragging, cellPx, tables, currentFloor])
+  }, [dragging, cellPx, rows, tables, currentFloor])
 
   useEffect(() => {
     if (!menuTableId) return
@@ -252,6 +324,7 @@ export function FloorGridEditor({
       moved: false,
       pointer: { x: e.clientX, y: e.clientY },
       target: null,
+      reach: { cols: 0, rows: 0 },
     })
   }
 
@@ -262,14 +335,17 @@ export function FloorGridEditor({
     if (!cell) return
     e.preventDefault()
     ;(e.target as Element).setPointerCapture?.(e.pointerId)
+    pointerRef.current = { x: e.clientX, y: e.clientY }
     setDraw({ start: cell, end: cell })
   }
   const moveDraw = (e: ReactPointerEvent) => {
     if (!draw) return
-    const cell = cellAt(e.clientX, e.clientY)
+    pointerRef.current = { x: e.clientX, y: e.clientY }
+    const cell = cellAt(e.clientX, e.clientY, true)
     if (cell) setDraw({ ...draw, end: cell })
   }
   const endDraw = () => {
+    pointerRef.current = null
     if (!draw) return
     onAreaDrawn(rectFromCorners(draw.start, draw.end))
     setDraw(null)
@@ -293,7 +369,6 @@ export function FloorGridEditor({
   const dragTable = drag ? tableById(drag.tableId) : undefined
   const ghost = drag?.moved && drag.target ? drag.target : null
   const ghostValid = ghost && drag ? validTarget(drag.tableId, ghost) : false
-  const drawRect = draw ? rectFromCorners(draw.start, draw.end) : null
   const inset = Math.max(8, Math.round(cellPx * 0.2))
   const chairGap = Math.max(4, Math.round(inset * 0.55))
 

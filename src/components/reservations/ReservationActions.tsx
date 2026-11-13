@@ -186,7 +186,7 @@ export function ReservationActions({
         {showService && guestArrived && (
           <span className="text-label-sm text-on-surface-variant">{t.reservations.track.here}</span>
         )}
-        <DropdownMenu label={t.common.moreActions}>
+        <DropdownMenu label={t.common.moreActions} align="start">
           {showConfirm && (
             <DropdownMenuItem destructive onSelect={() => setDestructive('reject')}>
               {t.reservations.reject}

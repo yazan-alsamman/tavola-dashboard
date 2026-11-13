@@ -141,10 +141,14 @@ export function useFloorPlanEditor({
   // The grid always offers one more row/column to grow into.
   const placeBounds = { cols: bounds.cols + 1, rows: bounds.rows + 1 }
 
-  /** Moves a placed table, or places a queued one, at `rect` on the current floor. */
+  /**
+   * Moves a placed table, or places a queued one, at `rect` on the current
+   * floor. A drag may carry a table past the current edge (the grid grows
+   * under it), so only the plan's maximum size limits where it lands.
+   */
   const placeTable = (table: TableDto, rect: CellRect): boolean => {
     const occupied = occupiedRects(tables, currentFloor, table.tableId)
-    if (!canPlace(rect, occupied, placeBounds)) {
+    if (!canPlace(rect, occupied)) {
       toast('error', t.floorGrid.cellTaken)
       return false
     }
