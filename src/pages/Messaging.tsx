@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
@@ -116,6 +117,27 @@ export function MessagingPage() {
       markRead.mutate({ conversationId, scope: mutationScope })
     }
   }
+
+  // A notification opens its conversation with `?conversation=<id>`: select
+  // it once the restaurant scope is known, then drop the parameter so a later
+  // pick in the list is not overridden.
+  const [searchParams, setSearchParams] = useSearchParams()
+  const requestedConversationId = searchParams.get('conversation')
+  const scopeRestaurantId = mutationScope?.restaurantId ?? null
+  useEffect(() => {
+    if (!requestedConversationId || !scopeRestaurantId) return
+    handleSelectConversation(requestedConversationId)
+    setSearchParams(
+      (params) => {
+        const next = new URLSearchParams(params)
+        next.delete('conversation')
+        return next
+      },
+      { replace: true },
+    )
+    // Runs once per requested id; the handler reads the current scope.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [requestedConversationId, scopeRestaurantId])
 
   const handleSend = (): void => {
     const body = messageBody.trim()

@@ -737,6 +737,35 @@ export const en = {
     empty: 'No notifications yet',
     untitled: 'Notification',
     loadError: 'Could not load notifications',
+    /** Restaurant-side notification types, in the dashboard's language. */
+    staff: {
+      StaffReservationCreated: {
+        title: 'New reservation',
+        body: 'A customer booked a table from the app.',
+      },
+      StaffReservationCancelled: {
+        title: 'Reservation cancelled',
+        body: 'A customer cancelled their reservation.',
+      },
+      StaffWaitlistEntryCreated: {
+        title: 'New on the waitlist',
+        body: 'A customer joined the waitlist from the app.',
+      },
+      StaffReviewCreated: {
+        title: 'New review',
+        body: 'A guest reviewed their visit.',
+      },
+      StaffLowReviewCreated: {
+        title: 'Low review',
+        body: 'A guest gave their visit a low rating. Worth a reply.',
+      },
+      StaffMessageReceived: {
+        title: 'New message',
+        body: 'A customer sent you a message.',
+      },
+    },
+    messageFrom: 'New message from {name}',
+    messageFromBody: '{name} sent you a message. Tap to open the conversation.',
   },
   messaging: {
     title: 'Inbox',
