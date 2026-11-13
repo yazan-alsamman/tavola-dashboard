@@ -1,3 +1,4 @@
+import { useLocale } from '@/context/LocaleContext'
 import { cn } from '@/lib/utils'
 
 interface SkeletonProps {
@@ -18,13 +19,14 @@ function LoadingRegion({
   className,
   children,
 }: {
-  label: string
+  label?: string
   className?: string
   children: React.ReactNode
 }) {
+  const { t } = useLocale()
   return (
     <div role="status" aria-live="polite" aria-busy="true" className={className}>
-      <span className="sr-only">{label}</span>
+      <span className="sr-only">{label ?? t.common.loading}</span>
       {children}
     </div>
   )
@@ -32,7 +34,7 @@ function LoadingRegion({
 
 export function SkeletonText({
   lines = 3,
-  label = 'Loading',
+  label,
   className,
 }: {
   lines?: number
@@ -51,7 +53,7 @@ export function SkeletonText({
 /** Mirrors the StatCard grid so the page does not reflow when data lands. */
 export function SkeletonStats({
   count = 4,
-  label = 'Loading metrics',
+  label,
   className,
 }: {
   count?: number
@@ -81,7 +83,7 @@ export function SkeletonStats({
 export function SkeletonTable({
   rows = 6,
   columns = 5,
-  label = 'Loading table',
+  label,
   className,
 }: {
   rows?: number
@@ -118,7 +120,6 @@ export function SkeletonTable({
 export function SkeletonCard({ className }: SkeletonProps) {
   return (
     <LoadingRegion
-      label="Loading"
       className={cn(
         'rounded-xl border border-outline-variant/60 bg-surface-container-lowest p-5 elev-1',
         className,

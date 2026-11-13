@@ -53,8 +53,8 @@ import {
   uploadMyAvatar,
   type UserPreferences,
 } from '@/api/users'
-import { isApiError } from '@/api/errors'
 import { cn } from '@/lib/utils'
+import { apiErrorText } from '@/lib/apiErrorText'
 
 const tabs = [
   'profile',
@@ -120,7 +120,7 @@ export function SettingsPage() {
     onError: (err) => {
       toast(
         'error',
-        isApiError(err) ? err.message : t.settings.securityForm.passwordChangeFailed,
+        apiErrorText(err, t, t.settings.securityForm.passwordChangeFailed),
       )
     },
   })
@@ -134,7 +134,7 @@ export function SettingsPage() {
     onError: (err) => {
       toast(
         'error',
-        isApiError(err) ? err.message : t.settings.securityForm.sessionRevokeFailed,
+        apiErrorText(err, t, t.settings.securityForm.sessionRevokeFailed),
       )
     },
   })
@@ -148,7 +148,7 @@ export function SettingsPage() {
     onError: (err) => {
       toast(
         'error',
-        isApiError(err) ? err.message : t.settings.securityForm.logoutAllFailed,
+        apiErrorText(err, t, t.settings.securityForm.logoutAllFailed),
       )
     },
   })
@@ -229,7 +229,7 @@ export function SettingsPage() {
       })
       .catch((err) => {
         if (!ac.signal.aborted) {
-          toast('error', isApiError(err) ? err.message : t.login.errors.unknown)
+          toast('error', apiErrorText(err, t, t.login.errors.unknown))
         }
       })
       .finally(() => {
@@ -252,7 +252,7 @@ export function SettingsPage() {
         setSelectedOccasionIds(occasion.occasionCategoryIds)
       } catch (err) {
         if (!ac.signal.aborted) {
-          toast('error', isApiError(err) ? err.message : t.login.errors.unknown)
+          toast('error', apiErrorText(err, t, t.login.errors.unknown))
         }
       }
     })()
@@ -278,7 +278,7 @@ export function SettingsPage() {
         if (ac.signal.aborted) return
         // Fall back to scoped restaurant snapshot for profile fields.
         if (selectedRestaurant) applyRestaurant(selectedRestaurant)
-        toast('error', isApiError(err) ? err.message : t.login.errors.unknown)
+        toast('error', apiErrorText(err, t, t.login.errors.unknown))
       } finally {
         if (!ac.signal.aborted) setLoading(false)
       }
@@ -310,7 +310,7 @@ export function SettingsPage() {
       refreshScope()
       toast('success', t.common.save)
     } catch (err) {
-      toast('error', isApiError(err) ? err.message : t.login.errors.unknown)
+      toast('error', apiErrorText(err, t, t.login.errors.unknown))
     } finally {
       setSaving(false)
     }
@@ -325,7 +325,7 @@ export function SettingsPage() {
       setSettings(updated)
       toast('success', t.common.save)
     } catch (err) {
-      toast('error', isApiError(err) ? err.message : t.login.errors.unknown)
+      toast('error', apiErrorText(err, t, t.login.errors.unknown))
     } finally {
       setSaving(false)
     }
@@ -344,7 +344,7 @@ export function SettingsPage() {
       setSelectedOccasionIds(occasion.occasionCategoryIds)
       toast('success', t.common.save)
     } catch (err) {
-      toast('error', isApiError(err) ? err.message : t.login.errors.unknown)
+      toast('error', apiErrorText(err, t, t.login.errors.unknown))
     } finally {
       setSaving(false)
     }
@@ -367,7 +367,7 @@ export function SettingsPage() {
       await accountQuery.refetch()
       toast('success', t.common.save)
     } catch (err) {
-      toast('error', isApiError(err) ? err.message : t.login.errors.unknown)
+      toast('error', apiErrorText(err, t, t.login.errors.unknown))
     } finally {
       setSaving(false)
     }
@@ -385,7 +385,7 @@ export function SettingsPage() {
       setGallery((prev) => [...prev, item])
       toast('success', t.settings.galleryForm.uploadSuccess)
     } catch (err) {
-      toast('error', isApiError(err) ? err.message : t.login.errors.unknown)
+      toast('error', apiErrorText(err, t, t.login.errors.unknown))
     } finally {
       setSaving(false)
     }
@@ -399,7 +399,7 @@ export function SettingsPage() {
       setGallery((prev) => prev.filter((g) => g.galleryItemId !== galleryItemId))
       toast('success', t.settings.galleryForm.removeSuccess)
     } catch (err) {
-      toast('error', isApiError(err) ? err.message : t.login.errors.unknown)
+      toast('error', apiErrorText(err, t, t.login.errors.unknown))
     } finally {
       setSaving(false)
     }
@@ -417,7 +417,7 @@ export function SettingsPage() {
       await accountQuery.refetch()
       toast('success', t.settings.accountForm.avatarSuccess)
     } catch (err) {
-      toast('error', isApiError(err) ? err.message : t.login.errors.unknown)
+      toast('error', apiErrorText(err, t, t.login.errors.unknown))
     } finally {
       setSaving(false)
     }
@@ -619,9 +619,7 @@ export function SettingsPage() {
               <p className="text-sm text-on-surface-variant">{t.common.loading}</p>
             ) : accountQuery.isError ? (
               <p className="text-sm text-error">
-                {isApiError(accountQuery.error)
-                  ? accountQuery.error.message
-                  : t.settings.accountForm.loadFailed}
+                {apiErrorText(accountQuery.error, t, t.settings.accountForm.loadFailed)}
               </p>
             ) : (
               <form className="space-y-4" onSubmit={(e) => void saveAccount(e)}>
@@ -735,9 +733,7 @@ export function SettingsPage() {
             title={t.settings.subscriptionPlan.planTitle}
             loading={subscriptionQuery.isLoading}
             error={
-              subscriptionQuery.error && isApiError(subscriptionQuery.error)
-                ? subscriptionQuery.error.message
-                : null
+              subscriptionQuery.error && apiErrorText(subscriptionQuery.error, t, t.login.errors.unknown)
             }
             fields={displayPayloadFields(subscriptionQuery.data ?? {}, locale)}
             emptyTitle={t.settings.subscriptionPlan.noData}
@@ -746,9 +742,7 @@ export function SettingsPage() {
             title={t.settings.subscriptionPlan.usageTitle}
             loading={usageQuery.isLoading}
             error={
-              usageQuery.error && isApiError(usageQuery.error)
-                ? usageQuery.error.message
-                : null
+              usageQuery.error && apiErrorText(usageQuery.error, t, t.login.errors.unknown)
             }
             fields={displayPayloadFields(usageQuery.data ?? {}, locale)}
             emptyTitle={t.settings.subscriptionPlan.noData}
@@ -829,9 +823,7 @@ export function SettingsPage() {
               <p className="text-sm text-on-surface-variant">{t.common.loading}</p>
             ) : sessionsQuery.error ? (
               <p className="text-sm text-error">
-                {isApiError(sessionsQuery.error)
-                  ? sessionsQuery.error.message
-                  : t.settings.securityForm.sessionsLoadFailed}
+                {apiErrorText(sessionsQuery.error, t, t.settings.securityForm.sessionsLoadFailed)}
               </p>
             ) : (sessionsQuery.data?.sessions ?? []).length === 0 ? (
               <EmptyState

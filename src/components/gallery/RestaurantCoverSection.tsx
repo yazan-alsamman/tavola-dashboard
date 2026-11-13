@@ -1,6 +1,5 @@
 import { useRef } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { isApiError } from '@/api/errors'
 import {
   getPublicRestaurantCover,
   uploadRestaurantCover,
@@ -10,6 +9,7 @@ import { MaterialIcon } from '@/components/ui/Icon'
 import { useAuth } from '@/context/AuthContext'
 import { useLocale } from '@/context/LocaleContext'
 import { useToast } from '@/context/ToastContext'
+import { apiErrorText } from '@/lib/apiErrorText'
 
 function coverKey(restaurantId: string) {
   return ['restaurants', restaurantId, 'cover'] as const
@@ -39,7 +39,7 @@ export function RestaurantCoverSection({ restaurantId }: { restaurantId: string 
       toast('success', copy.success)
     },
     onError: (err) => {
-      toast('error', isApiError(err) ? err.message : t.gallery.errors.unknown)
+      toast('error', apiErrorText(err, t, t.gallery.errors.unknown))
     },
   })
 

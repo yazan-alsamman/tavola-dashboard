@@ -1,6 +1,5 @@
 import { useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { isApiError } from '@/api/errors'
 import {
   addRestaurantGalleryImage,
   listRestaurantGallery,
@@ -20,6 +19,7 @@ import { useRestaurantScope } from '@/context/RestaurantScopeContext'
 import { useToast } from '@/context/ToastContext'
 import { moveTo } from '@/lib/reorder'
 import { cn } from '@/lib/utils'
+import { apiErrorText } from '@/lib/apiErrorText'
 
 function galleryKeys(restaurantId: string) {
   return ['restaurants', restaurantId, 'gallery'] as const
@@ -61,7 +61,7 @@ export function GalleryPage() {
       toast('success', t.gallery.uploadSuccess)
     },
     onError: (err) => {
-      const message = isApiError(err) ? err.message : t.gallery.errors.unknown
+      const message = apiErrorText(err, t, t.gallery.errors.unknown)
       setUploadError(message)
       toast('error', message)
     },
@@ -78,7 +78,7 @@ export function GalleryPage() {
       setRemoveTarget(null)
     },
     onError: (err) => {
-      toast('error', isApiError(err) ? err.message : t.gallery.errors.unknown)
+      toast('error', apiErrorText(err, t, t.gallery.errors.unknown))
     },
   })
 
@@ -92,7 +92,7 @@ export function GalleryPage() {
       toast('success', t.gallery.reorderSuccess)
     },
     onError: (err) => {
-      toast('error', isApiError(err) ? err.message : t.gallery.errors.unknown)
+      toast('error', apiErrorText(err, t, t.gallery.errors.unknown))
     },
     onSettled: () => setPendingOrder(null),
   })

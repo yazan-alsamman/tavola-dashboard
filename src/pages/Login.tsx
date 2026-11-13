@@ -6,6 +6,7 @@ import { tokenStore } from '@/api/tokenStore'
 import { useAuth } from '@/context/AuthContext'
 import { useLocale } from '@/context/LocaleContext'
 import { MaterialIcon } from '@/components/ui/Icon'
+import { apiErrorText } from '@/lib/apiErrorText'
 
 const BG_IMAGE =
   'https://lh3.googleusercontent.com/aida-public/AB6AXuAUn-J3WBBKHCMehPNsnUiKp-7bXHcHO2WwVCGj-eNzATQCOqDzNI-5TPiQqJspv3RiJBDO5bmgMLsUypw4B7U4v0gQxGnxYMMCjaMBtlHvi78ocO6cM-5tBVEt3xzRA7vz9ttMRNzqRHZz4kFqSgdFvHkjq2ju2tojt4PRFXfo9cehIFkam9SqYe5Xbr_uuffZfxoIGkuoeYtN66uGhEX4upwqxgotsKh6Pv-RknvsvkolVRMMtZRgcQ'
@@ -143,7 +144,7 @@ export function LoginPage() {
       await forgotPassword(email.trim())
       setSuccess(t.login.forgot.success)
     } catch (err) {
-      setError(isApiError(err) ? err.message : t.login.errors.unknown)
+      setError(apiErrorText(err, t, t.login.errors.unknown))
     } finally {
       setSubmitting(false)
     }
@@ -170,7 +171,7 @@ export function LoginPage() {
       setConfirmPassword('')
       setTimeout(() => goToLogin(), 1200)
     } catch (err) {
-      setError(isApiError(err) ? err.message : t.login.errors.unknown)
+      setError(apiErrorText(err, t, t.login.errors.unknown))
     } finally {
       setSubmitting(false)
     }

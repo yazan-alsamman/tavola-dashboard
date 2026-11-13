@@ -48,7 +48,7 @@ Supporting modules:
 | `src/api/tokenStore.ts` | In-memory access token + `sessionStorage` refresh token + session-invalidated listeners |
 | `src/api/auth.ts` | `login`, `logout`, `logoutAll`, `forgotPassword`, `resetPassword`, `changePassword`, `listSessions`, `revokeSession` |
 | `src/api/users.ts` | `getCurrentUser`, `updateCurrentUser`, `getMyPreferences`, `updateMyPreferences`, `uploadMyAvatar` |
-| `src/api/restaurants.ts` | list/get/create/update/delete + settings, working-hours, gallery (incl. `PUT /restaurants/:id/gallery/order`), cover (`POST /restaurants/:id/cover`), cuisine/occasion category assignment. `priceLevel` is read-only (ADR-046). |
+| `src/api/restaurants.ts` | list/get/create/update/delete + settings, gallery (incl. `PUT /restaurants/:id/gallery/order`), cover (`POST /restaurants/:id/cover`), cuisine/occasion category assignment. `priceLevel` is read-only (ADR-046). |
 | `src/api/branches.ts` | list/get/create/update/delete + working-hours. Reads the computed `referencePrice`/`priceLevel` (ADR-046). |
 | `src/api/reservations.ts` | availability, Online + staff phone-booking create, list/get, approve/reject/cancel/reschedule/complete/no-show/table-ready |
 | `src/api/floorPlans.ts` | `listFloorPlans`, `createFloorPlan`, `activateFloorPlan` |
@@ -373,8 +373,7 @@ Grouped by Postman folder. `{base}` = `VITE_API_BASE_URL` (i.e. `/api/v1`). All 
 | GET | `/restaurants/:id` | |
 | PATCH | `/restaurants/:id` | |
 | DELETE | `/restaurants/:id` | soft delete |
-| GET / PATCH | `/restaurants/:id/settings` | `RestaurantSettings` (reservationInterval, maxGuestsPerReservation, cancellationWindow, autoApproval, timezone, defaultCurrency) |
-| GET / PATCH | `/restaurants/:id/working-hours` | |
+| GET / PATCH | `/restaurants/:id/settings` | `RestaurantSettings` (reservationInterval, maxGuestsPerReservation, cancellationWindow, autoApproval, timezone, defaultCurrency). `timezone`/`defaultCurrency` are deprecated (backend ADR-050): not shown, sent back unchanged. |
 | POST | `/restaurants/:id/cover` | Owner/Admin multipart `file`. Sets `coverImageId`. 201 `{ coverImageId, coverImageUrl }`. |
 | GET | `/discovery/restaurants/:id` | Public. Photos page reads `coverImageUrl` only, to preview the cover. |
 | POST / DELETE | `/restaurants/:id/gallery[/:galleryItemId]` | Owner/Admin. Multipart `file` on POST. This does not set the cover. |
@@ -390,7 +389,7 @@ Grouped by Postman folder. `{base}` = `VITE_API_BASE_URL` (i.e. `/api/v1`). All 
 | POST | `/restaurants/:restaurantId/branches` | |
 | GET | `/restaurants/:restaurantId/branches` | paginated |
 | GET / PATCH / DELETE | `/restaurants/:restaurantId/branches/:branchId` | |
-| GET / PATCH | `/restaurants/:restaurantId/branches/:branchId/working-hours` | |
+| GET / PATCH | `/restaurants/:restaurantId/branches/:branchId/working-hours` | The only working hours (backend ADR-050). Full replace; a weekday without an entry is closed. The restaurant-level `/restaurants/:id/working-hours` is deprecated and not called. |
 
 ## Floor Plans
 

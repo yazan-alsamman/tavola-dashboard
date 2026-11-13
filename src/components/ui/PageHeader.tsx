@@ -1,3 +1,4 @@
+import { useLocale } from '@/context/LocaleContext'
 import { Link } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 import { MaterialIcon } from '@/components/ui/Icon'
@@ -32,10 +33,11 @@ export function PageHeader({
   meta,
   className,
 }: PageHeaderProps) {
+  const { t } = useLocale()
   return (
     <div className={cn('mb-6', className)}>
       {breadcrumbs && breadcrumbs.length > 0 && (
-        <nav aria-label="Breadcrumb" className="mb-2">
+        <nav aria-label={t.common.breadcrumb} className="mb-2">
           <ol className="flex flex-wrap items-center gap-1 text-body-sm text-on-surface-variant">
             {breadcrumbs.map((crumb, i) => (
               <li key={`${crumb.label}-${i}`} className="flex items-center gap-1">

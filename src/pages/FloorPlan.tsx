@@ -27,6 +27,7 @@ import { useCanManageInventory } from '@/hooks/usePermissions'
 import { areaFloor, areaRect, type CellRect } from '@/lib/floorGrid'
 import { floorLabel, listFloors, nextFloor } from '@/lib/floors'
 import { cn } from '@/lib/utils'
+import { apiErrorText } from '@/lib/apiErrorText'
 
 type View = 'map' | 'list'
 
@@ -124,7 +125,7 @@ export function FloorPlanPage() {
       await editor.removeTable(deleteTableTarget)
       setDeleteTableTarget(null)
     } catch (err) {
-      setDeleteError(err instanceof Error ? err.message : t.inventory.errors.unknown)
+      setDeleteError(apiErrorText(err, t, t.inventory.errors.unknown))
     }
   }
 

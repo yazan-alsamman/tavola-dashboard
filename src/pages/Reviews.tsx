@@ -1,5 +1,4 @@
 import { useState, type FormEvent } from 'react'
-import { isApiError } from '@/api/errors'
 import { REVIEW_AXES, type ReviewAxis, type ReviewDto } from '@/api/reviews'
 import { ReviewCard } from '@/components/reviews/ReviewCard'
 import { ReviewSummary } from '@/components/reviews/ReviewSummary'
@@ -17,6 +16,7 @@ import { useReviewsSummaryQuery } from '@/hooks/useAnalyticsQueries'
 import { useCanManageReviews } from '@/hooks/usePermissions'
 import { useRestaurantReviewsQuery } from '@/hooks/useReviewQueries'
 import { useReopenReviewMutation, useReplyToReviewMutation } from '@/hooks/useReviewMutations'
+import { apiErrorText } from '@/lib/apiErrorText'
 
 const PAGE_SIZE = 20
 const STARS = [5, 4, 3, 2, 1] as const
@@ -47,7 +47,7 @@ export function ReviewsPage() {
   const reopenMutation = useReopenReviewMutation()
 
   const errorMessage = (err: unknown): string =>
-    isApiError(err) ? err.message : copy.errors.unknown
+    apiErrorText(err, t, copy.errors.unknown)
 
   const filterBy = (next: { axis?: ReviewAxis; stars?: number }) => {
     setAxis(next.axis)

@@ -325,7 +325,7 @@ export function CalendarPage() {
                 </button>
               ))}
             </div>
-            <Button variant="outline" size="icon" aria-label="Previous" onClick={goPrev}>
+            <Button variant="outline" size="icon" aria-label={t.common.previous} onClick={goPrev}>
               <MaterialIcon name="chevron_left" size={16} />
             </Button>
             {view === 'daily' ? (
@@ -340,7 +340,7 @@ export function CalendarPage() {
                 {rangeLabel}
               </span>
             )}
-            <Button variant="outline" size="icon" aria-label="Next" onClick={goNext}>
+            <Button variant="outline" size="icon" aria-label={t.common.next} onClick={goNext}>
               <MaterialIcon name="chevron_right" size={16} />
             </Button>
             <Button variant="ghost" size="sm" onClick={() => setAnchorDate(today)}>

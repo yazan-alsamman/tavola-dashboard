@@ -52,4 +52,5 @@ Any new code introduced by the backend should be added to this table (and to the
 
 - Never swallow a caught error with an empty `catch {}`.
 - Never log a raw error response, token, or password to the console — log the `code` and a correlation id if available, per the security rules in root `CLAUDE.md`.
+- Show request errors through `apiErrorText(err, t, fallback)` (`src/lib/apiErrorText.ts`, ADR-028): English shows the backend `message`, Arabic shows `t.apiErrors.codes[code]` or the translated fallback.
 - Never show a raw, untranslated backend `message` string as the only feedback for an error the UI could handle more specifically (see table above) — but a generic fallback showing the backend's `message` is acceptable for the true "unknown error" case, since the backend already writes it as user-facing copy.

@@ -606,3 +606,16 @@ Decision:
 3. Opening a conversation marks its `StaffMessageReceived` notifications from the watch as read, so the badge does not keep counting messages already seen.
 
 Consequences: one notification request per 20 seconds per open dashboard. A message can take up to 20 seconds to alert. Sound only plays after the user has interacted with the page, as browsers require.
+
+## ADR-028 — Working hours, currency and timezone per branch; every text in both languages
+
+Context: the owner wants working hours, currency and timezone to belong to each branch, not the whole restaurant (backend ADR-050), and every word of the dashboard to show in the selected language. Restaurant settings still had a restaurant-wide hours tab and English-only reservation rule labels; the hours editors had English weekday names and no way to close a day; and errors showed the backend's English `message` even in Arabic.
+
+Decision:
+1. Settings drops the Working Hours tab and the timezone/currency fields. The Reservation Rules tab says these are set per branch and links to Branches. `PATCH /restaurants/:id/settings` still sends the loaded `timezone`/`defaultCurrency` back unchanged, because the backend body requires them.
+2. Branches edits hours with `WeeklyHoursEditor` (`src/components/branches/`): translated weekday names, an open/closed switch per day, and a note that a closing time before the opening time runs past midnight. A closed day is sent as no entry (`weekToEntries`), matching the backend rule that a weekday without a row is closed.
+3. `apiErrorText(err, t, fallback)` (`src/lib/apiErrorText.ts`) picks an error's text: the dictionary's `apiErrors.serverMessages` is `show` in English (the backend's specific message) and `hide` in Arabic, where the translated `apiErrors.codes[code]` is used, falling back to the caller's translated text. Every page and component uses it instead of `err.message`.
+4. UI primitives (`Skeleton`, `DataTableSkeleton`, `ErrorState`, `PageHeader`) default their screen-reader and retry labels from `t.common`; the calendar arrows and the menu availability weekdays use translated labels.
+
+Consequences: the restaurant-level `GET/PATCH /restaurants/:id/working-hours` calls are gone from the dashboard. In Arabic, a validation error shows a general translated sentence instead of the backend's specific English detail.
+

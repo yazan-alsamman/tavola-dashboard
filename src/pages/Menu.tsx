@@ -73,6 +73,7 @@ import {
 import { useSelectedMenu } from '@/hooks/useMenuQueries'
 import { useCanManageMenu } from '@/hooks/usePermissions'
 import { cn } from '@/lib/utils'
+import { apiErrorText } from '@/lib/apiErrorText'
 
 function sortByDisplayOrder<T extends { displayOrder?: number }>(items: T[]): T[] {
   return [...items].sort(
@@ -81,12 +82,11 @@ function sortByDisplayOrder<T extends { displayOrder?: number }>(items: T[]): T[
 }
 
 function mapMenuError(err: unknown, t: ReturnType<typeof useLocale>['t']): string {
-  if (isApiError(err)) {
+  if (isApiError(err) && t.apiErrors.serverMessages === 'show') {
     const detail = err.errors.find((entry) => typeof entry === 'string')
     if (typeof detail === 'string' && detail.trim()) return detail
-    return err.message
   }
-  return t.menu.errors.unknown
+  return apiErrorText(err, t, t.menu.errors.unknown)
 }
 
 function menuStatusLabel(
@@ -515,15 +515,7 @@ function ItemEditModal({
                       setWindows(next)
                     }}
                   >
-                    {[
-                      'Sun',
-                      'Mon',
-                      'Tue',
-                      'Wed',
-                      'Thu',
-                      'Fri',
-                      'Sat',
-                    ].map((label, day) => (
+                    {t.branches.hours.weekdays.map((label, day) => (
                       <option key={day} value={day}>
                         {label}
                       </option>

@@ -19,7 +19,6 @@ import {
   type BranchDto,
   type BranchWriteRequest,
 } from '@/api/branches'
-import { isApiError } from '@/api/errors'
 import { BranchLocationField } from '@/components/branches/BranchLocationField'
 import { WeeklyHoursEditor } from '@/components/branches/WeeklyHoursEditor'
 import {
@@ -27,6 +26,7 @@ import {
   weekToEntries,
   type WeekdayHours,
 } from '@/components/branches/weeklyHours'
+import { apiErrorText } from '@/lib/apiErrorText'
 
 const emptyForm: BranchWriteRequest = {
   city: '',
@@ -98,7 +98,7 @@ export function BranchesPage() {
       })
       .catch((err) => {
         if (!ac.signal.aborted) {
-          toast('error', isApiError(err) ? err.message : t.login.errors.unknown)
+          toast('error', apiErrorText(err, t, t.login.errors.unknown))
         }
       })
       .finally(() => {
@@ -155,7 +155,7 @@ export function BranchesPage() {
       closeForm()
       refreshScope()
     } catch (err) {
-      toast('error', isApiError(err) ? err.message : t.login.errors.unknown)
+      toast('error', apiErrorText(err, t, t.login.errors.unknown))
     } finally {
       setSubmitting(false)
     }
@@ -169,7 +169,7 @@ export function BranchesPage() {
       toast('success', t.common.delete)
       refreshScope()
     } catch (err) {
-      toast('error', isApiError(err) ? err.message : t.login.errors.unknown)
+      toast('error', apiErrorText(err, t, t.login.errors.unknown))
     } finally {
       setDeletingId(null)
     }
@@ -189,7 +189,7 @@ export function BranchesPage() {
       toast('success', t.common.save)
       setHoursBranch(null)
     } catch (err) {
-      toast('error', isApiError(err) ? err.message : t.login.errors.unknown)
+      toast('error', apiErrorText(err, t, t.login.errors.unknown))
     } finally {
       setSubmitting(false)
     }

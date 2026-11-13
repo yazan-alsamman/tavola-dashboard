@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 import type { EmployeeDto, EmployeeStatus } from '@/api/employees'
-import { isApiError } from '@/api/errors'
 import type { BranchDto } from '@/api/branches'
 import { Badge, type BadgeTone } from '@/components/ui/Badge'
 import { MaterialIcon } from '@/components/ui/Icon'
@@ -20,6 +19,7 @@ import {
   useRemoveEmployeeMutation,
   useRestaurantRolesQuery,
 } from '@/hooks/useEmployeeQueries'
+import { apiErrorText } from '@/lib/apiErrorText'
 
 function statusTone(status: EmployeeStatus | string): BadgeTone {
   if (status === 'Active') return 'success'
@@ -78,7 +78,7 @@ export function StaffPage() {
   }, [roleId, firstRoleId])
 
   const mapError = (err: unknown): string =>
-    isApiError(err) ? err.message : t.staff.errors.unknown
+    apiErrorText(err, t, t.staff.errors.unknown)
 
   const handleInvite = async (event: React.FormEvent): Promise<void> => {
     event.preventDefault()
@@ -108,7 +108,7 @@ export function StaffPage() {
       if (result.branchAssigned) {
         toast('success', t.staff.inviteSuccess)
       } else {
-        toast('error', isApiError(result.error) ? result.error.message : t.staff.assignFailed)
+        toast('error', apiErrorText(result.error, t, t.staff.assignFailed))
       }
     } catch (err) {
       toast('error', mapError(err))
